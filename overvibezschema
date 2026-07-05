@@ -1,0 +1,380 @@
+-- ═══════════════════════════════════════════════════════════════
+-- OverVibez — full database schema for Supabase (Postgres)
+-- Two-tier accounts: 'creator' (Vibe Creator) and 'follower' (Vibe Follower)
+-- Apply as a single migration once the project is restored.
+-- ═══════════════════════════════════════════════════════════════
+
+-- ---------- Enums ----------
+create type account_type as enum ('creator','follower');
+create type media_type as enum ('image','video','text');
+create type sub_status as enum ('active','canceled','past_due');
+create type tx_type as enum ('subscription','post_unlock','tip','live_entry','raffle_entry','payout','wallet_topup');
+create type report_status as enum ('open','reviewing','actioned','dismissed');
+create type live_status as enum ('scheduled','live','ended');
+
+-- ---------- Profiles (extends auth.users) ----------
+create table public.profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  username text unique not null check (username ~ '^[a-z0-9_\.]{3,24}$'),
+  display_name text,
+  bio text,
+  avatar_url text,
+  account_type account_type not null default 'follower',
+  is_verified boolean not null default false,          -- blue-tick style verification
+  age_verified boolean not null default false,          -- 18+ ID check passed (set by verification webhook)
+  sub_price_cents int check (sub_price_cents between 199 and 9999), -- creators only
+  wallet_cents bigint not null default 0,               -- follower spending balance
+  earnings_cents bigint not null default 0,             -- creator withdrawable balance (net of 15% fee)
+  created_at timestamptz not null default now()
+);
+
+-- Auto-create profile on signup (account_type passed in auth metadata)
+create or replace function public.handle_new_user()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  insert into public.profiles (id, username, display_name, account_type)
+  values (
+    new.id,
+    coalesce(new.raw_user_meta_data->>'username', 'user_' || left(new.id::text, 8)),
+    coalesce(new.raw_user_meta_data->>'display_name', new.raw_user_meta_data->>'username'),
+    coalesce((new.raw_user_meta_data->>'account_type')::account_type, 'follower')
+  );
+  return new;
+end $$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- ---------- Social graph ----------
+create table public.follows (
+  follower_id uuid not null references public.profiles(id) on delete cascade,
+  creator_id  uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (follower_id, creator_id),
+  check (follower_id <> creator_id)
+);
+
+create table public.subscriptions (
+  id uuid primary key default gen_random_uuid(),
+  subscriber_id uuid not null references public.profiles(id) on delete cascade,
+  creator_id    uuid not null references public.profiles(id) on delete cascade,
+  price_cents int not null,
+  status sub_status not null default 'active',
+  current_period_end timestamptz not null,
+  created_at timestamptz not null default now(),
+  unique (subscriber_id, creator_id)
+);
+
+-- ---------- Content ----------
+create table public.posts (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid not null references public.profiles(id) on delete cascade,
+  caption text,
+  media_type media_type not null default 'image',
+  media_path text,            -- storage path in PRIVATE bucket; serve via signed URLs after access check
+  is_paid boolean not null default false,
+  price_cents int check (price_cents between 99 and 49999),
+  like_count int not null default 0,
+  comment_count int not null default 0,
+  created_at timestamptz not null default now()
+);
+create index on public.posts (creator_id, created_at desc);
+
+create table public.post_unlocks (
+  post_id uuid not null references public.posts(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  amount_cents int not null,
+  created_at timestamptz not null default now(),
+  primary key (post_id, user_id)
+);
+
+create table public.likes (
+  post_id uuid not null references public.posts(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  primary key (post_id, user_id)
+);
+
+create table public.comments (
+  id uuid primary key default gen_random_uuid(),
+  post_id uuid not null references public.posts(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  body text not null check (length(body) between 1 and 2000),
+  created_at timestamptz not null default now()
+);
+
+create table public.stories (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid not null references public.profiles(id) on delete cascade,
+  media_path text not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default now() + interval '24 hours'
+);
+
+create table public.live_streams (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid not null references public.profiles(id) on delete cascade,
+  title text not null,
+  entry_price_cents int not null default 0,   -- 0 = free stream
+  status live_status not null default 'live',
+  started_at timestamptz not null default now(),
+  ended_at timestamptz
+);
+
+-- ---------- Messaging ----------
+create table public.conversations (
+  id uuid primary key default gen_random_uuid(),
+  user_a uuid not null references public.profiles(id) on delete cascade,
+  user_b uuid not null references public.profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (user_a, user_b),
+  check (user_a < user_b)   -- canonical ordering prevents duplicate threads
+);
+
+create table public.messages (
+  id uuid primary key default gen_random_uuid(),
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  sender_id uuid not null references public.profiles(id) on delete cascade,
+  body text not null check (length(body) between 1 and 4000),
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index on public.messages (conversation_id, created_at);
+
+-- ---------- Raffles ----------
+create table public.raffles (
+  id uuid primary key default gen_random_uuid(),
+  host_id uuid references public.profiles(id) on delete set null, -- null = platform-hosted
+  title text not null,
+  prize text not null,
+  entry_price_cents int not null,
+  seed_hash text not null,          -- pre-committed SHA-256 of secret seed (provably fair)
+  revealed_seed text,               -- published after draw
+  closes_at timestamptz not null,
+  winner_entry_id uuid,
+  created_at timestamptz not null default now()
+);
+
+create table public.raffle_entries (
+  id uuid primary key default gen_random_uuid(),
+  raffle_id uuid not null references public.raffles(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  qty int not null check (qty > 0),
+  amount_cents int not null,
+  created_at timestamptz not null default now()
+);
+
+-- ---------- Money ----------
+create table public.transactions (
+  id uuid primary key default gen_random_uuid(),
+  payer_id uuid references public.profiles(id) on delete set null,
+  payee_id uuid references public.profiles(id) on delete set null,  -- creator receiving; null for raffle/platform
+  type tx_type not null,
+  gross_cents bigint not null,
+  fee_cents bigint not null default 0,      -- platform 15%
+  net_cents bigint not null,                -- creator 85%
+  reference_id uuid,                        -- post id / raffle id / stream id / sub id
+  created_at timestamptz not null default now()
+);
+create index on public.transactions (payee_id, created_at desc);
+
+create table public.payouts (
+  id uuid primary key default gen_random_uuid(),
+  creator_id uuid not null references public.profiles(id) on delete cascade,
+  amount_cents bigint not null,
+  status text not null default 'pending',   -- pending → processing → paid
+  created_at timestamptz not null default now()
+);
+
+-- ---------- Safety ----------
+create table public.reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_id uuid references public.profiles(id) on delete set null,
+  target_type text not null check (target_type in ('post','profile','message','stream','comment')),
+  target_id uuid not null,
+  reason text not null,
+  status report_status not null default 'open',
+  created_at timestamptz not null default now()
+);
+
+-- ═══════════════ Access helper ═══════════════
+-- Can the current user view a given post's media?
+create or replace function public.can_view_post(p_post_id uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from posts p
+    where p.id = p_post_id
+      and (
+        p.is_paid = false
+        or p.creator_id = auth.uid()
+        or exists (select 1 from post_unlocks u where u.post_id = p.id and u.user_id = auth.uid())
+        or exists (select 1 from subscriptions s where s.creator_id = p.creator_id
+                     and s.subscriber_id = auth.uid() and s.status = 'active'
+                     and s.current_period_end > now())
+      )
+  );
+$$;
+
+-- ═══════════════ Purchase functions (atomic, fee-aware) ═══════════════
+-- 85/15 split enforced server-side; wallet debited and creator credited in one transaction.
+create or replace function public.purchase_post(p_post_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_price int; v_creator uuid; v_fee int; v_net int;
+begin
+  select price_cents, creator_id into v_price, v_creator
+    from posts where id = p_post_id and is_paid;
+  if v_price is null then raise exception 'Post not found or not paid'; end if;
+  if v_creator = auth.uid() then raise exception 'Cannot buy your own post'; end if;
+
+  update profiles set wallet_cents = wallet_cents - v_price
+    where id = auth.uid() and wallet_cents >= v_price;
+  if not found then raise exception 'Insufficient wallet balance'; end if;
+
+  v_fee := round(v_price * 0.15); v_net := v_price - v_fee;
+  update profiles set earnings_cents = earnings_cents + v_net where id = v_creator;
+
+  insert into post_unlocks (post_id, user_id, amount_cents) values (p_post_id, auth.uid(), v_price);
+  insert into transactions (payer_id, payee_id, type, gross_cents, fee_cents, net_cents, reference_id)
+    values (auth.uid(), v_creator, 'post_unlock', v_price, v_fee, v_net, p_post_id);
+end $$;
+
+create or replace function public.subscribe_to_creator(p_creator uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_price int; v_fee int; v_net int;
+begin
+  select sub_price_cents into v_price from profiles
+    where id = p_creator and account_type = 'creator';
+  if v_price is null then raise exception 'Creator has no subscription price set'; end if;
+  if p_creator = auth.uid() then raise exception 'Cannot subscribe to yourself'; end if;
+
+  update profiles set wallet_cents = wallet_cents - v_price
+    where id = auth.uid() and wallet_cents >= v_price;
+  if not found then raise exception 'Insufficient wallet balance'; end if;
+
+  v_fee := round(v_price * 0.15); v_net := v_price - v_fee;
+  update profiles set earnings_cents = earnings_cents + v_net where id = p_creator;
+
+  insert into subscriptions (subscriber_id, creator_id, price_cents, current_period_end)
+    values (auth.uid(), p_creator, v_price, now() + interval '30 days')
+    on conflict (subscriber_id, creator_id)
+    do update set status = 'active', price_cents = v_price,
+                  current_period_end = now() + interval '30 days';
+  insert into transactions (payer_id, payee_id, type, gross_cents, fee_cents, net_cents, reference_id)
+    values (auth.uid(), p_creator, 'subscription', v_price, v_fee, v_net, p_creator);
+end $$;
+
+create or replace function public.buy_raffle_entries(p_raffle uuid, p_qty int)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_price int; v_total int;
+begin
+  select entry_price_cents into v_price from raffles
+    where id = p_raffle and closes_at > now() and winner_entry_id is null;
+  if v_price is null then raise exception 'Raffle closed or not found'; end if;
+  v_total := v_price * p_qty;
+
+  update profiles set wallet_cents = wallet_cents - v_total
+    where id = auth.uid() and wallet_cents >= v_total;
+  if not found then raise exception 'Insufficient wallet balance'; end if;
+
+  insert into raffle_entries (raffle_id, user_id, qty, amount_cents)
+    values (p_raffle, auth.uid(), p_qty, v_total);
+  insert into transactions (payer_id, type, gross_cents, fee_cents, net_cents, reference_id)
+    values (auth.uid(), 'raffle_entry', v_total, v_total, 0, p_raffle);
+end $$;
+
+-- ═══════════════ Row Level Security ═══════════════
+alter table public.profiles enable row level security;
+alter table public.follows enable row level security;
+alter table public.subscriptions enable row level security;
+alter table public.posts enable row level security;
+alter table public.post_unlocks enable row level security;
+alter table public.likes enable row level security;
+alter table public.comments enable row level security;
+alter table public.stories enable row level security;
+alter table public.live_streams enable row level security;
+alter table public.conversations enable row level security;
+alter table public.messages enable row level security;
+alter table public.raffles enable row level security;
+alter table public.raffle_entries enable row level security;
+alter table public.transactions enable row level security;
+alter table public.payouts enable row level security;
+alter table public.reports enable row level security;
+
+-- Profiles: public read, self write. Wallet/earnings hidden via column grants in API layer if needed.
+create policy "profiles_read"   on public.profiles for select using (true);
+create policy "profiles_update" on public.profiles for update using (auth.uid() = id);
+
+-- Follows
+create policy "follows_read"   on public.follows for select using (true);
+create policy "follows_insert" on public.follows for insert with check (auth.uid() = follower_id);
+create policy "follows_delete" on public.follows for delete using (auth.uid() = follower_id);
+
+-- Subscriptions: visible to either party
+create policy "subs_read" on public.subscriptions for select
+  using (auth.uid() in (subscriber_id, creator_id));
+
+-- Posts: metadata public (media gated by can_view_post + private storage bucket);
+-- only age-verified creators can publish.
+create policy "posts_read" on public.posts for select using (true);
+create policy "posts_insert" on public.posts for insert with check (
+  auth.uid() = creator_id
+  and exists (select 1 from profiles pr where pr.id = auth.uid()
+              and pr.account_type = 'creator' and pr.age_verified)
+);
+create policy "posts_update" on public.posts for update using (auth.uid() = creator_id);
+create policy "posts_delete" on public.posts for delete using (auth.uid() = creator_id);
+
+-- Unlocks: owner + creator visibility
+create policy "unlocks_read" on public.post_unlocks for select
+  using (auth.uid() = user_id or auth.uid() in (select creator_id from posts where id = post_id));
+
+-- Likes & comments
+create policy "likes_read"    on public.likes for select using (true);
+create policy "likes_insert"  on public.likes for insert with check (auth.uid() = user_id);
+create policy "likes_delete"  on public.likes for delete using (auth.uid() = user_id);
+create policy "comments_read"   on public.comments for select using (true);
+create policy "comments_insert" on public.comments for insert with check (auth.uid() = user_id);
+create policy "comments_delete" on public.comments for delete using (auth.uid() = user_id);
+
+-- Stories: readable while unexpired; creators write
+create policy "stories_read" on public.stories for select using (expires_at > now());
+create policy "stories_insert" on public.stories for insert with check (
+  auth.uid() = creator_id
+  and exists (select 1 from profiles pr where pr.id = auth.uid() and pr.account_type = 'creator')
+);
+
+-- Live streams
+create policy "streams_read"   on public.live_streams for select using (true);
+create policy "streams_insert" on public.live_streams for insert with check (auth.uid() = creator_id);
+create policy "streams_update" on public.live_streams for update using (auth.uid() = creator_id);
+
+-- Conversations & messages: participants only
+create policy "conv_read" on public.conversations for select using (auth.uid() in (user_a, user_b));
+create policy "conv_insert" on public.conversations for insert with check (auth.uid() in (user_a, user_b));
+create policy "msg_read" on public.messages for select using (
+  exists (select 1 from conversations c where c.id = conversation_id and auth.uid() in (c.user_a, c.user_b)));
+create policy "msg_insert" on public.messages for insert with check (
+  auth.uid() = sender_id and
+  exists (select 1 from conversations c where c.id = conversation_id and auth.uid() in (c.user_a, c.user_b)));
+create policy "msg_update_read_receipt" on public.messages for update using (
+  exists (select 1 from conversations c where c.id = conversation_id and auth.uid() in (c.user_a, c.user_b)));
+
+-- Raffles: public read; entries visible to owner
+create policy "raffles_read" on public.raffles for select using (true);
+create policy "entries_read" on public.raffle_entries for select using (auth.uid() = user_id);
+
+-- Money: strictly own rows
+create policy "tx_read" on public.transactions for select using (auth.uid() in (payer_id, payee_id));
+create policy "payouts_read"   on public.payouts for select using (auth.uid() = creator_id);
+create policy "payouts_insert" on public.payouts for insert with check (auth.uid() = creator_id);
+
+-- Reports: anyone can file; only reporter sees their own
+create policy "reports_insert" on public.reports for insert with check (auth.uid() = reporter_id);
+create policy "reports_read"   on public.reports for select using (auth.uid() = reporter_id);
+
+-- ═══════════════ Storage note ═══════════════
+-- Create TWO buckets in Supabase Storage:
+--   'public-media'  (public)  → avatars, free post media
+--   'paid-media'    (private) → paid post media; serve via createSignedUrl AFTER can_view_post() check
+--     (enforce with a storage policy calling public.can_view_post on the path's post id,
+--      or issue signed URLs from an Edge Function)
