@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OverVibez — Social. Amplified.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E0A14; --panel:#171021; --panel-2:#1F1630; --line:#2C2140;
+  --text:#EFEAF6; --muted:#9E90B8; --accent:#FF3D8A; --accent-2:#8B5CF6;
+  --money:#FFB443; --live:#FF4757; --ok:#3DDC97;
+  --grad:linear-gradient(135deg,#FF3D8A 0%,#8B5CF6 100%);
+  --radius:18px; --shadow:0 8px 30px rgba(0,0,0,.35);
+}
+html[data-theme="light"]{
+  --bg:#F7F4FB; --panel:#FFFFFF; --panel-2:#F1EBFA; --line:#E4DCF2;
+  --text:#211736; --muted:#7A6C96; --shadow:0 8px 24px rgba(90,60,140,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;transition:background .3s,color .3s}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,textarea,select{font-family:inherit;color:var(--text)}
+.app{max-width:520px;margin:0 auto;padding-bottom:92px;min-height:100vh}
+.hidden{display:none!important}
+
+/* ═══════════ AUTH ═══════════ */
+.auth{max-width:440px;margin:0 auto;padding:48px 26px;min-height:100vh;display:flex;flex-direction:column;justify-content:center}
+.auth .logo-big{font-family:'Unbounded';font-weight:900;font-size:34px;letter-spacing:-1px;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;text-align:center}
+.auth .tag{text-align:center;color:var(--muted);font-size:14px;margin:8px 0 30px;letter-spacing:.14em;text-transform:uppercase}
+.auth-tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:5px;margin-bottom:22px}
+.auth-tabs button{flex:1;padding:11px;border-radius:10px;font-size:14px;font-weight:600;color:var(--muted)}
+.auth-tabs button.on{background:var(--grad);color:#fff}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;letter-spacing:.04em}
+.field input,.field select,.field textarea{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 16px;font-size:14.5px;outline:none;transition:border .2s}
+.field input:focus,.field textarea:focus{border-color:var(--accent-2)}
+.role-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.role-card{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:18px 14px;text-align:center;transition:all .18s;cursor:pointer}
+.role-card:hover{transform:translateY(-2px)}
+.role-card.on{border-color:transparent;background:linear-gradient(var(--panel),var(--panel)) padding-box,var(--grad) border-box}
+.role-card .ic{font-size:30px;display:block;margin-bottom:8px}
+.role-card b{font-size:14px;display:block;margin-bottom:5px}
+.role-card span{font-size:11.5px;color:var(--muted);line-height:1.45;display:block}
+.primary{width:100%;background:var(--grad);color:#fff;font-weight:700;font-size:14.5px;padding:14px;border-radius:14px;margin-top:8px;transition:filter .15s}
+.primary:hover{filter:brightness(1.12)}
+.ghost{width:100%;color:var(--muted);font-size:13px;padding:12px;margin-top:4px}
+.demo-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}
+.demo-btn{background:var(--panel);border:1px dashed var(--line);border-radius:12px;padding:12px;font-size:12.5px;color:var(--muted)}
+.demo-btn b{display:block;color:var(--text);font-size:13px;margin-bottom:2px}
+.auth-note{text-align:center;font-size:11.5px;color:var(--muted);margin-top:22px;line-height:1.6}
+.err{color:var(--live);font-size:12.5px;margin-top:8px;min-height:16px;text-align:center}
+
+/* verify step */
+.verify-steps{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px;font-size:13px;color:var(--muted)}
+.verify-steps div{display:flex;gap:10px;padding:7px 0;align-items:center}
+.verify-steps .done{color:var(--ok)}
+
+/* ═══════════ TOP BAR ═══════════ */
+.topbar{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.logo{font-family:'Unbounded';font-weight:900;font-size:19px;letter-spacing:-.5px;
+  background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.topbar .actions{display:flex;gap:6px;align-items:center}
+.icon-btn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:17px;transition:background .2s;position:relative}
+.icon-btn:hover{background:var(--panel-2)}
+.wallet-pill{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:13px;font-weight:600}
+.wallet-pill .c{color:var(--money)}
+.role-badge{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:6px;background:var(--grad);color:#fff}
+.role-badge.f{background:var(--panel-2);color:var(--muted)}
+
+/* ═══════════ STORIES / FEED (shared with v1) ═══════════ */
+.stories{display:flex;gap:14px;padding:16px 18px 8px;overflow-x:auto;scrollbar-width:none}
+.stories::-webkit-scrollbar{display:none}
+.story{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none;cursor:pointer}
+.story .ring{width:64px;height:64px;border-radius:50%;padding:3px;background:var(--grad);position:relative}
+.story.seen .ring{background:var(--line)}
+.story .ring .av{width:100%;height:100%;border-radius:50%;border:3px solid var(--bg);display:grid;place-items:center;font-size:23px}
+.story .name{font-size:11.5px;color:var(--muted);max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-tag{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);background:var(--live);color:#fff;
+  font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:6px;border:2px solid var(--bg)}
+.av{background:var(--panel-2)}
+.a1{background:linear-gradient(135deg,#3a1c4f,#6b2d5c)} .a2{background:linear-gradient(135deg,#1c3a4f,#2d5c6b)}
+.a3{background:linear-gradient(135deg,#4f3a1c,#6b5c2d)} .a4{background:linear-gradient(135deg,#1c4f2e,#2d6b45)}
+.a5{background:linear-gradient(135deg,#4f1c1c,#6b2d2d)} .a6{background:linear-gradient(135deg,#241c4f,#2d3a6b)}
+.feed{display:flex;flex-direction:column;gap:16px;padding:10px 14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.card-head{display:flex;align-items:center;gap:11px;padding:13px 15px}
+.card-head .av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:18px;flex:none}
+.card-head .who{flex:1;min-width:0}
+.card-head .who b{font-size:14.5px;display:flex;align-items:center;gap:5px}
+.verified{color:var(--accent-2);font-size:13px}
+.card-head .who span{font-size:12px;color:var(--muted)}
+.sub-pill{font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:999px;background:var(--grad);color:#fff;flex:none}
+.sub-pill.subbed{background:var(--panel-2);color:var(--muted)}
+.media{position:relative;aspect-ratio:4/3.2;display:grid;place-items:center;overflow:hidden}
+.media .scene{position:absolute;inset:0;display:grid;place-items:center;font-size:72px}
+.locked .scene{filter:blur(26px) saturate(1.4);transform:scale(1.12)}
+.lockglass{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  background:rgba(14,10,20,.35);backdrop-filter:blur(2px)}
+.lock-ic{width:56px;height:56px;border-radius:50%;background:var(--grad);display:grid;place-items:center;font-size:23px;
+  box-shadow:0 0 0 8px rgba(255,61,138,.18),0 0 40px rgba(139,92,246,.5);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 14px rgba(255,61,138,.08),0 0 60px rgba(139,92,246,.65)}}
+.unlock-btn{background:#fff;color:#111;font-weight:700;font-size:13.5px;padding:11px 22px;border-radius:999px;display:flex;align-items:center;gap:8px;transition:transform .15s}
+.unlock-btn:hover{transform:scale(1.05)}
+.unlock-btn .price{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lock-note{color:rgba(255,255,255,.85);font-size:12px}
+.card-actions{display:flex;align-items:center;gap:4px;padding:8px 10px 4px}
+.act{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;font-size:14px;color:var(--muted);transition:all .15s}
+.act:hover{background:var(--panel-2)}
+.act.liked{color:var(--accent)}
+.act.tip{margin-left:auto;color:var(--money);font-weight:600}
+.card-body{padding:2px 16px 15px}
+.card-body .likes{font-size:13px;font-weight:600;margin-bottom:4px}
+.card-body .cap{font-size:14px;line-height:1.45}
+.card-body .cap b{margin-right:6px}
+.own-tag{font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
+
+/* ═══════════ SECTIONS / EXPLORE / RAFFLES ═══════════ */
+.section-title{font-family:'Unbounded';font-weight:700;font-size:15px;padding:20px 18px 10px;letter-spacing:-.3px}
+.section-sub{padding:0 18px 14px;font-size:13px;color:var(--muted);margin-top:-6px}
+.explore-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:0 14px}
+.tile{aspect-ratio:1;border-radius:10px;display:grid;place-items:center;font-size:34px;position:relative;overflow:hidden;background:var(--panel-2);cursor:pointer;transition:transform .15s}
+.tile:hover{transform:scale(.97)}
+.tile .t-lock{position:absolute;top:6px;right:6px;font-size:11px;background:rgba(0,0,0,.5);color:#fff;padding:3px 6px;border-radius:6px;backdrop-filter:blur(4px)}
+.tile.big{grid-column:span 2;grid-row:span 2;font-size:64px}
+.chiprow{display:flex;gap:8px;padding:4px 18px 14px;overflow-x:auto;scrollbar-width:none}
+.chip{flex:none;font-size:12.5px;font-weight:500;padding:8px 15px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--muted)}
+.chip.on{background:var(--grad);color:#fff;border-color:transparent}
+.raffle-card{margin:0 14px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;position:relative;overflow:hidden}
+.raffle-card::before{content:"";position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(255,61,138,.22),transparent 70%)}
+.raffle-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.raffle-top h3{font-size:17px;font-weight:700}
+.raffle-top .prize{font-family:'Unbounded';font-weight:700;font-size:15px;color:var(--money)}
+.countdown{display:flex;gap:8px;margin:12px 0}
+.cd-unit{background:var(--panel-2);border-radius:10px;padding:8px 0;width:56px;text-align:center}
+.cd-unit b{font-family:'Unbounded';font-size:16px;display:block}
+.cd-unit span{font-size:9.5px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.raffle-meta{display:flex;gap:16px;font-size:12.5px;color:var(--muted);margin-bottom:14px}
+.enter-btn{width:100%;background:var(--grad);color:#fff;font-weight:700;font-size:14px;padding:13px;border-radius:12px}
+.fair-note{display:flex;gap:8px;align-items:flex-start;margin:4px 14px 16px;padding:12px 14px;border-radius:12px;background:var(--panel-2);font-size:12px;color:var(--muted);line-height:1.5}
+
+/* ═══════════ CHAT ═══════════ */
+.thread-list{padding:0 14px}
+.thread{display:flex;gap:12px;align-items:center;padding:13px 10px;border-radius:14px;cursor:pointer;transition:background .15s}
+.thread:hover{background:var(--panel)}
+.thread .av{width:50px;height:50px;border-radius:50%;display:grid;place-items:center;font-size:21px;flex:none}
+.thread .tx{flex:1;min-width:0}
+.thread .tx b{font-size:14.5px;display:block}
+.thread .tx span{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:270px}
+.thread .meta{text-align:right;font-size:11px;color:var(--muted)}
+.unread{width:10px;height:10px;border-radius:50%;background:var(--accent);margin:5px 0 0 auto}
+.chat{display:flex;flex-direction:column;height:calc(100vh - 215px);min-height:420px}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.bubble{max-width:75%;padding:11px 15px;border-radius:18px;font-size:14px;line-height:1.4}
+.bubble.them{background:var(--panel-2);border-bottom-left-radius:6px;align-self:flex-start}
+.bubble.me{background:var(--grad);color:#fff;border-bottom-right-radius:6px;align-self:flex-end}
+.bubble .rr{display:block;font-size:10px;opacity:.75;margin-top:4px;text-align:right}
+.typing{align-self:flex-start;background:var(--panel-2);border-radius:18px;border-bottom-left-radius:6px;padding:13px 16px;display:flex;gap:5px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:tp 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes tp{30%{transform:translateY(-5px);opacity:1}}
+.chat-input{display:flex;gap:9px;padding:12px 14px;border-top:1px solid var(--line)}
+.chat-input input{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:12px 18px;font-size:14px;outline:none}
+.chat-input button{background:var(--grad);color:#fff;border-radius:999px;width:44px;height:44px;font-size:17px}
+.back-btn{font-size:13px;color:var(--muted);padding:10px 18px 0;display:inline-flex;gap:6px;align-items:center}
+
+/* ═══════════ STUDIO ═══════════ */
+.dash{padding:0 14px}
+.earn-hero{background:var(--grad);border-radius:var(--radius);padding:22px;color:#fff;margin-bottom:14px;position:relative;overflow:hidden}
+.earn-hero::after{content:"₊˚✧";position:absolute;right:18px;top:14px;font-size:22px;opacity:.6}
+.earn-hero .lbl{font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+.earn-hero .amt{font-family:'Unbounded';font-weight:900;font-size:33px;margin:6px 0 2px}
+.earn-hero .split{font-size:12.5px;opacity:.92}
+.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 12px;text-align:center}
+.stat b{font-family:'Unbounded';font-size:16px;display:block}
+.stat span{font-size:11px;color:var(--muted)}
+.chart-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.chart-card h4{font-size:13.5px;margin-bottom:12px;font-weight:600}
+.content-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.content-row:last-child{border:none}
+.content-row .sc{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:19px;flex:none}
+.content-row .ti{flex:1;min-width:0}
+.content-row .ti b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;font-weight:500}
+.content-row .ti span{font-size:11.5px;color:var(--muted)}
+.content-row .earn{color:var(--money);font-weight:700}
+.payout-btn{width:100%;background:var(--panel);border:1px solid var(--money);color:var(--money);font-weight:700;padding:13px;border-radius:12px;margin-bottom:20px}
+
+/* ═══════════ ME / PROFILE ═══════════ */
+.me-head{display:flex;flex-direction:column;align-items:center;padding:26px 18px 8px;text-align:center}
+.me-head .av{width:86px;height:86px;border-radius:50%;display:grid;place-items:center;font-size:36px;margin-bottom:12px;border:3px solid transparent;background:linear-gradient(var(--panel-2),var(--panel-2)) padding-box,var(--grad) border-box}
+.me-head h2{font-size:19px;display:flex;align-items:center;gap:7px}
+.me-head .u{color:var(--muted);font-size:13.5px;margin:3px 0 10px}
+.me-stats{display:flex;gap:26px;justify-content:center;padding:6px 0 16px}
+.me-stats div{text-align:center}
+.me-stats b{font-family:'Unbounded';font-size:15px;display:block}
+.me-stats span{font-size:11px;color:var(--muted)}
+.list-card{margin:0 14px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.list-card .row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+.list-card .row:last-child{border:none}
+.list-card .row:hover{background:var(--panel-2)}
+.list-card .row .r-ic{width:34px;height:34px;border-radius:10px;background:var(--panel-2);display:grid;place-items:center;font-size:15px;flex:none}
+.list-card .row span.sub{margin-left:auto;color:var(--muted);font-size:12.5px}
+
+/* ═══════════ NAV / MODALS / TOAST ═══════════ */
+.bottomnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;
+  display:flex;justify-content:space-around;padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+  background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(16px);border-top:1px solid var(--line);z-index:40}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:19px;color:var(--muted);padding:6px 13px;border-radius:12px}
+.nav-btn span{font-size:10px;font-weight:500}
+.nav-btn.on{color:var(--text)}
+.nav-btn.on span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
+.nav-btn.create{background:var(--grad);color:#fff;border-radius:16px;margin-top:-16px;box-shadow:0 6px 18px rgba(255,61,138,.4)}
+.overlay{position:fixed;inset:0;background:rgba(8,5,14,.72);backdrop-filter:blur(8px);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:24px 24px 0 0;padding:26px 22px calc(26px + env(safe-area-inset-bottom));width:100%;max-width:520px;animation:slideup .3s ease;max-height:86vh;overflow-y:auto}
+@keyframes slideup{from{transform:translateY(40px);opacity:0}}
+.sheet h3{font-family:'Unbounded';font-size:16px;margin-bottom:8px}
+.sheet p{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:16px}
+.pay-row{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:11px 0;border-bottom:1px solid var(--line)}
+.pay-row:last-of-type{border:none;font-weight:700}
+.toggle-row{display:flex;gap:10px;margin-bottom:14px}
+.toggle-row button{flex:1;padding:11px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line);font-size:13px;font-weight:600;color:var(--muted)}
+.toggle-row button.on{background:var(--grad);color:#fff;border-color:transparent}
+.emoji-pick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.emoji-pick button{width:46px;height:46px;border-radius:12px;background:var(--panel-2);font-size:22px;border:2px solid transparent}
+.emoji-pick button.on{border-color:var(--accent)}
+.toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--panel);border:1px solid var(--line);
+  color:var(--text);padding:12px 20px;border-radius:999px;font-size:13.5px;box-shadow:var(--shadow);opacity:0;transition:all .3s;z-index:150;pointer-events:none;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ═══════════ LIVE STREAMING ═══════════ */
+.scene-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
+.live-banner{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,#FF4757,#8B5CF6);border-radius:16px;padding:12px 14px;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(255,71,87,.3)}
+.live-overlay{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;z-index:120;background:#0A0712;display:none;flex-direction:column;color:#fff}
+.live-overlay.open{display:flex}
+.live-stage{position:relative;flex:1;overflow:hidden;background:radial-gradient(120% 90% at 50% 10%,#2a1440 0%,#0A0712 70%)}
+#bcVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.live-fallback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:30px;text-align:center;color:#B9A8D6;font-size:13px;line-height:1.6}
+.viz{display:flex;gap:6px;align-items:flex-end;height:70px}
+.viz i{width:10px;border-radius:5px;background:var(--grad);animation:vz 1s ease-in-out infinite}
+.viz i:nth-child(2){animation-delay:.12s}.viz i:nth-child(3){animation-delay:.24s}.viz i:nth-child(4){animation-delay:.36s}
+.viz i:nth-child(5){animation-delay:.48s}.viz i:nth-child(6){animation-delay:.6s}.viz i:nth-child(7){animation-delay:.72s}
+.viz.big{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);height:120px}
+.viz.big i{width:14px}
+@keyframes vz{0%,100%{height:18%}50%{height:100%}}
+.live-top{position:absolute;top:0;left:0;right:0;display:flex;gap:8px;align-items:center;padding:16px 14px;background:linear-gradient(rgba(0,0,0,.55),transparent);z-index:5}
+.live-pill{background:rgba(0,0,0,.45);backdrop-filter:blur(6px);border-radius:999px;padding:6px 12px;font-size:12px;display:flex;gap:6px;align-items:center}
+.live-pill.red{background:var(--live);font-weight:700}
+.live-pill.gold{color:var(--money)}
+.live-end{margin-left:auto;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:7px 16px;font-size:12.5px;font-weight:700;color:#fff}
+.live-title-bar{position:absolute;top:62px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:rgba(255,255,255,.92);z-index:5}
+.live-title-bar span{background:rgba(0,0,0,.4);padding:4px 10px;border-radius:8px;font-size:11.5px}
+.lchat{position:absolute;left:14px;right:92px;bottom:78px;display:flex;flex-direction:column;gap:6px;max-height:38%;overflow:hidden;mask-image:linear-gradient(transparent,#000 25%);z-index:4}
+.lchat-msg{background:rgba(0,0,0,.42);backdrop-filter:blur(4px);border-radius:12px;padding:7px 12px;font-size:12.5px;line-height:1.35;align-self:flex-start;max-width:100%}
+.lchat-msg b{color:#D9B8FF;margin-right:6px}
+.lchat-msg.gold{border:1px solid var(--money);color:var(--money)}
+.live-bottom{position:absolute;left:0;right:0;bottom:0;display:flex;gap:8px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.6));z-index:6}
+.live-bottom input{flex:1;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:11px 16px;color:#fff;font-size:13.5px;outline:none}
+.live-bottom button{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);font-size:18px;flex:none}
+#floatLayer{position:absolute;right:22px;bottom:90px;width:60px;height:55%;pointer-events:none;z-index:5}
+.fl{position:absolute;bottom:0;left:50%;font-size:24px;animation:flup 2.6s ease-out forwards}
+@keyframes flup{0%{transform:translate(-50%,0) scale(.7);opacity:0}12%{opacity:1}100%{transform:translate(calc(-50% + 18px),-320px) scale(1.25);opacity:0}}
+.live-summary{margin:auto;width:min(420px,92%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;color:var(--text)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ AUTH SCREEN ═══════════ -->
+<div class="auth" id="authScreen">
+  <div class="logo-big">OverVibez</div>
+  <div class="tag">Social · Amplified</div>
+
+  <div class="auth-tabs">
+    <button id="tabLogin" class="on" onclick="authTab('login')">Log in</button>
+    <button id="tabSignup" onclick="authTab('signup')">Sign up</button>
+  </div>
+
+  <!-- LOGIN -->
+  <div id="loginForm">
+    <div class="field"><label>Email or username</label><input id="liUser" placeholder="you@example.com" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input id="liPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+    <button class="primary" onclick="doLogin()">Log in</button>
+    <div class="err" id="liErr"></div>
+    <div class="demo-row">
+      <button class="demo-btn" onclick="demoLogin('creator')"><b>✦ Demo Vibe Creator</b>Studio, publishing, earnings</button>
+      <button class="demo-btn" onclick="demoLogin('follower')"><b>♥ Demo Vibe Follower</b>Feed, wallet, unlocks</button>
+    </div>
+  </div>
+
+  <!-- SIGNUP -->
+  <div id="signupForm" class="hidden">
+    <div class="role-cards">
+      <div class="role-card on" id="rcCreator" onclick="pickRole('creator')">
+        <span class="ic">✦</span><b>Vibe Creator</b>
+        <span>Publish free &amp; paid content, go live, earn 85% of every sale</span>
+      </div>
+      <div class="role-card" id="rcFollower" onclick="pickRole('follower')">
+        <span class="ic">♥</span><b>Vibe Follower</b>
+        <span>Discover creators, subscribe, unlock exclusive drops</span>
+      </div>
+    </div>
+    <div class="field"><label>Username</label><input id="suUser" placeholder="lowercase, 3–24 chars" maxlength="24"></div>
+    <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="you@example.com"></div>
+    <div class="field"><label>Password</label><input id="suPass" type="password" placeholder="min 8 characters"></div>
+    <div class="field"><label>Date of birth (18+ required)</label><input id="suDob" type="date"></div>
+    <button class="primary" onclick="doSignup()">Continue to verification</button>
+    <div class="err" id="suErr"></div>
+  </div>
+
+  <!-- VERIFY STEP -->
+  <div id="verifyForm" class="hidden">
+    <div class="section-title" style="padding-left:0">Identity verification</div>
+    <p style="color:var(--muted);font-size:13.5px;line-height:1.6;margin-bottom:16px">
+      OverVibez is an 18+ platform. Verification is handled by a secure third-party provider — your ID is never shown publicly.
+      <b id="verifyRoleNote"></b>
+    </p>
+    <div class="verify-steps" id="verifySteps">
+      <div id="vs1">⬜ Date of birth confirmed</div>
+      <div id="vs2">⬜ Government ID check</div>
+      <div id="vs3">⬜ Liveness selfie match</div>
+    </div>
+    <button class="primary" id="verifyBtn" onclick="runVerify()">Start verification</button>
+  </div>
+
+  <div class="auth-note">By continuing you confirm you are 18+, and agree to the OverVibez Terms, Creator Agreement and Privacy Policy.<br>Demo build — no real payments or personal data are processed.</div>
+</div>
+
+<!-- ═══════════ APP SHELL ═══════════ -->
+<div class="app hidden" id="app">
+  <div class="topbar">
+    <div class="logo">OverVibez</div>
+    <div class="actions">
+      <span class="role-badge" id="roleBadge">CREATOR</span>
+      <button class="wallet-pill" id="walletPill" onclick="openTopup()" title="Wallet"><span class="c">◈</span><span id="walletAmt">$0.00</span></button>
+      <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">🌙</button>
+    </div>
+  </div>
+
+  <div id="page-home">
+    <div class="stories" id="storiesRow"></div>
+    <div class="feed" id="feed"></div>
+  </div>
+
+  <div id="page-explore" class="hidden">
+    <div class="section-title">Explore</div>
+    <div class="chiprow">
+      <button class="chip on">Trending</button><button class="chip">Music</button><button class="chip">Fitness</button>
+      <button class="chip">Art</button><button class="chip">Food</button><button class="chip">Photography</button>
+    </div>
+    <div class="explore-grid" id="exploreGrid"></div>
+  </div>
+
+  <div id="page-raffles" class="hidden">
+    <div class="section-title">Raffles &amp; Competitions</div>
+    <div class="section-sub">New draws every 72 hours. Winners announced publicly.</div>
+    <div id="raffleList"></div>
+    <div class="fair-note"><span>🛡️</span>
+      <span><b>Provably fair.</b> Every draw is generated from a public random beacon plus a pre-committed seed hash, verifiable after the draw. Paid random draws may be regulated as gambling in some regions — availability varies by location.</span></div>
+  </div>
+
+  <div id="page-messages" class="hidden">
+    <div id="threads-view">
+      <div class="section-title">Messages</div>
+      <div class="thread-list" id="threadList"></div>
+    </div>
+    <div id="chat-view" class="hidden">
+      <button class="back-btn" onclick="closeChat()">← Back to messages</button>
+      <div class="chat">
+        <div class="chat-msgs" id="chatMsgs"></div>
+        <div class="chat-input">
+          <input id="chatInput" placeholder="Message…" onkeydown="if(event.key==='Enter')sendMsg()">
+          <button onclick="sendMsg()" title="Send">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-studio" class="hidden">
+    <div class="section-title">Creator Studio</div>
+    <div class="dash" id="studioBody"></div>
+  </div>
+
+  <div id="page-me" class="hidden" ></div>
+
+  <nav class="bottomnav" id="bottomNav"></nav>
+</div>
+
+<!-- ═══════════ SHEETS ═══════════ -->
+<div class="overlay" id="payModal" onclick="if(event.target===this)closeModal('payModal')">
+  <div class="sheet">
+    <h3 id="payTitle">Unlock this post</h3>
+    <p id="paySub">One-time payment from your wallet. The creator keeps 85%.</p>
+    <div class="pay-row"><span>Price</span><span id="payPrice"></span></div>
+    <div class="pay-row"><span>To creator (85%)</span><span id="payCreator"></span></div>
+    <div class="pay-row"><span>Wallet after</span><span id="payAfter"></span></div>
+    <button class="primary" id="payConfirmBtn">Confirm payment</button>
+    <button class="ghost" onclick="closeModal('payModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="raffleModal" onclick="if(event.target===this)closeModal('raffleModal')">
+  <div class="sheet">
+    <h3>Buy raffle entries</h3>
+    <p>Entries are final. Seed hash <code id="raffleSeed"></code> — verify after the draw.</p>
+    <div class="pay-row"><span>Entries</span><span><button onclick="chgQty(-1)" style="padding:0 12px;font-size:17px">−</button><b id="qty">5</b><button onclick="chgQty(1)" style="padding:0 12px;font-size:17px">＋</button></span></div>
+    <div class="pay-row"><span>Total</span><span id="raffleTotal"></span></div>
+    <button class="primary" onclick="confirmRaffle()">Confirm purchase</button>
+    <button class="ghost" onclick="closeModal('raffleModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="createModal" onclick="if(event.target===this)closeModal('createModal')">
+  <div class="sheet">
+    <h3>Create</h3>
+    <div class="toggle-row">
+      <button id="cmPost" class="on" onclick="setCreateMode('post')">📝 New drop</button>
+      <button id="cmLive" onclick="setCreateMode('live')">🔴 Go live</button>
+    </div>
+    <div id="createPostSection">
+      <p>Publish to your followers — free, or set a price and keep 85%.</p>
+      <div class="toggle-row">
+        <button id="ctFree" class="on" onclick="setPostType('free')">Free post</button>
+        <button id="ctPaid" onclick="setPostType('paid')">Paid post 🔒</button>
+      </div>
+      <div class="field hidden" id="priceField"><label>Price (USD)</label><input id="postPrice" type="number" min="0.99" max="499" step="0.5" value="3.00"></div>
+      <div class="field"><label>Caption</label><textarea id="postCap" rows="3" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none" placeholder="What are you dropping?"></textarea></div>
+      <div class="field"><label>Attach photo or video (optional)</label><input id="postMedia" type="file" accept="image/*,video/*" style="padding:10px"></div>
+      <label style="font-size:12px;color:var(--muted)">Cover (used if no media attached)</label>
+      <div class="emoji-pick" id="emojiPick"></div>
+      <button class="primary" onclick="publishPost()">Publish</button>
+    </div>
+    <div id="createLiveSection" class="hidden">
+      <p>Start broadcasting — free for everyone, or charge for entry and keep 85% of every ticket and tip.</p>
+      <div class="field"><label>Stream title</label><input id="liveTitle" placeholder="Friday rooftop session 🎧"></div>
+      <div class="toggle-row">
+        <button id="leFree" class="on" onclick="setLiveEntry('free')">Free entry</button>
+        <button id="lePaid" onclick="setLiveEntry('paid')">Paid entry 🎟</button>
+      </div>
+      <div class="field hidden" id="livePriceField"><label>Entry price (USD)</label><input id="livePrice" type="number" min="0.99" max="99" step="0.5" value="4.99"></div>
+      <button class="primary" onclick="startLive()">Start broadcasting</button>
+    </div>
+    <button class="ghost" onclick="closeModal('createModal')">Cancel</button>
+  </div>
+</div>
+
+<!-- ═══════════ LIVE: BROADCASTER ═══════════ -->
+<div class="live-overlay" id="liveBroadcast">
+  <div id="bcStage" class="live-stage">
+    <video id="bcVideo" autoplay muted playsinline></video>
+    <div id="bcFallback" class="live-fallback hidden">
+      <div class="viz"><i></i><i></i><i></i><i></i><i></i></div>
+      <p>Camera unavailable in this preview.<br>Open the file directly in your browser and allow camera + mic access to broadcast with real video.</p>
+    </div>
+    <div class="live-top">
+      <span class="live-pill red">● LIVE <b id="bcTime">00:00</b></span>
+      <span class="live-pill">👁 <b id="bcViewers">1</b></span>
+      <span class="live-pill gold">◈ <b id="bcEarn">$0.00</b></span>
+      <button class="live-end" onclick="endLive()">End</button>
+    </div>
+    <div class="live-title-bar"><b id="bcTitle"></b><span id="bcPrice"></span></div>
+    <div class="lchat" id="bcChat"></div>
+  </div>
+  <div id="bcSummary" class="live-summary hidden"></div>
+</div>
+
+<!-- ═══════════ LIVE: VIEWER ═══════════ -->
+<div class="live-overlay" id="liveViewer">
+  <div class="live-stage">
+    <div class="viz big"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="live-top">
+      <span class="live-pill red">● LIVE</span>
+      <span class="live-pill">👁 <b id="vwViewers">1,204</b></span>
+      <button class="live-end" onclick="leaveViewer()">Leave</button>
+    </div>
+    <div class="live-title-bar"><div style="display:flex;align-items:center;gap:9px"><div id="vwAv" class="av a1" style="width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:15px">🎧</div><b id="vwName">nova.mixes</b></div><span>Paid stream · creator keeps 85%</span></div>
+    <div id="floatLayer"></div>
+    <div class="lchat" id="vwChat"></div>
+    <div class="live-bottom">
+      <input id="vwInput" placeholder="Say something…" onkeydown="if(event.key==='Enter')vwSend()">
+      <button onclick="react('❤️')" title="React">❤️</button>
+      <button onclick="react('🔥')" title="React">🔥</button>
+      <button onclick="vwTip()" title="Tip $2">💰</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="topupModal" onclick="if(event.target===this)closeModal('topupModal')">
+  <div class="sheet">
+    <h3>Wallet</h3>
+    <p>Demo wallet — in production this connects to the payment gateway (card / Apple Pay / Google Pay).</p>
+    <div class="pay-row"><span>Current balance</span><span id="topupBal"></span></div>
+    <button class="primary" onclick="topUp(2500)">Add $25.00</button>
+    <button class="primary" style="margin-top:10px;filter:saturate(.7)" onclick="topUp(10000)">Add $100.00</button>
+    <button class="ghost" onclick="closeModal('topupModal')">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═════════════════════════════════════════════════════════════
+   DATA LAYER — swap `LocalAdapter` for `SupabaseAdapter` later.
+   Every mutation in the app goes through DB.* so wiring Supabase
+   is a drop-in change (see overvibez_schema.sql for the backend).
+   ─────────────────────────────────────────────────────────────
+   // import { createClient } from '@supabase/supabase-js'
+   // const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
+   // signUp   → supabase.auth.signUp({email, password, options:{data:{username, account_type}}})
+   // unlock   → supabase.rpc('purchase_post', {p_post_id})
+   // subscribe→ supabase.rpc('subscribe_to_creator', {p_creator})
+   // raffle   → supabase.rpc('buy_raffle_entries', {p_raffle, p_qty})
+   // realtime → supabase.channel('messages').on('postgres_changes', ...)
+   ═════════════════════════════════════════════════════════════ */
+
+const FEE = 0.15; // platform share — creators keep 85%
+const $$ = c => '$' + (c/100).toFixed(2);
+
+const store = {
+  users: [
+    {id:'u1',username:'nova.mixes',name:'Nova',role:'creator',av:'a1',em:'🎧',verified:true,subPrice:499,followers:12400,earnings:421860,wallet:0,live:true,bio:'DJ · rooftop sets · weekly paid mixes'},
+    {id:'u2',username:'flexwithkai',name:'Kai',role:'creator',av:'a2',em:'🏋️',verified:false,subPrice:799,followers:8300,earnings:112040,wallet:0,bio:'Hypertrophy coach'},
+    {id:'u3',username:'inkbyluna',name:'Luna',role:'creator',av:'a3',em:'🎨',verified:true,subPrice:399,followers:21050,earnings:389220,wallet:0,bio:'Tattoo artist · process videos'},
+    {id:'u4',username:'chefmarrow',name:'Marrow',role:'creator',av:'a4',em:'🍳',verified:false,subPrice:299,followers:4400,earnings:23100,wallet:0,bio:'Fire food, zero gatekeeping'},
+    {id:'u5',username:'reelriya',name:'Riya',role:'creator',av:'a5',em:'📸',verified:true,subPrice:599,followers:15900,earnings:274400,wallet:0,bio:'Editorial photographer'},
+    {id:'f1',username:'rileyvibes',name:'Riley',role:'follower',av:'a6',em:'🫧',verified:false,wallet:5000,earnings:0,followers:0,bio:'Here for the drops'}
+  ],
+  posts: [
+    {id:'p1',by:'u1',cap:'Sunset rooftop set from Saturday. Full 90-min mix drops tonight 🔥',scene:'🎛️',paid:false,likes:2841,earned:0,ts:'2h'},
+    {id:'p2',by:'u3',cap:'Process video: full back-piece from sketch to final linework. 22 minutes.',scene:'🖋️',paid:true,price:300,likes:967,earned:91200,ts:'5h'},
+    {id:'p3',by:'u2',cap:'Free week of the hypertrophy program. Paid subs get the full 12-week plan + form checks.',scene:'💪',paid:false,likes:1532,earned:0,ts:'8h'},
+    {id:'p4',by:'u1',cap:'Full summer mix — 90 minutes, tracklist included 🎧',scene:'🌇',paid:true,price:300,likes:1204,earned:68800,ts:'1d'},
+    {id:'p5',by:'u5',cap:'Full editorial shoot — 42 RAW edits, lighting breakdown, preset pack.',scene:'🌆',paid:true,price:500,likes:684,earned:45500,ts:'1d'}
+  ],
+  raffles: [
+    {id:'r1',title:'Creator Fund Drop',host:'OverVibez',prize:'$2,500',price:200,entries:8412,players:3180,seed:'a91f…c2e7',ends:Date.now()+138720000},
+    {id:'r2',title:'Studio Gear Giveaway',host:'nova.mixes',prize:'DJ Rig',price:100,entries:2904,players:1022,seed:'7bd3…91aa',ends:Date.now()+195060000}
+  ],
+  likes:{}, unlocks:{}, subs:{}, session:null,
+  threads:[
+    {id:'t1',withU:'u1',msgs:[{me:false,t:'hey! saw you joined my last stream 🎧'},{me:true,t:'the set was unreal. that transition at the end??',rr:'Read ✓✓'},{me:false,t:'haha thank you!! full mix is up as a paid post 💜'}]},
+    {id:'t2',withU:'u3',msgs:[{me:false,t:'Commission slots open Friday 👀'}]}
+  ]
+};
+const user = id => store.users.find(u=>u.id===id);
+const me = () => store.session ? user(store.session) : null;
+
+/* ═══════════ AUTH ═══════════ */
+let signupRole='creator', pendingUser=null;
+function authTab(t){
+  document.getElementById('tabLogin').classList.toggle('on',t==='login');
+  document.getElementById('tabSignup').classList.toggle('on',t==='signup');
+  document.getElementById('loginForm').classList.toggle('hidden',t!=='login');
+  document.getElementById('signupForm').classList.toggle('hidden',t!=='signup');
+  document.getElementById('verifyForm').classList.add('hidden');
+}
+function pickRole(r){
+  signupRole=r;
+  document.getElementById('rcCreator').classList.toggle('on',r==='creator');
+  document.getElementById('rcFollower').classList.toggle('on',r==='follower');
+}
+function doSignup(){
+  const err=document.getElementById('suErr');
+  const un=document.getElementById('suUser').value.trim().toLowerCase();
+  const em=document.getElementById('suEmail').value.trim();
+  const pw=document.getElementById('suPass').value;
+  const dob=document.getElementById('suDob').value;
+  if(!/^[a-z0-9_.]{3,24}$/.test(un)) return err.textContent='Username: 3–24 chars, lowercase letters, numbers, . or _';
+  if(!em.includes('@')) return err.textContent='Enter a valid email.';
+  if(pw.length<8) return err.textContent='Password must be at least 8 characters.';
+  if(!dob) return err.textContent='Date of birth is required.';
+  const age=(Date.now()-new Date(dob).getTime())/3.15576e10;
+  if(age<18) return err.textContent='You must be 18 or older to join OverVibez.';
+  if(store.users.some(u=>u.username===un)) return err.textContent='That username is taken.';
+  err.textContent='';
+  pendingUser={id:'u'+Math.random().toString(36).slice(2,8),username:un,name:un,role:signupRole,
+    av:'a'+(1+Math.floor(Math.random()*6)),em:signupRole==='creator'?'✦':'🫧',verified:false,
+    subPrice:signupRole==='creator'?499:null,wallet:signupRole==='follower'?5000:0,earnings:0,followers:0,bio:''};
+  document.getElementById('signupForm').classList.add('hidden');
+  document.getElementById('verifyForm').classList.remove('hidden');
+  document.getElementById('verifyRoleNote').textContent = signupRole==='creator'
+    ? ' As a Vibe Creator, ID verification is mandatory before you can publish or receive payouts.'
+    : ' Followers verify age to access 18+ content.';
+}
+function runVerify(){
+  const btn=document.getElementById('verifyBtn'); btn.disabled=true; btn.textContent='Verifying…';
+  const steps=['vs1','vs2','vs3'], labels=['Date of birth confirmed','Government ID check passed','Liveness selfie matched'];
+  steps.forEach((s,i)=>setTimeout(()=>{
+    const el=document.getElementById(s); el.textContent='✅ '+labels[i]; el.classList.add('done');
+    if(i===2) setTimeout(()=>{ store.users.push(pendingUser); enterApp(pendingUser.id);
+      toast(pendingUser.role==='creator'?'Verified ✅ Welcome, Vibe Creator — your Studio is ready':'Verified ✅ Welcome to OverVibez'); },600);
+  },(i+1)*900));
+}
+function doLogin(){
+  const q=document.getElementById('liUser').value.trim().toLowerCase();
+  const u=store.users.find(x=>x.username===q);
+  if(!u||!document.getElementById('liPass').value) return document.getElementById('liErr').textContent='Account not found — try a demo login below.';
+  enterApp(u.id);
+}
+function demoLogin(role){ enterApp(role==='creator'?'u1':'f1'); toast(role==='creator'?'Logged in as nova.mixes ✦':'Logged in as rileyvibes ♥'); }
+function logOut(){ store.session=null; document.getElementById('app').classList.add('hidden'); document.getElementById('authScreen').classList.remove('hidden'); }
+
+/* ═══════════ APP SHELL ═══════════ */
+function enterApp(uid){
+  store.session=uid;
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  renderShell(); go('home');
+}
+function renderShell(){
+  const u=me(), isC=u.role==='creator';
+  const badge=document.getElementById('roleBadge');
+  badge.textContent=isC?'✦ CREATOR':'♥ FOLLOWER'; badge.classList.toggle('f',!isC);
+  document.getElementById('walletPill').style.display=isC?'none':'flex';
+  updateWallet();
+  document.getElementById('bottomNav').innerHTML = isC ? `
+    <button class="nav-btn on" data-page="home" onclick="go('home',this)">⌂<span>Home</span></button>
+    <button class="nav-btn" data-page="studio" onclick="go('studio',this)">◔<span>Studio</span></button>
+    <button class="nav-btn create" onclick="openCreate()">＋</button>
+    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<span>Chats</span></button>
+    <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>` : `
+    <button class="nav-btn on" data-page="home" onclick="go('home',this)">⌂<span>Home</span></button>
+    <button class="nav-btn" data-page="explore" onclick="go('explore',this)">✦<span>Explore</span></button>
+    <button class="nav-btn" data-page="raffles" onclick="go('raffles',this)">🎟<span>Raffles</span></button>
+    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<span>Chats</span></button>
+    <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>`;
+}
+function go(page,btn){
+  ['home','explore','raffles','messages','studio','me'].forEach(p=>{
+    const el=document.getElementById('page-'+p); if(el) el.classList.toggle('hidden',p!==page);
+  });
+  document.querySelectorAll('.nav-btn[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
+  if(btn) btn.classList.add('on');
+  if(page==='home'){renderStories();renderFeed()}
+  if(page==='explore')renderExplore();
+  if(page==='raffles')renderRaffles();
+  if(page==='messages')renderThreads();
+  if(page==='studio')renderStudio();
+  if(page==='me')renderMe();
+  window.scrollTo({top:0});
+}
+function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt').textContent=$$(u.wallet); }
+
+/* ═══════════ HOME ═══════════ */
+function renderStories(){
+  const creators=store.users.filter(u=>u.role==='creator');
+  document.getElementById('storiesRow').innerHTML=creators.map((c,i)=>`
+    <div class="story ${i>2?'seen':''}" onclick="${c.live?`joinLive('${c.id}')`:`toast('Viewing story')`}">
+      <div class="ring"><div class="av ${c.av}">${c.em}</div>${c.live?'<span class="live-tag">LIVE</span>':''}</div>
+      <span class="name">${c.username}</span></div>`).join('');
+}
+function canView(p){
+  const u=me();
+  return !p.paid || p.by===u.id || store.unlocks[u.id+p.id] || store.subs[u.id+p.by];
+}
+function renderFeed(){
+  const u=me();
+  const liveC=store.users.find(x=>x.live&&x.id!==u.id);
+  const banner=liveC?`<div class="live-banner" onclick="joinLive('${liveC.id}')">
+      <div class="av ${liveC.av}" style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px">${liveC.em}</div>
+      <div style="flex:1"><b style="font-size:14px">${liveC.username} is live</b><div style="font-size:12px;opacity:.9">Rooftop set · ${$$(499)} entry · tap to join</div></div>
+      <span class="live-tag" style="position:static;transform:none">LIVE</span></div>`:'';
+  document.getElementById('feed').innerHTML=banner+[...store.posts].map(p=>{
+    const c=user(p.by), mine=p.by===u.id, open=canView(p), liked=store.likes[u.id+p.id];
+    return `<article class="card">
+    <div class="card-head">
+      <div class="av ${c.av}">${c.em}</div>
+      <div class="who"><b>${c.username} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}</span></div>
+      ${mine?'<span class="own-tag">Your post</span>':
+        `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?'Subscribed':'Subscribe '+$$(c.subPrice)}</button>`}
+    </div>
+    <div class="media ${open?'':'locked'}">
+      ${p.mediaUrl&&open?(p.mediaKind==='video'
+        ?`<video class="scene-media" src="${p.mediaUrl}" controls playsinline preload="metadata"></video>`
+        :`<img class="scene-media" src="${p.mediaUrl}" alt="">`)
+        :`<div class="scene ${c.av}">${p.scene}</div>`}
+      ${open?'':`<div class="lockglass"><div class="lock-ic">🔒</div>
+        <button class="unlock-btn" onclick="startUnlock('${p.id}')">Unlock for <span class="price">${$$(p.price)}</span></button>
+        <span class="lock-note">or subscribe · creator keeps 85%</span></div>`}
+    </div>
+    <div class="card-actions">
+      <button class="act ${liked?'liked':''}" onclick="likePost('${p.id}')">${liked?'♥':'♡'} ${p.likes.toLocaleString()}</button>
+      <button class="act" onclick="toast('Comments open in production build')">💬</button>
+      <button class="act" onclick="toast('Share link copied')">↗</button>
+      ${mine?`<span class="act tip">earned ${$$(Math.round(p.earned*(1-FEE)))}</span>`:
+        `<button class="act tip" onclick="tip('${p.by}','${p.id}')">💰 Tip $2</button>`}
+    </div>
+    <div class="card-body"><div class="cap"><b>${c.username}</b>${p.cap}</div></div>
+  </article>`}).join('');
+}
+function likePost(id){ const u=me(),k=u.id+id,p=store.posts.find(x=>x.id===id);
+  store.likes[k]=!store.likes[k]; p.likes+=store.likes[k]?1:-1; renderFeed(); }
+
+/* ═══════════ PAYMENTS ═══════════ */
+function spend(cents){
+  const u=me();
+  if(u.role==='creator'){ toast('Creators demo account has no wallet — log in as a follower to buy'); return false; }
+  if(u.wallet<cents){ openTopup(); toast('Not enough balance — top up your wallet'); return false; }
+  u.wallet-=cents; updateWallet(); return true;
+}
+function credit(creatorId,gross,postId){
+  const c=user(creatorId); c.earnings+=Math.round(gross*(1-FEE));
+  if(postId){ const p=store.posts.find(x=>x.id===postId); if(p) p.earned+=gross; }
+}
+function startUnlock(pid){
+  const p=store.posts.find(x=>x.id===pid), u=me();
+  document.getElementById('payTitle').textContent='Unlock this post';
+  document.getElementById('paySub').textContent='One-time payment from your wallet. The creator keeps 85%.';
+  document.getElementById('payPrice').textContent=$$(p.price);
+  document.getElementById('payCreator').textContent=$$(Math.round(p.price*(1-FEE)));
+  document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-p.price));
+  document.getElementById('payConfirmBtn').onclick=()=>{
+    if(!spend(p.price))return closeModal('payModal');
+    credit(p.by,p.price,pid); store.unlocks[u.id+pid]=true;
+    closeModal('payModal'); renderFeed();
+    toast(`Unlocked — ${user(p.by).username} earned ${$$(Math.round(p.price*(1-FEE)))} 💜`);
+  };
+  openModal('payModal');
+}
+function subscribe(cid){
+  const u=me(),c=user(cid),k=u.id+cid;
+  if(store.subs[k]){ store.subs[k]=false; renderFeed(); return toast('Unsubscribed from '+c.username); }
+  document.getElementById('payTitle').textContent='Subscribe to '+c.username;
+  document.getElementById('paySub').textContent='Monthly subscription unlocks all their paid posts. Cancel anytime.';
+  document.getElementById('payPrice').textContent=$$(c.subPrice)+' / month';
+  document.getElementById('payCreator').textContent=$$(Math.round(c.subPrice*(1-FEE)));
+  document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-c.subPrice));
+  document.getElementById('payConfirmBtn').onclick=()=>{
+    if(!spend(c.subPrice))return closeModal('payModal');
+    credit(cid,c.subPrice); store.subs[k]=true; c.followers++;
+    closeModal('payModal'); renderFeed();
+    toast(`Subscribed to ${c.username} ✦ all paid posts unlocked`);
+  };
+  openModal('payModal');
+}
+function tip(cid,pid){ if(!spend(200))return; credit(cid,200,pid); toast(`Tipped ${user(cid).username} $2.00 — they keep $1.70 ✨`); }
+function openTopup(){ const u=me(); if(u.role==='creator')return; document.getElementById('topupBal').textContent=$$(u.wallet); openModal('topupModal'); }
+function topUp(c){ me().wallet+=c; updateWallet(); document.getElementById('topupBal').textContent=$$(me().wallet); toast('Added '+$$(c)+' to wallet'); }
+
+/* ═══════════ EXPLORE ═══════════ */
+function renderExplore(){
+  const scenes=[['a1','🎧',0,'big'],['a3','🖋️',300],['a4','🍜',0],['a2','🏄',0],['a5','📸',500],['a4','🌅',0],['a2','🧘',0],['a3','🖌️',0,'big'],['a1','🎹',200],['a5','🎬',0]];
+  document.getElementById('exploreGrid').innerHTML=scenes.map(([av,em,pr,big])=>
+    `<div class="tile ${big||''} ${av}" onclick="toast('${pr?'Paid post — subscribe or unlock to view':'Opening post'}')">${em}${pr?`<span class="t-lock">🔒 ${$$(pr)}</span>`:''}</div>`).join('');
+}
+
+/* ═══════════ RAFFLES ═══════════ */
+let activeRaffle=null,qty=5;
+function renderRaffles(){
+  document.getElementById('raffleList').innerHTML=store.raffles.map(r=>{
+    const left=r.ends-Date.now(), d=Math.floor(left/864e5), h=Math.floor(left%864e5/36e5), m=Math.floor(left%36e5/6e4), s=Math.floor(left%6e4/1e3);
+    return `<div class="raffle-card">
+    <div class="raffle-top"><div><h3>${r.title}</h3><span style="font-size:12px;color:var(--muted)">hosted by ${r.host}</span></div><span class="prize">${r.prize}</span></div>
+    <div class="countdown">
+      <div class="cd-unit"><b>${String(d).padStart(2,'0')}</b><span>days</span></div>
+      <div class="cd-unit"><b>${String(h).padStart(2,'0')}</b><span>hrs</span></div>
+      <div class="cd-unit"><b>${String(m).padStart(2,'0')}</b><span>min</span></div>
+      <div class="cd-unit"><b>${String(s).padStart(2,'0')}</b><span>sec</span></div></div>
+    <div class="raffle-meta"><span>🎟️ ${r.entries.toLocaleString()} entries</span><span>💵 ${$$(r.price)} / entry</span><span>👥 ${r.players.toLocaleString()} players</span></div>
+    <button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries — ${$$(r.price)} each</button></div>`;
+  }).join('');
+}
+setInterval(()=>{ if(!document.getElementById('page-raffles').classList.contains('hidden')) renderRaffles(); },1000);
+function openRaffle(id){ activeRaffle=store.raffles.find(r=>r.id===id); qty=5;
+  document.getElementById('raffleSeed').textContent=activeRaffle.seed;
+  document.getElementById('qty').textContent=qty;
+  document.getElementById('raffleTotal').textContent=$$(qty*activeRaffle.price);
+  openModal('raffleModal'); }
+function chgQty(d){ qty=Math.max(1,qty+d); document.getElementById('qty').textContent=qty;
+  document.getElementById('raffleTotal').textContent=$$(qty*activeRaffle.price); }
+function confirmRaffle(){ if(!spend(qty*activeRaffle.price))return closeModal('raffleModal');
+  activeRaffle.entries+=qty; closeModal('raffleModal'); toast(`${qty} entries confirmed 🎟️ Good luck!`); }
+
+/* ═══════════ CHAT ═══════════ */
+let activeThread=null;
+function renderThreads(){
+  document.getElementById('threadList').innerHTML=store.threads.map(t=>{
+    const c=user(t.withU),last=t.msgs[t.msgs.length-1];
+    return `<div class="thread" onclick="openChat('${t.id}')">
+      <div class="av ${c.av}">${c.em}</div>
+      <div class="tx"><b>${c.username} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${last.me?'You: ':''}${last.t}</span></div>
+      <div class="meta">now</div></div>`;
+  }).join('');
+}
+function openChat(id){
+  activeThread=store.threads.find(t=>t.id===id);
+  document.getElementById('threads-view').classList.add('hidden');
+  document.getElementById('chat-view').classList.remove('hidden');
+  const m=document.getElementById('chatMsgs');
+  m.innerHTML=activeThread.msgs.map(x=>`<div class="bubble ${x.me?'me':'them'}">${x.t}${x.rr?`<span class="rr">${x.rr}</span>`:''}</div>`).join('')
+    +'<div class="typing hidden" id="typingDots"><i></i><i></i><i></i></div>';
+  document.getElementById('chatInput').placeholder='Message '+user(activeThread.withU).username+'…';
+  m.scrollTop=m.scrollHeight;
+}
+function closeChat(){ document.getElementById('chat-view').classList.add('hidden'); document.getElementById('threads-view').classList.remove('hidden'); renderThreads(); }
+function sendMsg(){
+  const inp=document.getElementById('chatInput'); if(!inp.value.trim()||!activeThread)return;
+  const m=document.getElementById('chatMsgs'),typing=document.getElementById('typingDots');
+  activeThread.msgs.push({me:true,t:inp.value});
+  const b=document.createElement('div'); b.className='bubble me'; b.innerHTML=inp.value+'<span class="rr">Delivered ✓</span>';
+  m.insertBefore(b,typing); inp.value=''; m.scrollTop=m.scrollHeight;
+  setTimeout(()=>{b.querySelector('.rr').textContent='Read ✓✓'; typing.classList.remove('hidden'); m.scrollTop=m.scrollHeight;},1100);
+  setTimeout(()=>{ typing.classList.add('hidden');
+    const reply={me:false,t:'love that — catch you at the next stream? 💜'}; activeThread.msgs.push(reply);
+    const r=document.createElement('div'); r.className='bubble them'; r.textContent=reply.t;
+    m.insertBefore(r,typing); m.scrollTop=m.scrollHeight; },2600);
+}
+
+/* ═══════════ STUDIO (creators) ═══════════ */
+function renderStudio(){
+  const u=me();
+  if(u.role!=='creator'){ document.getElementById('studioBody').innerHTML='<p style="color:var(--muted);padding:10px 4px">Studio is for Vibe Creator accounts.</p>'; return; }
+  const myPosts=store.posts.filter(p=>p.by===u.id);
+  const gross=Math.round(u.earnings/(1-FEE));
+  document.getElementById('studioBody').innerHTML=`
+    <div class="earn-hero">
+      <div class="lbl">Available to withdraw</div>
+      <div class="amt">${$$(u.earnings)}</div>
+      <div class="split">You keep 85% · platform fee ${$$(Math.round(gross*FEE))} · gross ${$$(gross)}</div>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><b>${(u.followers/1000).toFixed(1)}k</b><span>Followers</span></div>
+      <div class="stat"><b>${$$(u.subPrice)}</b><span>Sub price</span></div>
+      <div class="stat"><b>${myPosts.length}</b><span>Drops</span></div>
+    </div>
+    <div class="chart-card"><h4>Earnings — last 8 weeks</h4>
+      <svg viewBox="0 0 320 90" width="100%" height="90" role="img" aria-label="Earnings trend, rising">
+        <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FF3D8A" stop-opacity=".45"/><stop offset="1" stop-color="#8B5CF6" stop-opacity="0"/></linearGradient></defs>
+        <path d="M0,70 L45,62 L90,66 L135,48 L180,52 L225,34 L270,28 L320,12 L320,90 L0,90 Z" fill="url(#g)"/>
+        <path d="M0,70 L45,62 L90,66 L135,48 L180,52 L225,34 L270,28 L320,12" fill="none" stroke="#FF3D8A" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+    <div class="chart-card"><h4>Your content</h4>
+      ${myPosts.length?myPosts.map(p=>`
+        <div class="content-row"><div class="sc ${u.av}">${p.scene}</div>
+          <div class="ti"><b>${p.cap}</b><span>${p.paid?'🔒 Paid · '+$$(p.price):'Free'} · ${p.likes.toLocaleString()} likes</span></div>
+          <span class="earn">${$$(Math.round(p.earned*(1-FEE)))}</span></div>`).join('')
+        :'<p style="color:var(--muted);font-size:13px">No drops yet — hit ＋ to publish your first post.</p>'}
+    </div>
+    <button class="payout-btn" onclick="toast('Payout of ${$$(u.earnings)} scheduled — arrives in 1–2 days 💸')">Withdraw ${$$(u.earnings)} to bank</button>`;
+}
+
+/* ═══════════ CREATE (creators) ═══════════ */
+let postType='free', pickedEmoji='🎛️';
+const emojis=['🎛️','🎧','🌇','🏋️','🎨','📸','🍳','🌊','🔥','🎹'];
+function openCreate(){
+  setCreateMode('post');
+  document.getElementById('emojiPick').innerHTML=emojis.map(e=>
+    `<button class="${e===pickedEmoji?'on':''}" onclick="pickEmoji('${e}',this)">${e}</button>`).join('');
+  openModal('createModal');
+}
+function pickEmoji(e,btn){ pickedEmoji=e; document.querySelectorAll('#emojiPick button').forEach(b=>b.classList.toggle('on',b===btn)); }
+function setPostType(t){ postType=t;
+  document.getElementById('ctFree').classList.toggle('on',t==='free');
+  document.getElementById('ctPaid').classList.toggle('on',t==='paid');
+  document.getElementById('priceField').classList.toggle('hidden',t==='free'); }
+function publishPost(){
+  const u=me(), cap=document.getElementById('postCap').value.trim();
+  if(!cap) return toast('Add a caption first');
+  const price=Math.round(parseFloat(document.getElementById('postPrice').value||'3')*100);
+  const f=document.getElementById('postMedia').files[0];
+  let mediaUrl=null,mediaKind=null;
+  if(f){ mediaUrl=URL.createObjectURL(f); mediaKind=f.type.startsWith('video')?'video':'image'; }
+  store.posts.unshift({id:'p'+Math.random().toString(36).slice(2,8),by:u.id,cap,scene:pickedEmoji,mediaUrl,mediaKind,
+    paid:postType==='paid',price:postType==='paid'?price:0,likes:0,earned:0,ts:'now'});
+  document.getElementById('postCap').value=''; document.getElementById('postMedia').value='';
+  closeModal('createModal'); go('home');
+  toast(postType==='paid'?`Paid drop published 🔒 ${$$(price)} — you keep ${$$(Math.round(price*(1-FEE)))} per unlock`:'Post published ✨');
+}
+
+/* ═══════════ GO LIVE — broadcaster ═══════════
+   Demo engine: real camera capture in-browser; viewer distribution in
+   production plugs into LiveKit / Mux / Cloudflare Stream here.       */
+let createMode='post', liveEntry='free', liveTimer=null, liveMedia=null, liveState=null;
+function setCreateMode(m){ createMode=m;
+  document.getElementById('cmPost').classList.toggle('on',m==='post');
+  document.getElementById('cmLive').classList.toggle('on',m==='live');
+  document.getElementById('createPostSection').classList.toggle('hidden',m!=='post');
+  document.getElementById('createLiveSection').classList.toggle('hidden',m!=='live'); }
+function setLiveEntry(t){ liveEntry=t;
+  document.getElementById('leFree').classList.toggle('on',t==='free');
+  document.getElementById('lePaid').classList.toggle('on',t==='paid');
+  document.getElementById('livePriceField').classList.toggle('hidden',t==='free'); }
+async function startLive(){
+  const u=me();
+  if(u.role!=='creator') return toast('Going live is a Vibe Creator feature ✦');
+  const title=document.getElementById('liveTitle').value.trim()||'Live with '+u.username;
+  const price=liveEntry==='paid'?Math.round(parseFloat(document.getElementById('livePrice').value||'4.99')*100):0;
+  closeModal('createModal');
+  liveState={title,price,viewers:1,peak:1,gross:0,start:Date.now(),ended:false};
+  u.live=true;
+  document.getElementById('bcTitle').textContent=title;
+  document.getElementById('bcPrice').textContent=price?$$(price)+' entry · you keep 85%':'Free entry';
+  document.getElementById('bcChat').innerHTML='';
+  document.getElementById('bcSummary').classList.add('hidden');
+  document.getElementById('bcStage').classList.remove('hidden');
+  document.getElementById('liveBroadcast').classList.add('open');
+  try{
+    liveMedia=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:true});
+    const v=document.getElementById('bcVideo'); v.srcObject=liveMedia; v.classList.remove('hidden'); await v.play();
+    document.getElementById('bcFallback').classList.add('hidden');
+  }catch(e){
+    document.getElementById('bcVideo').classList.add('hidden');
+    document.getElementById('bcFallback').classList.remove('hidden');
+  }
+  const names=['zoe_afterdark','mixhead22','tk.wav','sunsetjunkie','vibecheck_ana','lofi_dan','rooftopritz'];
+  const lines=['this is 🔥🔥','been waiting all week','sound is crisp tonight','drop the tracklist pls','LETS GOOO','tuning in from Berlin 🇩🇪','best money I spent today'];
+  liveTimer=setInterval(()=>{
+    if(!liveState||liveState.ended)return;
+    const join=Math.random()<0.75?Math.ceil(Math.random()*3):0;
+    if(join){ liveState.viewers+=join; liveState.peak=Math.max(liveState.peak,liveState.viewers);
+      if(liveState.price){ const g=join*liveState.price; liveState.gross+=g; me().earnings+=Math.round(g*(1-FEE)); } }
+    if(Math.random()<0.15&&liveState.viewers>3) liveState.viewers--;
+    if(Math.random()<0.7) bcChatMsg(names[Math.floor(Math.random()*names.length)],lines[Math.floor(Math.random()*lines.length)]);
+    if(Math.random()<0.12){ const t=200*Math.ceil(Math.random()*3); liveState.gross+=t; me().earnings+=Math.round(t*(1-FEE));
+      bcChatMsg(names[Math.floor(Math.random()*names.length)],'tipped '+$$(t)+' 💰',true); }
+    const el=Date.now()-liveState.start, mm=String(Math.floor(el/60000)).padStart(2,'0'), ss=String(Math.floor(el/1000%60)).padStart(2,'0');
+    document.getElementById('bcTime').textContent=mm+':'+ss;
+    document.getElementById('bcViewers').textContent=liveState.viewers.toLocaleString();
+    document.getElementById('bcEarn').textContent=$$(Math.round(liveState.gross*(1-FEE)));
+  },1600);
+  toast('You are LIVE ✦');
+}
+function bcChatMsg(name,text,gold){
+  const c=document.getElementById('bcChat');
+  const d=document.createElement('div'); d.className='lchat-msg'+(gold?' gold':''); d.innerHTML=`<b>${name}</b> ${text}`;
+  c.appendChild(d); while(c.children.length>7)c.removeChild(c.firstChild);
+}
+function endLive(){
+  if(!liveState)return; liveState.ended=true; clearInterval(liveTimer);
+  if(liveMedia){liveMedia.getTracks().forEach(t=>t.stop());liveMedia=null;}
+  me().live=false;
+  const mins=Math.max(1,Math.round((Date.now()-liveState.start)/60000));
+  document.getElementById('bcStage').classList.add('hidden');
+  const s=document.getElementById('bcSummary'); s.classList.remove('hidden');
+  s.innerHTML=`
+    <h3 style="font-family:'Unbounded';font-size:17px;margin-bottom:6px">Stream ended ✦</h3>
+    <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">${liveState.title}</p>
+    <div class="pay-row"><span>Duration</span><span>${mins} min</span></div>
+    <div class="pay-row"><span>Peak viewers</span><span>${liveState.peak.toLocaleString()}</span></div>
+    <div class="pay-row"><span>Gross (entries + tips)</span><span>${$$(liveState.gross)}</span></div>
+    <div class="pay-row"><span>You keep (85%)</span><span style="color:var(--money);font-weight:700">${$$(Math.round(liveState.gross*(1-FEE)))}</span></div>
+    <button class="primary" onclick="closeBroadcast()">Done</button>`;
+}
+function closeBroadcast(){ document.getElementById('liveBroadcast').classList.remove('open'); liveState=null; renderStories(); renderFeed(); }
+
+/* ═══════════ GO LIVE — viewer ═══════════ */
+let viewTimer=null, viewingCid=null;
+function joinLive(cid){
+  const u=me(), c=user(cid);
+  if(u.id===cid) return toast('Use ＋ → Go live to start your own stream');
+  const price=499;
+  store.liveAccess=store.liveAccess||{};
+  if(u.role==='follower'&&!store.liveAccess[u.id+cid]){
+    document.getElementById('payTitle').textContent='Join '+c.username+' live';
+    document.getElementById('paySub').textContent='Paid live stream — one-time entry. The creator keeps 85%.';
+    document.getElementById('payPrice').textContent=$$(price);
+    document.getElementById('payCreator').textContent=$$(Math.round(price*(1-FEE)));
+    document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-price));
+    document.getElementById('payConfirmBtn').onclick=()=>{
+      if(!spend(price))return closeModal('payModal');
+      credit(cid,price); store.liveAccess[u.id+cid]=true;
+      closeModal('payModal'); openViewer(c);
+      toast('You\'re in 🎟 '+c.username+' earned '+$$(Math.round(price*(1-FEE))));
+    };
+    openModal('payModal');
+  } else openViewer(c);
+}
+function openViewer(c){
+  viewingCid=c.id;
+  document.getElementById('vwName').textContent=c.username;
+  const av=document.getElementById('vwAv'); av.className='av '+c.av;
+  av.textContent=c.em; av.style.cssText='width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:15px';
+  document.getElementById('vwChat').innerHTML='';
+  document.getElementById('liveViewer').classList.add('open');
+  let viewers=1180+Math.floor(Math.random()*90);
+  const names=['zoe_afterdark','mixhead22','tk.wav','sunsetjunkie','vibecheck_ana','lofi_dan'];
+  const lines=['this is 🔥','sound is unreal','LETS GOOO','anyone got the tracklist?','greetings from Tokyo 🗼','again again again'];
+  clearInterval(viewTimer);
+  viewTimer=setInterval(()=>{
+    viewers=Math.max(900,viewers+Math.floor(Math.random()*9)-3);
+    document.getElementById('vwViewers').textContent=viewers.toLocaleString();
+    if(Math.random()<0.8) vwChatMsg(names[Math.floor(Math.random()*names.length)],lines[Math.floor(Math.random()*lines.length)]);
+  },1500);
+}
+function leaveViewer(){ clearInterval(viewTimer); document.getElementById('liveViewer').classList.remove('open'); }
+function vwChatMsg(name,text,gold){
+  const c=document.getElementById('vwChat');
+  const d=document.createElement('div'); d.className='lchat-msg'+(gold?' gold':''); d.innerHTML=`<b>${name}</b> ${text}`;
+  c.appendChild(d); while(c.children.length>7)c.removeChild(c.firstChild);
+}
+function vwSend(){ const i=document.getElementById('vwInput'); if(!i.value.trim())return; vwChatMsg(me().username,i.value); i.value=''; }
+function react(e){
+  const l=document.getElementById('floatLayer');
+  const s=document.createElement('span'); s.className='fl'; s.textContent=e;
+  s.style.left=(10+Math.random()*40)+'px';
+  l.appendChild(s); setTimeout(()=>s.remove(),2600);
+  if(Math.random()<0.5)setTimeout(()=>react(e),180); // little burst
+}
+function vwTip(){
+  if(!spend(200))return;
+  credit(viewingCid,200);
+  vwChatMsg(me().username,'tipped $2.00 💰',true); react('💰');
+  toast('Tipped '+user(viewingCid).username+' $2.00 — they keep $1.70');
+}
+
+/* ═══════════ ME ═══════════ */
+function renderMe(){
+  const u=me(), isC=u.role==='creator';
+  const mySubs=Object.keys(store.subs).filter(k=>store.subs[k]&&k.startsWith(u.id)).map(k=>user(k.replace(u.id,'')));
+  document.getElementById('page-me').innerHTML=`
+    <div class="me-head">
+      <div class="av ${u.av}">${u.em}</div>
+      <h2>${u.name} ${u.verified?'<span class="verified">✔</span>':''} <span class="role-badge ${isC?'':'f'}">${isC?'✦ CREATOR':'♥ FOLLOWER'}</span></h2>
+      <div class="u">@${u.username}${u.bio?' · '+u.bio:''}</div>
+      <div class="me-stats">
+        ${isC?`<div><b>${(u.followers/1000).toFixed(1)}k</b><span>Followers</span></div>
+               <div><b>${$$(u.earnings)}</b><span>Earnings</span></div>
+               <div><b>${$$(u.subPrice)}</b><span>Sub price</span></div>`
+             :`<div><b>${$$(u.wallet)}</b><span>Wallet</span></div>
+               <div><b>${mySubs.length}</b><span>Subscriptions</span></div>
+               <div><b>${Object.keys(store.unlocks).filter(k=>store.unlocks[k]&&k.startsWith(u.id)).length}</b><span>Unlocks</span></div>`}
+      </div>
+    </div>
+    ${!isC&&mySubs.length?`<div class="section-title" style="padding-top:4px">Your subscriptions</div>
+      <div class="list-card">${mySubs.map(c=>`<div class="row"><div class="r-ic ${c.av}">${c.em}</div>${c.username}<span class="sub">${$$(c.subPrice)}/mo · active</span></div>`).join('')}</div>`:''}
+    <div class="section-title" style="padding-top:4px">Settings</div>
+    <div class="list-card">
+      ${isC?`<div class="row" onclick="changeSubPrice()"><div class="r-ic">💜</div>Subscription price<span class="sub">${$$(u.subPrice)}/mo</span></div>
+             <div class="row" onclick="toast('Payout details: connect bank in production build')"><div class="r-ic">🏦</div>Payout method<span class="sub">Add bank</span></div>`
+           :`<div class="row" onclick="openTopup()"><div class="r-ic">◈</div>Wallet &amp; top-up<span class="sub">${$$(u.wallet)}</span></div>`}
+      <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
+      <div class="row" onclick="toast('Age verification: complete ✅')"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">Verified ✅</span></div>
+      <div class="row" onclick="toast('Report submitted to Trust & Safety')"><div class="r-ic">🛡️</div>Report a problem</div>
+      <div class="row" onclick="logOut()"><div class="r-ic">🚪</div>Log out</div>
+    </div>`;
+}
+function changeSubPrice(){
+  const v=prompt('Monthly subscription price (USD, 1.99–99.99):', (me().subPrice/100).toFixed(2));
+  if(!v)return; const c=Math.round(parseFloat(v)*100);
+  if(isNaN(c)||c<199||c>9999) return toast('Price must be between $1.99 and $99.99');
+  me().subPrice=c; renderMe(); toast('Subscription price updated to '+$$(c));
+}
+
+/* ═══════════ UTIL ═══════════ */
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function toggleTheme(){ const h=document.documentElement,d=h.dataset.theme==='dark';
+  h.dataset.theme=d?'light':'dark';
+  const b=document.getElementById('themeBtn'); if(b)b.textContent=d?'☀️':'🌙'; }
+let toastTimer;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2600); }
+</script>
+</body>
+</html>
