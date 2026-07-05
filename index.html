@@ -386,6 +386,8 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 
   <div id="page-me" class="hidden" ></div>
 
+  <div id="page-profile" class="hidden"></div>
+
   <nav class="bottomnav" id="bottomNav"></nav>
 </div>
 
@@ -608,7 +610,9 @@ function enterApp(uid){
   store.session=uid;
   document.getElementById('authScreen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
-  renderShell(); go('home');
+  renderShell();
+  const hc=hashUser();
+  if(hc&&hc.id!==uid) openProfile(hc.id); else go('home');
 }
 function renderShell(){
   const u=me(), isC=u.role==='creator';
@@ -629,7 +633,7 @@ function renderShell(){
     <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>`;
 }
 function go(page,btn){
-  ['home','explore','raffles','messages','studio','me'].forEach(p=>{
+  ['home','explore','raffles','messages','studio','me','profile'].forEach(p=>{
     const el=document.getElementById('page-'+p); if(el) el.classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
@@ -640,6 +644,7 @@ function go(page,btn){
   if(page==='messages')renderThreads();
   if(page==='studio')renderStudio();
   if(page==='me')renderMe();
+  if(page==='profile')renderProfile();
   window.scrollTo({top:0});
 }
 function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt').textContent=$$(u.wallet); }
@@ -656,19 +661,12 @@ function canView(p){
   const u=me();
   return !p.paid || p.by===u.id || store.unlocks[u.id+p.id] || store.subs[u.id+p.by];
 }
-function renderFeed(){
-  const u=me();
-  const liveC=store.users.find(x=>x.live&&x.id!==u.id);
-  const banner=liveC?`<div class="live-banner" onclick="joinLive('${liveC.id}')">
-      <div class="av ${liveC.av}" style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px">${liveC.em}</div>
-      <div style="flex:1"><b style="font-size:14px">${liveC.username} is live</b><div style="font-size:12px;opacity:.9">Rooftop set · ${$$(499)} entry · tap to join</div></div>
-      <span class="live-tag" style="position:static;transform:none">LIVE</span></div>`:'';
-  document.getElementById('feed').innerHTML=banner+[...store.posts].map(p=>{
-    const c=user(p.by), mine=p.by===u.id, open=canView(p), liked=store.likes[u.id+p.id];
-    return `<article class="card">
+function postCard(p){
+  const u=me(), c=user(p.by), mine=p.by===u.id, open=canView(p), liked=store.likes[u.id+p.id];
+  return `<article class="card">
     <div class="card-head">
-      <div class="av ${c.av}">${c.em}</div>
-      <div class="who"><b>${c.username} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}</span></div>
+      <div class="av ${c.av}" style="cursor:pointer" onclick="openProfile('${p.by}')">${c.em}</div>
+      <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${c.username} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}</span></div>
       ${mine?'<span class="own-tag">Your post</span>':
         `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?'Subscribed':'Subscribe '+$$(c.subPrice)}</button>`}
     </div>
@@ -684,15 +682,24 @@ function renderFeed(){
     <div class="card-actions">
       <button class="act ${liked?'liked':''}" onclick="likePost('${p.id}')">${liked?'♥':'♡'} ${p.likes.toLocaleString()}</button>
       <button class="act" onclick="toast('Comments open in production build')">💬</button>
-      <button class="act" onclick="toast('Share link copied')">↗</button>
+      <button class="act" onclick="shareProfile('${c.username}')">↗</button>
       ${mine?`<span class="act tip">earned ${$$(Math.round(p.earned*(1-FEE)))}</span>`:
         `<button class="act tip" onclick="tip('${p.by}','${p.id}')">💰 Tip $2</button>`}
     </div>
-    <div class="card-body"><div class="cap"><b>${c.username}</b>${p.cap}</div></div>
-  </article>`}).join('');
+    <div class="card-body"><div class="cap"><b style="cursor:pointer" onclick="openProfile('${p.by}')">${c.username}</b>${p.cap}</div></div>
+  </article>`;
+}
+function renderFeed(){
+  const u=me();
+  const liveC=store.users.find(x=>x.live&&x.id!==u.id);
+  const banner=liveC?`<div class="live-banner" onclick="joinLive('${liveC.id}')">
+      <div class="av ${liveC.av}" style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px">${liveC.em}</div>
+      <div style="flex:1"><b style="font-size:14px">${liveC.username} is live</b><div style="font-size:12px;opacity:.9">Rooftop set · ${$$(499)} entry · tap to join</div></div>
+      <span class="live-tag" style="position:static;transform:none">LIVE</span></div>`:'';
+  document.getElementById('feed').innerHTML=banner+[...store.posts].map(postCard).join('');
 }
 function likePost(id){ const u=me(),k=u.id+id,p=store.posts.find(x=>x.id===id);
-  store.likes[k]=!store.likes[k]; p.likes+=store.likes[k]?1:-1; renderFeed(); }
+  store.likes[k]=!store.likes[k]; p.likes+=store.likes[k]?1:-1; refresh(); }
 
 /* ═══════════ PAYMENTS ═══════════ */
 function spend(cents){
@@ -715,14 +722,14 @@ function startUnlock(pid){
   document.getElementById('payConfirmBtn').onclick=()=>{
     if(!spend(p.price))return closeModal('payModal');
     credit(p.by,p.price,pid); store.unlocks[u.id+pid]=true;
-    closeModal('payModal'); renderFeed();
+    closeModal('payModal'); refresh();
     toast(`Unlocked — ${user(p.by).username} earned ${$$(Math.round(p.price*(1-FEE)))} 💜`);
   };
   openModal('payModal');
 }
 function subscribe(cid){
   const u=me(),c=user(cid),k=u.id+cid;
-  if(store.subs[k]){ store.subs[k]=false; renderFeed(); return toast('Unsubscribed from '+c.username); }
+  if(store.subs[k]){ store.subs[k]=false; refresh(); return toast('Unsubscribed from '+c.username); }
   document.getElementById('payTitle').textContent='Subscribe to '+c.username;
   document.getElementById('paySub').textContent='Monthly subscription unlocks all their paid posts. Cancel anytime.';
   document.getElementById('payPrice').textContent=$$(c.subPrice)+' / month';
@@ -731,7 +738,7 @@ function subscribe(cid){
   document.getElementById('payConfirmBtn').onclick=()=>{
     if(!spend(c.subPrice))return closeModal('payModal');
     credit(cid,c.subPrice); store.subs[k]=true; c.followers++;
-    closeModal('payModal'); renderFeed();
+    closeModal('payModal'); refresh();
     toast(`Subscribed to ${c.username} ✦ all paid posts unlocked`);
   };
   openModal('payModal');
@@ -778,7 +785,7 @@ function confirmRaffle(){ if(!spend(qty*activeRaffle.price))return closeModal('r
 let activeThread=null;
 function renderThreads(){
   document.getElementById('threadList').innerHTML=store.threads.map(t=>{
-    const c=user(t.withU),last=t.msgs[t.msgs.length-1];
+    const c=user(t.withU),last=t.msgs[t.msgs.length-1]||{me:false,t:'Say hi 👋'};
     return `<div class="thread" onclick="openChat('${t.id}')">
       <div class="av ${c.av}">${c.em}</div>
       <div class="tx"><b>${c.username} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${last.me?'You: ':''}${last.t}</span></div>
@@ -1043,6 +1050,70 @@ function changeSubPrice(){
   if(isNaN(c)||c<199||c>9999) return toast('Price must be between $1.99 and $99.99');
   me().subPrice=c; renderMe(); toast('Subscription price updated to '+$$(c));
 }
+
+/* ═══════════ CREATOR PROFILE PAGES + SHAREABLE LINKS ═══════════ */
+let currentProfile=null;
+function openProfile(cid){ currentProfile=cid; go('profile'); }
+function refresh(){
+  if(!document.getElementById('page-profile').classList.contains('hidden')) renderProfile();
+  if(!document.getElementById('page-home').classList.contains('hidden')) renderFeed();
+}
+function shareLink(un){ return location.href.split('#')[0]+'#'+un; }
+function shareProfile(un){
+  const l=shareLink(un);
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(l).then(()=>toast('Link copied — share it anywhere 🔗'))
+      .catch(()=>prompt('Copy your shareable link:',l));
+  } else prompt('Copy your shareable link:',l);
+}
+function msgFromProfile(cid){
+  let t=store.threads.find(x=>x.withU===cid);
+  if(!t){ t={id:'t'+Math.random().toString(36).slice(2,7),withU:cid,msgs:[]}; store.threads.unshift(t); }
+  go('messages'); openChat(t.id);
+}
+function renderProfile(){
+  const c=user(currentProfile); if(!c) return go('home');
+  const u=me(), isMe=c.id===u.id, subbed=store.subs[u.id+c.id];
+  const theirPosts=store.posts.filter(p=>p.by===c.id);
+  document.getElementById('page-profile').innerHTML=`
+    <button class="back-btn" onclick="go('home')" style="padding:14px 18px 0">← Home</button>
+    <div class="me-head">
+      <div class="av ${c.av}">${c.em}</div>
+      <h2>${c.name} ${c.verified?'<span class="verified">✔</span>':''} ${c.role==='creator'?'<span class="role-badge">✦ CREATOR</span>':'<span class="role-badge f">♥ FOLLOWER</span>'}</h2>
+      <div class="u">@${c.username}${c.bio?' · '+c.bio:''}</div>
+      <div class="me-stats">
+        <div><b>${c.followers>=1000?(c.followers/1000).toFixed(1)+'k':c.followers}</b><span>Followers</span></div>
+        <div><b>${theirPosts.length}</b><span>Drops</span></div>
+        ${c.role==='creator'?`<div><b>${$$(c.subPrice)}</b><span>Per month</span></div>`:''}
+      </div>
+      ${c.live?`<button class="enter-btn" style="margin:2px 0 10px;background:var(--live)" onclick="joinLive('${c.id}')">● LIVE now — tap to join</button>`:''}
+      ${!isMe&&c.role==='creator'?`
+      <div style="display:flex;gap:10px;width:100%;padding:2px 4px 4px">
+        <button class="primary" style="margin:0" onclick="subscribe('${c.id}')">${subbed?'Subscribed ✓':'Subscribe '+$$(c.subPrice)+'/mo'}</button>
+        <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text)" onclick="msgFromProfile('${c.id}')">Message</button>
+      </div>`:''}
+      <button class="ghost" style="margin-top:2px" onclick="shareProfile('${c.username}')">🔗 Copy shareable link</button>
+    </div>
+    <div class="feed">${theirPosts.length?theirPosts.map(postCard).join('')
+      :'<p style="color:var(--muted);text-align:center;padding:24px;font-size:13.5px">No drops yet.</p>'}</div>`;
+}
+/* hash routing: overvibez.link/#username lands on that creator's page */
+function hashUser(){
+  const h=decodeURIComponent(location.hash.slice(1)).toLowerCase();
+  return h?store.users.find(x=>x.username===h):null;
+}
+window.addEventListener('hashchange',()=>{ const c=hashUser(); if(c&&store.session) openProfile(c.id); });
+(function(){
+  const c=hashUser();
+  if(c){
+    document.querySelector('.auth .tag').insertAdjacentHTML('afterend',
+      `<div style="display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:20px">
+        <div class="av ${c.av}" style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:18px">${c.em}</div>
+        <div style="font-size:13px;line-height:1.45"><b>You've been invited to @${c.username}</b><br>
+        <span style="color:var(--muted)">Log in or sign up to view their page${c.role==='creator'?' and subscribe from '+$$(c.subPrice)+'/mo':''}</span></div>
+      </div>`);
+  }
+})();
 
 /* ═══════════ UTIL ═══════════ */
 function openModal(id){document.getElementById(id).classList.add('open')}
