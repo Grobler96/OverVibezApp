@@ -274,6 +274,20 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .av img,.r-ic img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
 .cover{height:130px;background:var(--panel-2) center/cover no-repeat;margin:0 14px;border-radius:18px}
 #pwModal,#editProfileModal{z-index:130}
+.badge,.nbadge{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--live);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;line-height:1;font-style:normal}
+.nav-btn{position:relative}
+.nav-btn .nbadge{top:0;right:4px}
+.pcard{display:flex;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.pcard:last-child{border:none}
+.pcard .av{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:19px;flex:none}
+.pcard .tx{flex:1;min-width:0;font-size:13.5px;line-height:1.4} .pcard .tx span{color:var(--muted);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbtn{padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:700;background:var(--grad);color:#fff;flex:none}
+.fbtn.on{background:var(--panel-2);color:var(--text);border:1px solid var(--line)}
+.notif{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px;line-height:1.45}
+.notif.unread{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.notif .ni{font-size:20px;flex:none;width:30px;text-align:center}
+.notif small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.tile.img{background-size:cover;background-position:center}
 .abtn{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:4px 6px 0 0}
 .abtn.danger{color:var(--live);border-color:var(--live)} .abtn.ok{color:var(--ok);border-color:var(--ok)}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px}
@@ -334,6 +348,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="actions">
       <span class="role-badge" id="roleBadge">CREATOR</span>
       <button class="wallet-pill" id="walletPill" onclick="openTopup()" title="Wallet"><span class="c">◈</span><span id="walletAmt">$0.00</span></button>
+      <button class="icon-btn" onclick="go('notifs')" id="bellBtn" title="Notifications">🔔<i class="badge hidden" id="bellBadge">0</i></button>
       <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">🌙</button>
     </div>
   </div>
@@ -346,11 +361,14 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 
   <div id="page-explore" class="hidden">
     <div class="section-title">Explore</div>
-    <div class="chiprow">
-      <button class="chip on">Trending</button><button class="chip">Music</button><button class="chip">Fitness</button>
-      <button class="chip">Art</button><button class="chip">Food</button><button class="chip">Photography</button>
-    </div>
-    <div class="explore-grid" id="exploreGrid"></div>
+    <div style="padding:0 14px 6px"><div class="field" style="margin-bottom:8px"><input id="exploreQ" type="search" placeholder="Search creators…" autocomplete="off" oninput="exploreTyped()"></div></div>
+    <div class="chiprow" id="exploreChips"></div>
+    <div id="exploreBody"></div>
+  </div>
+
+  <div id="page-notifs" class="hidden">
+    <div class="section-title">Notifications</div>
+    <div id="notifList"></div>
   </div>
 
   <div id="page-raffles" class="hidden">
@@ -529,6 +547,11 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <h3>Edit profile</h3>
     <div class="field"><label>Display name</label><input id="epName" maxlength="60"></div>
     <div class="field"><label>Bio</label><textarea id="epBio" rows="3" maxlength="500" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
+    <div class="field hidden" id="epCatWrap"><label>Your category (so people can find you in Explore)</label>
+      <select id="epCat" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none">
+        <option value="">— none —</option><option value="music">🎵 Music</option><option value="fitness">💪 Fitness</option><option value="art">🎨 Art</option><option value="food">🍳 Food</option>
+        <option value="photography">📷 Photography</option><option value="fashion">👗 Fashion</option><option value="gaming">🎮 Gaming</option><option value="comedy">😂 Comedy</option>
+        <option value="lifestyle">✨ Lifestyle</option><option value="other">Other</option></select></div>
     <div class="field"><label>Profile picture</label>
       <div style="display:flex;gap:12px;align-items:center"><div class="av a1" id="epAvPrev" style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:24px;flex:none"></div>
       <input id="epAvatar" type="file" accept="image/png,image/jpeg,image/webp" style="padding:8px"></div></div>
@@ -557,9 +580,10 @@ const FEE = 0.15; // platform share — creators keep 85% (enforced server-side 
 const $$ = c => '$' + ((Number(c)||0)/100).toFixed(2);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
-const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at';
+const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at,follower_count,category';
+const CATS=[['music','🎵','Music'],['fitness','💪','Fitness'],['art','🎨','Art'],['food','🍳','Food'],['photography','📷','Photography'],['fashion','👗','Fashion'],['gaming','🎮','Gaming'],['comedy','😂','Comedy'],['lifestyle','✨','Lifestyle'],['other','','Other']];
 
-const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
+const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
@@ -571,7 +595,7 @@ function ago(iso){ const t=(Date.now()-new Date(iso))/1000;
 function mapUser(p,followers){
   return {id:p.id,username:p.username,name:p.display_name||p.username,role:p.account_type,
     av:'a'+(1+hue(p.username)%6),em:p.account_type==='creator'?'✦':'🫧',verified:!!p.is_verified,
-    subPrice:p.sub_price_cents,followers:followers||0,earnings:Number(p.earnings_cents||0),
+    subPrice:p.sub_price_cents,followers:p.follower_count!=null?p.follower_count:(followers||0),category:p.category||null,createdAt:p.created_at,earnings:Number(p.earnings_cents||0),
     wallet:Number(p.wallet_cents||0),ageVerified:!!p.age_verified,bio:p.bio||'',live:false,
     staffRole:p.staff_role||null,isBanned:!!p.is_banned,banReason:p.ban_reason||'',
     avatarPath:p.avatar_url||null,avatarUrl:p.avatar_url?pubUrl(p.avatar_url):null,coverUrl:p.cover_url?pubUrl(p.cover_url):null};
@@ -617,12 +641,12 @@ async function hydrate(){
     sb.from('post_unlocks').select('post_id').eq('user_id',uid),
     sb.from('subscriptions').select('creator_id,status,current_period_end').eq('subscriber_id',uid),
     sb.from('raffles').select('*').gt('closes_at',new Date().toISOString()).is('winner_entry_id',null).order('closes_at'),
-    sb.from('follows').select('creator_id').limit(10000),
+    sb.from('follows').select('creator_id').eq('follower_id',uid).limit(5000),
     sb.from('transactions').select('reference_id,gross_cents').eq('payee_id',uid).in('type',['post_unlock','tip'])]);
   const bad=[mine,profs,posts,likes,unl,subs,raf,fol,tx].find(r=>r.error); if(bad) throw bad.error;
-  const fc={}; (fol.data||[]).forEach(f=>fc[f.creator_id]=(fc[f.creator_id]||0)+1);
-  store.users=(profs.data||[]).map(p=>mapUser(p,fc[p.id]));
-  const m=mine.data; if(m){ const i=store.users.findIndex(u=>u.id===m.id), mu=mapUser(m,fc[m.id]);
+  store.following=new Set((fol.data||[]).map(f=>f.creator_id));
+  store.users=(profs.data||[]).map(p=>mapUser(p));
+  const m=mine.data; if(m){ const i=store.users.findIndex(u=>u.id===m.id), mu=mapUser(m);
     if(i>=0) store.users[i]=mu; else store.users.push(mu); }
   const h=decodeURIComponent(location.hash.slice(1)).toLowerCase();
   if(h&&!store.users.some(u=>u.username===h)){
@@ -767,12 +791,12 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures();
+  enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
   store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={};
+  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -782,6 +806,59 @@ if(sb) sb.auth.onAuthStateChange((ev,session)=>{
   if(ev==='PASSWORD_RECOVERY') recoveryMode=true;
   setTimeout(()=>{ if(session&&session.user) startSession(session.user.id); else if(store.session) clearSession(); },0);
 });
+
+/* ═══════════ NOTIFICATIONS + UNREAD BADGES ═══════════ */
+function paintBadges(){
+  const b=document.getElementById('bellBadge'), c=document.getElementById('chatBadge');
+  if(b){ b.textContent=store.unread>99?'99+':store.unread; b.classList.toggle('hidden',!store.unread); }
+  if(c){ c.textContent=store.unreadMsgs>99?'99+':store.unreadMsgs; c.classList.toggle('hidden',!store.unreadMsgs); }
+}
+async function refreshBadges(){
+  if(!store.session) return;
+  try{
+    const [n,m]=await Promise.all([
+      sb.from('notifications').select('id',{count:'exact',head:true}).is('read_at',null),
+      sb.from('messages').select('id',{count:'exact',head:true}).is('read_at',null).neq('sender_id',store.session)]);
+    store.unread=n.count||0; store.unreadMsgs=m.count||0; paintBadges();
+  }catch(e){}
+}
+setInterval(()=>{ if(!document.hidden) refreshBadges(); },30000);
+const notifInfo=n=>{
+  const a=n.actor_id?user(n.actor_id):null, who=a?'<b>@'+esc(a.username)+'</b>':'<b>Someone</b>', d=n.data||{};
+  switch(n.type){
+    case 'new_follower': return ['👤',who+' started following you'];
+    case 'new_subscriber': return ['💜',who+' subscribed to you'+(d.price_cents?' ('+$$(d.price_cents)+'/mo)':'')];
+    case 'subscription_renewed': return ['🔁',who+' renewed their subscription'];
+    case 'tip': return ['💰',who+' tipped you '+$$(d.gross_cents)+' — you keep '+$$(d.net_cents)];
+    case 'unlock': return ['🔓',who+' unlocked your post — you earned '+$$(d.net_cents)];
+    case 'ticket': return ['🎟️',who+' bought a ticket to your live stream — you earned '+$$(d.net_cents)];
+    case 'comment': return ['💬',who+' commented: “'+esc(d.preview||'')+'”'];
+    case 'like': return ['♥',who+' liked your post'];
+    case 'live': return ['🔴',who+' is live: '+esc(d.title||'')];
+    case 'payout_paid': return ['🏦','Your payout of '+$$(d.amount_cents)+' has been sent'];
+    case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')];
+    default: return ['🔔','New activity'];
+  }
+};
+async function renderNotifs(){
+  const el=document.getElementById('notifList');
+  el.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">Loading…</p>';
+  const {data,error}=await sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50);
+  if(error) return el.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">'+esc(error.message)+'</p>';
+  await ensureUsers(data.map(n=>n.actor_id));
+  store.notifs=data;
+  el.innerHTML=data.length?`<div class="list-card" style="margin:0 14px">${data.map((n,i)=>{ const [ic,txt]=notifInfo(n);
+    return `<div class="notif ${n.read_at?'':'unread'}" onclick="notifOpen(${i})"><div class="ni">${ic}</div><div style="flex:1;min-width:0;word-break:break-word">${txt}<small>${ago(n.created_at)} ago</small></div></div>`; }).join('')}</div>`
+    :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No notifications yet.<br>New followers, tips, comments and more will show up here.</p>';
+  if(data.some(n=>!n.read_at)){ await sb.rpc('mark_notifications_read'); store.unread=0; paintBadges(); }
+}
+function notifOpen(i){
+  const n=store.notifs[i]; if(!n) return;
+  if(n.type==='live'&&n.ref_id) return openLive(n.ref_id);
+  if(n.type==='comment'&&n.ref_id&&store.posts.some(p=>p.id===n.ref_id)) return openComments(n.ref_id);
+  if(n.type==='payout_paid') return go('studio');
+  if(n.actor_id&&user(n.actor_id)) return openProfile(n.actor_id);
+}
 
 /* ═══════════ REALTIME CHAT ═══════════ */
 let rt=null;
@@ -795,11 +872,14 @@ function subscribeRealtime(){
     const viewing=activeThread&&activeThread.id===t.id&&!document.getElementById('chat-view').classList.contains('hidden');
     if(viewing){ renderChat(); markRead(t.id); }
     else { if(!document.getElementById('threads-view').classList.contains('hidden')) renderThreads();
-      toast('New message from '+user(t.withU).username); }
+      store.unreadMsgs++; paintBadges(); toast('New message from '+user(t.withU).username); }
+  }).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:'user_id=eq.'+store.session},async p=>{
+    await ensureUsers([p.new.actor_id]); store.unread++; paintBadges(); const [ic,txt]=notifInfo(p.new); toast(ic+' '+txt.replace(/<[^>]+>/g,''));
+    if(!document.getElementById('page-notifs').classList.contains('hidden')) renderNotifs();
   }).subscribe();
 }
 function markRead(convId){
-  sb.from('messages').update({read_at:new Date().toISOString()}).eq('conversation_id',convId).neq('sender_id',store.session).is('read_at',null).then(()=>{});
+  sb.from('messages').update({read_at:new Date().toISOString()}).eq('conversation_id',convId).neq('sender_id',store.session).is('read_at',null).then(()=>refreshBadges());
 }
 
 /* ═══════════ APP SHELL ═══════════ */
@@ -820,32 +900,34 @@ function renderShell(){
   const bb=document.getElementById('banBanner');
   bb.classList.toggle('hidden',!u.isBanned);
   if(u.isBanned) bb.textContent='Your account is suspended'+(u.banReason?': '+u.banReason:'')+'. You can browse but cannot post, comment, message or spend. Contact support to appeal.';
+  paintBadges();
   document.getElementById('bottomNav').innerHTML = isC ? `
     <button class="nav-btn on" data-page="home" onclick="go('home',this)">⌂<span>Home</span></button>
     <button class="nav-btn" data-page="studio" onclick="go('studio',this)">◔<span>Studio</span></button>
     <button class="nav-btn create" onclick="openCreate()">＋</button>
-    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<span>Chats</span></button>
+    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<i class="nbadge hidden" id="chatBadge">0</i><span>Chats</span></button>
     <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>` : `
     <button class="nav-btn on" data-page="home" onclick="go('home',this)">⌂<span>Home</span></button>
     <button class="nav-btn" data-page="explore" onclick="go('explore',this)">✦<span>Explore</span></button>
     <button class="nav-btn" data-page="raffles" onclick="go('raffles',this)">🎟<span>Raffles</span></button>
-    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<span>Chats</span></button>
+    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<i class="nbadge hidden" id="chatBadge">0</i><span>Chats</span></button>
     <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>`;
 }
 function go(page,btn){
-  ['home','explore','raffles','messages','studio','me','profile','admin'].forEach(p=>{
+  ['home','explore','raffles','messages','studio','me','profile','admin','notifs'].forEach(p=>{
     const el=document.getElementById('page-'+p); if(el) el.classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
   if(btn) btn.classList.add('on');
   if(page==='home'){renderStories();renderFeed()}
-  if(page==='explore')renderExplore();
+  if(page==='explore')renderExplore(true);
   if(page==='raffles')renderRaffles();
   if(page==='messages')renderThreads();
   if(page==='studio')renderStudio();
   if(page==='me')renderMe();
   if(page==='profile')renderProfile();
   if(page==='admin')renderAdmin();
+  if(page==='notifs')renderNotifs();
   window.scrollTo({top:0});
 }
 function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt').textContent=$$(u.wallet); }
@@ -899,9 +981,16 @@ function liveBanners(){
       <div style="flex:1;min-width:0"><b style="font-size:14px">${esc(c.username)} is live</b><div style="font-size:12px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.title)} · ${l.entry_price_cents?$$(l.entry_price_cents)+' entry':'Free'} · tap to join</div></div>
       <span class="live-tag" style="position:static;transform:none">LIVE</span></div>`; }).join('');
 }
+function feedTab(){ try{ return localStorage.getItem('ov_feed')==='following'?'following':'all'; }catch(e){ return 'all'; } }
+function setFeedTab(t){ try{ localStorage.setItem('ov_feed',t); }catch(e){} renderFeed(); }
 function renderFeed(){
-  document.getElementById('feed').innerHTML=liveBanners()+(store.posts.length?store.posts.map(postCard).join('')
-    :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No drops yet.<br>Creators will appear here as they publish.</p>');
+  const u=me(), tab=feedTab();
+  const posts=tab==='following'?store.posts.filter(p=>p.by===u.id||store.following.has(p.by)||store.subs[u.id+p.by]):store.posts;
+  const tabs=`<div class="chiprow" style="padding-top:2px"><button class="chip ${tab==='all'?'on':''}" onclick="setFeedTab('all')">Everyone</button><button class="chip ${tab==='following'?'on':''}" onclick="setFeedTab('following')">Following</button></div>`;
+  const empty=tab==='following'
+    ?'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">Nothing here yet.<br>Follow creators to see their posts in this feed.<br><button class="abtn ok" style="margin-top:10px" onclick="go(\'explore\')">Find creators</button></p>'
+    :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No drops yet.<br>Creators will appear here as they publish.</p>';
+  document.getElementById('feed').innerHTML=tabs+liveBanners()+(posts.length?posts.map(postCard).join(''):empty);
 }
 async function likePost(id){
   const u=me(), k=u.id+id, p=store.posts.find(x=>x.id===id), was=!!store.likes[k];
@@ -994,6 +1083,14 @@ function subscribe(cid){
   };
   openModal('payModal');
 }
+async function toggleFollow(cid){
+  const u=me(), c=user(cid); if(!c||cid===u.id) return;
+  const was=store.following.has(cid);
+  if(was) store.following.delete(cid); else store.following.add(cid);
+  c.followers=Math.max(0,c.followers+(was?-1:1)); rerender();
+  const {error}=was?await sb.from('follows').delete().eq('follower_id',u.id).eq('creator_id',cid):await sb.from('follows').insert({follower_id:u.id,creator_id:cid});
+  if(error){ if(was) store.following.add(cid); else store.following.delete(cid); c.followers=Math.max(0,c.followers+(was?1:-1)); rerender(); toast(error.message); }
+}
 async function cancelSub(cid){
   if(await rpc('cancel_subscription',{p_creator:cid})){
     store.subCanceled[cid]=true; rerender();
@@ -1040,11 +1137,54 @@ function handleStripeReturn(){
 }
 
 /* ═══════════ EXPLORE ═══════════ */
-function renderExplore(){
-  const el=document.getElementById('exploreGrid');
-  if(!store.posts.length){ el.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px 20px;grid-column:1/-1;font-size:13.5px">Nothing to explore yet.</p>'; return; }
-  el.innerHTML=store.posts.slice(0,12).map((p,i)=>{ const c=user(p.by); if(!c) return '';
-    return `<div class="tile ${i%7===0?'big':''} ${c.av}" onclick="openProfile('${p.by}')">${p.scene}${p.paid?`<span class="t-lock">🔒 ${$$(p.price)}</span>`:''}</div>`; }).join('');
+let exploreTab='trending', exploreTimer=null;
+function exploreTyped(){ clearTimeout(exploreTimer); exploreTimer=setTimeout(()=>renderExplore(),350); }
+function setExploreTab(t){ exploreTab=t; document.getElementById('exploreQ').value=''; renderExplore(); }
+function personCard(c){
+  const mine=c.id===store.session;
+  return `<div class="pcard" onclick="openProfile('${c.id}')"><div class="av ${c.av}">${avInner(c)}</div>
+    <div class="tx"><b>${esc(c.name)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>@${esc(c.username)}${c.category?' · '+esc((CATS.find(x=>x[0]===c.category)||[0,'',c.category])[2]):''} · ${fmtN(c.followers)} followers</span>${c.bio?`<span>${esc(c.bio)}</span>`:''}</div>
+    ${!mine&&c.role==='creator'?`<button class="fbtn ${store.following.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleFollow('${c.id}')">${store.following.has(c.id)?'Following':'Follow'}</button>`:''}</div>`;
+}
+function tileHtml(p,i){
+  const c=user(p.by); if(!c) return '';
+  const img=!p.paid&&p.mediaUrl&&p.mediaKind==='image';
+  return `<div class="tile ${i%7===0?'big':''} ${img?'img':c.av}" ${img?`style="background-image:url('${esc(p.mediaUrl)}')"`:''} onclick="openProfile('${p.by}')">${img?'':p.scene}${p.paid?`<span class="t-lock">🔒 ${$$(p.price)}</span>`:''}</div>`;
+}
+async function renderExplore(reset){
+  if(reset){ document.getElementById('exploreQ').value=''; }
+  const chips=[['trending','🔥 Trending'],['new','🆕 New'],['live','🔴 Live']].concat(CATS.map(c=>[c[0],(c[1]?c[1]+' ':'')+c[2]]));
+  document.getElementById('exploreChips').innerHTML=chips.map(([k,l])=>`<button class="chip ${exploreTab===k?'on':''}" onclick="setExploreTab('${k}')">${l}</button>`).join('');
+  const body=document.getElementById('exploreBody'), q=document.getElementById('exploreQ').value.trim();
+  const empty=t=>`<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">${t}</p>`;
+  if(q.length>=2){
+    const {data,error}=await sb.rpc('search_people',{p_q:q}); if(document.getElementById('exploreQ').value.trim()!==q) return;
+    if(error) return toast(error.message);
+    (data||[]).forEach(p=>{ if(!user(p.id)) store.users.push(mapUser(p)); });
+    const ppl=(data||[]).map(p=>user(p.id));
+    const cap=store.posts.filter(p=>p.cap.toLowerCase().includes(q.toLowerCase())).slice(0,9);
+    body.innerHTML=(ppl.length?`<div class="section-title" style="padding-top:4px">People</div><div class="list-card">${ppl.map(personCard).join('')}</div>`:'')
+      +(cap.length?`<div class="section-title" style="padding-top:4px">Posts</div><div class="explore-grid">${cap.map(tileHtml).join('')}</div>`:'')
+      +(!ppl.length&&!cap.length?empty('No results for “'+esc(q)+'”.'):'');
+    return;
+  }
+  const creators=store.users.filter(u=>u.role==='creator'&&u.id!==store.session);
+  if(exploreTab==='live'){
+    body.innerHTML=store.live.length?`<div class="list-card">${store.live.map(l=>{ const c=user(l.creator_id); return c?`<div class="pcard" onclick="openLive('${l.id}')"><div class="av ${c.av}">${avInner(c)}</div>
+      <div class="tx"><b>${esc(c.username)} is live</b><span>${esc(l.title)} · ${l.entry_price_cents?$$(l.entry_price_cents)+' entry':'Free'}</span></div><span class="live-tag" style="position:static;transform:none">LIVE</span></div>`:''; }).join('')}</div>`:empty('Nobody is live right now.');
+  } else if(exploreTab==='new'){
+    const list=creators.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,15);
+    body.innerHTML=list.length?`<div class="list-card">${list.map(personCard).join('')}</div>`:empty('No creators yet.');
+  } else if(exploreTab==='trending'){
+    const top=creators.slice().sort((a,b)=>b.followers-a.followers).slice(0,5);
+    const posts=store.posts.slice().sort((a,b)=>b.likes-a.likes).slice(0,12);
+    body.innerHTML=(top.length?`<div class="section-title" style="padding-top:4px">Top creators</div><div class="list-card">${top.map(personCard).join('')}</div>`:'')
+      +(posts.length?`<div class="section-title" style="padding-top:4px">Trending posts</div><div class="explore-grid">${posts.map(tileHtml).join('')}</div>`:empty('Nothing to explore yet.'));
+  } else {
+    const list=creators.filter(c=>c.category===exploreTab), posts=store.posts.filter(p=>{ const c=user(p.by); return c&&c.category===exploreTab; }).slice(0,12);
+    body.innerHTML=(list.length?`<div class="list-card">${list.map(personCard).join('')}</div>`:'')+(posts.length?`<div class="section-title" style="padding-top:4px">Posts</div><div class="explore-grid">${posts.map(tileHtml).join('')}</div>`:'')
+      +(!list.length&&!posts.length?empty('No creators in this category yet.'):'');
+  }
 }
 
 /* ═══════════ RAFFLES ═══════════ */
@@ -1417,6 +1557,7 @@ function openEditProfile(){
   const u=me();
   document.getElementById('epName').value=u.name; document.getElementById('epBio').value=u.bio||'';
   document.getElementById('epAvatar').value=''; document.getElementById('epCover').value='';
+  document.getElementById('epCatWrap').classList.toggle('hidden',u.role!=='creator'); document.getElementById('epCat').value=u.category||'';
   const av=document.getElementById('epAvPrev'); av.className='av '+u.av; av.innerHTML=avInner(u);
   document.getElementById('epCoverPrev').style.backgroundImage=u.coverUrl?`url('${u.coverUrl}')`:'none';
   openModal('editProfileModal');
@@ -1434,6 +1575,7 @@ async function saveProfile(){
   btn.disabled=true; toast('Saving…');
   try{
     const patch={display_name:name,bio:bio||null}, old=[];
+    if(u.role==='creator') patch.category=document.getElementById('epCat').value||null;
     const up=async(file,w,h,kind)=>{
       const blob=await imgToBlob(file,w,h), path=`${u.id}/${kind}-${Date.now()}.jpg`;
       const {error}=await sb.storage.from('public-media').upload(path,blob,{contentType:'image/jpeg'}); if(error) throw new Error(error.message);
@@ -1466,10 +1608,10 @@ let currentProfile=null;
 function openProfile(cid){ currentProfile=cid; go('profile'); }
 function rerender(){
   updateWallet();
-  const vis=['home','explore','raffles','messages','studio','me','profile','admin'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
+  const vis=['home','explore','raffles','messages','studio','me','profile','admin','notifs'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
   if(vis==='home'){renderStories();renderFeed()} else if(vis==='explore')renderExplore();
   else if(vis==='raffles')renderRaffles(); else if(vis==='messages'){ if(!document.getElementById('threads-view').classList.contains('hidden'))renderThreads(); }
-  else if(vis==='studio')renderStudio(); else if(vis==='me')renderMe(); else if(vis==='profile')renderProfile();
+  else if(vis==='studio')renderStudio(); else if(vis==='notifs'){} else if(vis==='me')renderMe(); else if(vis==='profile')renderProfile();
 }
 const refresh=rerender;
 function shareLink(un){ return location.href.split('#')[0]+'#'+un; }
@@ -1522,6 +1664,7 @@ function renderProfile(){
       ${(()=>{ const l=store.live.find(x=>x.creator_id===c.id); return l&&!isMe?`<button class="enter-btn" style="margin:2px 0 10px;background:var(--live)" onclick="openLive('${l.id}')">● LIVE now — tap to join</button>`:''; })()}
       ${!isMe&&c.role==='creator'?`
       <div style="display:flex;gap:10px;width:100%;padding:2px 4px 4px">
+        <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text);flex:none;padding:0 16px" onclick="toggleFollow('${c.id}')">${store.following.has(c.id)?'Following ✓':'Follow'}</button>
         <button class="primary" style="margin:0" onclick="subscribe('${c.id}')">${subbed?(store.subCanceled[c.id]?'Ends '+new Date(store.subEnds[c.id]).toLocaleDateString():'Subscribed ✓'):'Subscribe '+$$(c.subPrice)+'/mo'}</button>
         <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text)" onclick="msgFromProfile('${c.id}')">Message</button>
       </div>`:''}

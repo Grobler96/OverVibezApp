@@ -63,6 +63,11 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 - Not automated: refunds and chargebacks (handle in the Stripe dashboard; an admin can adjust balances), and creator payouts
   (Stripe Connect). Stripe's fee (~1.5%+20p UK cards / 2.9%+30c) comes out of the platform's 15%, not the creator's 85%.
 
+## Following, Explore and notifications (migration 011)
+- `profiles.follower_count` is kept by a trigger on `follows`; `profiles.category` is a creator-chosen category (10 fixed values).
+- The **Following** feed tab shows your own posts plus creators you follow or subscribe to. Explore has Trending / New / Live / category tabs and name search via `search_people()` (min 2 characters, wildcards escaped, banned users hidden).
+- `notifications` is written only by triggers (follow, subscribe/renew, tip, unlock, ticket, comment, like) and by `start_live_stream` (fan-out to up to 1000 followers), payout-paid and content-removed. Users can read only their own rows; `mark_notifications_read()` marks them read. The app polls every 30s and also listens over Realtime.
+
 ## Not built yet (needed before launch)
 - Automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console. Admins can still mark a user 18+ verified by hand.
 - Notifications, live recording/replays, and multi-guest streams. Terms/Privacy pages exist as lawyer-review drafts.
