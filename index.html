@@ -318,7 +318,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="err" id="suErr"></div>
   </div>
 
-  <div class="auth-note">By continuing you confirm you are 18+ and agree to the <a href="terms.html" style="color:var(--accent-2)">Terms</a> and <a href="privacy.html" style="color:var(--accent-2)">Privacy Policy</a>.<br>Beta build — payments and ID verification are not live yet.</div>
+  <div class="auth-note">By continuing you confirm you are 18+ and agree to the <a href="terms.html" style="color:var(--accent-2)">Terms</a> and <a href="privacy.html" style="color:var(--accent-2)">Privacy Policy</a>.<br>Beta build — payments run in test mode.</div>
 </div>
 
 <!-- ═══════════ APP SHELL ═══════════ -->
@@ -464,9 +464,15 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 
 <div class="overlay" id="topupModal" onclick="if(event.target===this)closeModal('topupModal')">
   <div class="sheet">
-    <h3>Wallet</h3>
-    <p>Card payments are not connected yet. Wallet top-ups will be available once the payment provider is live.</p>
+    <h3>Add funds</h3>
+    <p>Top up your wallet to unlock posts, subscribe, tip and join live streams. Payments are handled securely by Stripe — we never see your card details.</p>
     <div class="pay-row"><span>Current balance</span><span id="topupBal"></span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+      <button class="primary" style="margin:0" onclick="startTopup(1000)">$10</button>
+      <button class="primary" style="margin:0" onclick="startTopup(2500)">$25</button>
+      <button class="primary" style="margin:0" onclick="startTopup(5000)">$50</button>
+      <button class="primary" style="margin:0" onclick="startTopup(10000)">$100</button>
+    </div>
     <button class="ghost" onclick="closeModal('topupModal')">Close</button>
   </div>
 </div>
@@ -534,7 +540,7 @@ function mapUser(p,followers){
 }
 function friendly(m){
   if(/Insufficient wallet/i.test(m)) return 'Not enough balance in your wallet';
-  if(/Age verification/i.test(m)) return 'Age verification is required first — ID checks are launching soon';
+  if(/Age verification/i.test(m)) return 'Age verification is required first — tap Me → Identity & age verification';
   return m||'Something went wrong';
 }
 async function rpc(name,args){
@@ -663,7 +669,7 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  enterApp(uid); subscribeRealtime();
+  enterApp(uid); subscribeRealtime(); handleStripeReturn();
 }
 function clearSession(){
   store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
@@ -901,7 +907,36 @@ async function tip(cid,pid){
     const u=me(); u.wallet=Math.max(0,u.wallet-200); updateWallet();
     toast(`Tipped ${user(cid).username} $2.00 — they keep $1.70 ✨`); settled(); }
 }
-function openTopup(){ const u=me(); if(u.role==='creator')return; document.getElementById('topupBal').textContent=$$(u.wallet); openModal('topupModal'); }
+function openTopup(){
+  const u=me(); if(u.role==='creator')return;
+  if(!u.ageVerified){ if(confirm('Adding funds needs a one-time age check (18+) with a government ID and a selfie, done securely by Stripe. Start the check now?')) startVerification(); return; }
+  document.getElementById('topupBal').textContent=$$(u.wallet); openModal('topupModal');
+}
+const payFail=(e,what)=>toast(e.message==='NOT_CONFIGURED'?what+' is not switched on yet':(e.message||'Something went wrong'));
+async function stripeCall(fn,body){
+  const {data,error}=await sb.functions.invoke(fn,{body});
+  if(error){ let msg=error.message; try{ const b=await error.context.json(); msg=b.error==='not_configured'?'NOT_CONFIGURED':(b.error||msg); }catch(e){} throw new Error(msg); }
+  return data;
+}
+async function startTopup(cents){
+  closeModal('topupModal'); toast('Opening secure checkout…');
+  try{ const d=await stripeCall('create-topup',{cents}); location.href=d.url; }
+  catch(e){ payFail(e,'Adding funds'); }
+}
+async function startVerification(){
+  toast('Opening secure ID check…');
+  try{ const d=await stripeCall('create-verification',{}); location.href=d.url; }
+  catch(e){ payFail(e,'ID verification'); }
+}
+/* back from Stripe (?topup=success|cancel, ?verify=done) */
+function handleStripeReturn(){
+  const q=new URLSearchParams(location.search); if(!q.has('topup')&&!q.has('verify')) return;
+  const refresh=(times)=>times.forEach(ms=>setTimeout(()=>{ if(store.session) settled(); },ms));
+  if(q.get('topup')==='success'){ toast('Payment received — your wallet updates in a few seconds ✓'); refresh([3000,8000,15000,30000]); }
+  else if(q.get('topup')==='cancel') toast('Payment cancelled — you were not charged');
+  if(q.get('verify')==='done'){ toast('Thanks — we are checking your ID. This usually takes a few minutes and updates automatically.'); refresh([10000,30000,60000,120000]); }
+  history.replaceState(null,'',location.pathname+location.hash);
+}
 
 /* ═══════════ EXPLORE ═══════════ */
 function renderExplore(){
@@ -1017,7 +1052,7 @@ function setPostType(t){ postType=t;
 async function publishPost(){
   const u=me(), cap=document.getElementById('postCap').value.trim(), f=document.getElementById('postMedia').files[0];
   if(!cap&&!f) return toast('Add a caption or a photo/video first');
-  if(!u.ageVerified) return toast('ID verification is required before you can publish — launching soon');
+  if(!u.ageVerified) return toast('Verify your age first — tap Me → Identity & age verification');
   const price=Math.round(parseFloat(document.getElementById('postPrice').value||'3')*100);
   if(postType==='paid'&&(isNaN(price)||price<99||price>49999)) return toast('Price must be between $0.99 and $499.99');
   const btn=document.getElementById('publishBtn'); btn.disabled=true;
@@ -1070,7 +1105,7 @@ const liveFail=e=>toast(e.message==='NOT_CONFIGURED'?'Live streaming is not swit
 
 async function startBroadcast(){
   const u=me();
-  if(!u.ageVerified) return toast('ID verification is required before you can go live — launching soon');
+  if(!u.ageVerified) return toast('Verify your age first — tap Me → Identity & age verification');
   const title=document.getElementById('liveTitle').value.trim(); if(!title) return toast('Give your stream a title');
   const price=liveEntry==='paid'?Math.round(parseFloat(document.getElementById('livePrice').value||'0')*100):0;
   if(liveEntry==='paid'&&(isNaN(price)||price<99||price>50000)) return toast('Entry price must be between $0.99 and $500.00');
@@ -1245,7 +1280,7 @@ function renderMe(){
            :`<div class="row" onclick="openTopup()"><div class="r-ic">◈</div>Wallet<span class="sub">${$$(u.wallet)}</span></div>`}
       ${u.staffRole?`<div class="row" onclick="go('admin')"><div class="r-ic">🛡️</div>${u.staffRole==='admin'?'Admin console':'Moderator tools'}<span class="sub">${u.staffRole}</span></div>`:''}
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
-      <div class="row" onclick="toast('${u.ageVerified?'Age verified ✅':'ID verification is launching soon — purchases and publishing unlock once verified'}')"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':'Not verified'}</span></div>
+      <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':'Verify now →'}</span></div>
       <div class="row" onclick="logOut()"><div class="r-ic">🚪</div>Log out</div>
     </div>`;
 }

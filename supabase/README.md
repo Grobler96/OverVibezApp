@@ -36,8 +36,23 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
   answers `503 not_configured` and the app says "Live streaming is not switched on yet".
 - Source: `supabase/functions/live-token/` (`token.js` is dependency-free and was verified against LiveKit's official SDK).
 
+## Stripe (migration 009 + 3 edge functions)
+- `create-topup`: signed-in, age-verified users pick $10/$25/$50/$100 and are sent to Stripe Checkout.
+- `stripe-webhook`: Stripe calls this after payment. It verifies Stripe's signature (the authentication, so it is deployed without
+  JWT checking), then credits the wallet exactly once via `credit_wallet_from_stripe()` (callable only by the service role; one row
+  per Checkout session in `stripe_events`). Also records Stripe Identity results.
+- `create-verification`: starts a Stripe Identity check (ID + selfie). The webhook reads the verified date of birth and only sets
+  `age_verified` if the person is 18+; if the date of birth is unavailable it fails closed (not verified).
+- **Secrets** (Supabase Dashboard → Edge Functions → Secrets): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (the endpoint's `whsec_…`).
+  Optional: `SITE_URL` (default the GitHub Pages URL), `STRIPE_CURRENCY` (default `usd`). Without them the functions answer `503 not_configured`.
+- Card payments use Stripe-hosted Checkout, so card details never touch our servers.
+- **Going live checklist:** finish Stripe business verification, enable Stripe Identity in live mode, create a LIVE webhook endpoint
+  (same URL, events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `identity.verification_session.verified`),
+  replace the two secrets with live values, and change the "payments run in test mode" line on the signup screen.
+- Not automated: refunds and chargebacks (handle in the Stripe dashboard; an admin can adjust balances), and creator payouts
+  (Stripe Connect). Stripe's fee (~1.5%+20p UK cards / 2.9%+30c) comes out of the platform's 15%, not the creator's 85%.
+
 ## Not built yet (needed before launch)
-- Automatic ID verification: until a provider is connected, an admin marks users 18+ verified by hand (Users → Mark 18+ verified).
-- Wallet top-ups (Stripe webhook that credits `wallet_cents` and logs a `wallet_topup` transaction) and automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console.
+- Automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console. Admins can still mark a user 18+ verified by hand.
 - Notifications, live recording/replays, and multi-guest streams. Terms/Privacy pages exist as lawyer-review drafts.
 - Auth: decide whether email confirmation stays on (the app handles both).
