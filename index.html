@@ -308,7 +308,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="err" id="suErr"></div>
   </div>
 
-  <div class="auth-note">By continuing you confirm you are 18+. Beta build — payments and ID verification are not live yet.</div>
+  <div class="auth-note">By continuing you confirm you are 18+ and agree to the <a href="terms.html" style="color:var(--accent-2)">Terms</a> and <a href="privacy.html" style="color:var(--accent-2)">Privacy Policy</a>.<br>Beta build — payments and ID verification are not live yet.</div>
 </div>
 
 <!-- ═══════════ APP SHELL ═══════════ -->
@@ -436,6 +436,22 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   </div>
 </div>
 
+<div class="overlay" id="reportModal" onclick="if(event.target===this)closeModal('reportModal')">
+  <div class="sheet">
+    <h3>Report</h3>
+    <p>Tell us what is wrong. Reports are reviewed by our Trust &amp; Safety team.</p>
+    <div class="field"><label>Reason</label>
+      <select id="reportReason" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none">
+        <option value="spam">Spam or scam</option><option value="nudity">Non-consensual or prohibited sexual content</option>
+        <option value="harassment">Harassment or hate</option><option value="underage">Involves someone under 18</option>
+        <option value="illegal">Illegal content</option><option value="other">Something else</option></select></div>
+    <div class="field"><label>Details (optional)</label>
+      <textarea id="reportDetails" rows="3" maxlength="800" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
+    <button class="primary" id="reportBtn" onclick="submitReport()">Submit report</button>
+    <button class="ghost" onclick="closeModal('reportModal')">Cancel</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -455,7 +471,7 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
 const PUB_COLS='id,username,display_name,bio,avatar_url,account_type,is_verified,sub_price_cents,created_at';
 
-const store = {users:[],posts:[],raffles:[],likes:{},unlocks:{},subs:{},subEnds:{},threads:[],session:null};
+const store = {users:[],posts:[],raffles:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
@@ -523,9 +539,9 @@ async function hydrate(){
   await ensureUsers((posts.data||[]).map(p=>p.creator_id));
   store.likes={}; (likes.data||[]).forEach(l=>store.likes[uid+l.post_id]=true);
   store.unlocks={}; (unl.data||[]).forEach(l=>store.unlocks[uid+l.post_id]=true);
-  store.subs={}; store.subEnds={};
-  (subs.data||[]).forEach(x=>{ if(x.status==='active'&&new Date(x.current_period_end)>new Date()){
-    store.subs[uid+x.creator_id]=true; store.subEnds[x.creator_id]=x.current_period_end; }});
+  store.subs={}; store.subEnds={}; store.subCanceled={};
+  (subs.data||[]).forEach(x=>{ if((x.status==='active'||x.status==='canceled')&&new Date(x.current_period_end)>new Date()){
+    store.subs[uid+x.creator_id]=true; store.subEnds[x.creator_id]=x.current_period_end; if(x.status==='canceled') store.subCanceled[x.creator_id]=true; }});
   const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
   store.posts=(posts.data||[]).map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
     paid:p.is_paid,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),
@@ -599,7 +615,7 @@ async function startSession(uid){
 }
 function clearSession(){
   store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[];
-  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={};
+  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={};
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -692,7 +708,7 @@ function postCard(p){
       <div class="av ${c.av}" style="cursor:pointer" onclick="openProfile('${p.by}')">${c.em}</div>
       <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}</span></div>
       ${mine?'<span class="own-tag">Your post</span>':
-        `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?'Subscribed':'Subscribe '+$$(c.subPrice)}</button>`}
+        `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?(store.subCanceled[p.by]?'Ends '+new Date(store.subEnds[p.by]).toLocaleDateString():'Subscribed'):'Subscribe '+$$(c.subPrice)}</button>`}
     </div>
     <div class="media ${open?'':'locked'}">
       ${p.mediaUrl&&open?(p.mediaKind==='video'
@@ -707,6 +723,7 @@ function postCard(p){
       <button class="act ${liked?'liked':''}" onclick="likePost('${p.id}')">${liked?'♥':'♡'} ${p.likes.toLocaleString()}</button>
       <button class="act" onclick="openComments('${p.id}')">💬 ${p.comments||0}</button>
       <button class="act" onclick="shareProfile('${esc(c.username)}')">↗</button>
+      ${mine?'':`<button class="act" onclick="openReport('post','${p.id}')" title="Report">⚑</button>`}
       ${mine?`<span class="act tip">earned ${$$(Math.round(p.earned*(1-FEE)))}</span>`:
         `<button class="act tip" onclick="tip('${p.by}','${p.id}')">💰 Tip $2</button>`}
     </div>
@@ -745,7 +762,8 @@ async function loadComments(){
     return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start">
       <div class="av ${a.av}" style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex:none">${a.em}</div>
       <div style="flex:1;min-width:0;font-size:13.5px;line-height:1.45;word-break:break-word"><b>${esc(a.username)}</b> <span style="color:var(--muted);font-size:11.5px">${ago(c.created_at)}</span><br>${esc(c.body)}</div>
-      ${c.user_id===myId?`<button onclick="deleteComment('${c.id}')" title="Delete" style="color:var(--muted);font-size:15px;padding:2px 6px">✕</button>`:''}
+      ${c.user_id===myId?`<button onclick="deleteComment('${c.id}')" title="Delete" style="color:var(--muted);font-size:15px;padding:2px 6px">✕</button>`
+      :`<button onclick="closeModal('commentsModal');openReport('comment','${c.id}')" title="Report" style="color:var(--muted);font-size:14px;padding:2px 6px">⚑</button>`}
     </div>`; }).join('')
     :'<p style="color:var(--muted);text-align:center;padding:24px 10px;font-size:13.5px">No comments yet — be the first.</p>';
   rerender();
@@ -786,8 +804,12 @@ function startUnlock(pid){
 }
 function subscribe(cid){
   const u=me(), c=user(cid);
-  if(store.subs[u.id+cid]) return toast('Subscribed to '+c.username+' until '+new Date(store.subEnds[cid]).toLocaleDateString());
-  document.getElementById('payTitle').textContent='Subscribe to '+c.username;
+  if(store.subs[u.id+cid]&&!store.subCanceled[cid]){
+    const end=new Date(store.subEnds[cid]).toLocaleDateString();
+    if(confirm('You are subscribed to '+c.username+' until '+end+'.\n\nCancel? You keep access until '+end+' and will not be charged again.')) cancelSub(cid);
+    return;
+  }
+  document.getElementById('payTitle').textContent=store.subs[u.id+cid]?'Renew '+c.username:'Subscribe to '+c.username;
   document.getElementById('paySub').textContent='30 days of access to all their paid posts. Renew anytime.';
   document.getElementById('payPrice').textContent=$$(c.subPrice)+' / 30 days';
   document.getElementById('payCreator').textContent=$$(Math.round(c.subPrice*(1-FEE)));
@@ -802,6 +824,13 @@ function subscribe(cid){
     }
   };
   openModal('payModal');
+}
+async function cancelSub(cid){
+  if(await rpc('cancel_subscription',{p_creator:cid})){
+    store.subCanceled[cid]=true; rerender();
+    toast('Subscription cancelled — access continues until '+new Date(store.subEnds[cid]).toLocaleDateString());
+    settled();
+  }
 }
 async function tip(cid,pid){
   toast('Processing tip…');
@@ -969,7 +998,7 @@ function renderMe(){
       </div>
     </div>
     ${!isC&&mySubs.length?`<div class="section-title" style="padding-top:4px">Your subscriptions</div>
-      <div class="list-card">${mySubs.map(c=>`<div class="row"><div class="r-ic ${c.av}">${c.em}</div>${esc(c.username)}<span class="sub">${$$(c.subPrice)}/mo · until ${new Date(store.subEnds[c.id]).toLocaleDateString()}</span></div>`).join('')}</div>`:''}
+      <div class="list-card">${mySubs.map(c=>`<div class="row"><div class="r-ic ${c.av}">${c.em}</div>${esc(c.username)}<span class="sub">${store.subCanceled[c.id]?'cancelled · ends ':'renews manually · until '}${new Date(store.subEnds[c.id]).toLocaleDateString()}</span></div>`).join('')}</div>`:''}
     <div class="section-title" style="padding-top:4px">Settings</div>
     <div class="list-card">
       ${isC?`<div class="row" onclick="changeSubPrice()"><div class="r-ic">💜</div>Subscription price<span class="sub">${$$(u.subPrice)}/mo</span></div>
@@ -1015,11 +1044,21 @@ async function msgFromProfile(cid){
   if(!t){ t={id:data,withU:cid,msgs:[]}; store.threads.unshift(t); }
   go('messages'); openChat(t.id);
 }
-async function reportProfile(cid){
-  const reason=prompt('What is wrong with this account? (spam, nudity, harassment, underage, illegal, other)');
-  if(!reason||!reason.trim()) return;
-  const {error}=await sb.from('reports').insert({reporter_id:store.session,target_type:'profile',target_id:cid,reason:reason.trim().slice(0,1000)});
-  toast(error?error.message:'Report submitted to Trust & Safety');
+let reportTarget=null;
+function openReport(type,id){
+  reportTarget={type,id};
+  document.getElementById('reportReason').value='spam'; document.getElementById('reportDetails').value='';
+  openModal('reportModal');
+}
+const reportProfile=cid=>openReport('profile',cid);
+async function submitReport(){
+  if(!reportTarget) return;
+  const sel=document.getElementById('reportReason'), label=sel.options[sel.selectedIndex].text, det=document.getElementById('reportDetails').value.trim();
+  const btn=document.getElementById('reportBtn'); btn.disabled=true;
+  const {error}=await sb.from('reports').insert({reporter_id:store.session,target_type:reportTarget.type,target_id:reportTarget.id,
+    reason:(sel.value+': '+label+(det?' — '+det:'')).slice(0,1000)});
+  btn.disabled=false; closeModal('reportModal');
+  toast(error?error.message:'Report submitted — thank you');
 }
 function renderProfile(){
   const c=user(currentProfile); if(!c) return go('home');
@@ -1038,7 +1077,7 @@ function renderProfile(){
       </div>
       ${!isMe&&c.role==='creator'?`
       <div style="display:flex;gap:10px;width:100%;padding:2px 4px 4px">
-        <button class="primary" style="margin:0" onclick="subscribe('${c.id}')">${subbed?'Subscribed ✓':'Subscribe '+$$(c.subPrice)+'/mo'}</button>
+        <button class="primary" style="margin:0" onclick="subscribe('${c.id}')">${subbed?(store.subCanceled[c.id]?'Ends '+new Date(store.subEnds[c.id]).toLocaleDateString():'Subscribed ✓'):'Subscribe '+$$(c.subPrice)+'/mo'}</button>
         <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text)" onclick="msgFromProfile('${c.id}')">Message</button>
       </div>`:''}
       <button class="ghost" style="margin-top:2px" onclick="shareProfile('${esc(c.username)}')">🔗 Copy shareable link</button>
