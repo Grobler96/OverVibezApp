@@ -266,6 +266,12 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 @keyframes flup{0%{transform:translate(-50%,0) scale(.7);opacity:0}12%{opacity:1}100%{transform:translate(calc(-50% + 18px),-320px) scale(1.25);opacity:0}}
 .live-summary{margin:auto;width:min(420px,92%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;color:var(--text)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.abtn{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:4px 6px 0 0}
+.abtn.danger{color:var(--live);border-color:var(--live)} .abtn.ok{color:var(--ok);border-color:var(--ok)}
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px}
+.admin-grid .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:left}
+.admin-grid .stat b{display:block;font-size:20px} .admin-grid .stat span{font-size:11.5px;color:var(--muted)}
+.admin-pad{padding:0 14px}
 </style>
 </head>
 <body>
@@ -322,6 +328,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     </div>
   </div>
 
+  <div id="banBanner" class="hidden" style="background:var(--live);color:#fff;padding:10px 14px;font-size:13px;text-align:center;line-height:1.45"></div>
   <div id="page-home">
     <div class="stories" id="storiesRow"></div>
     <div class="feed" id="feed"></div>
@@ -369,6 +376,8 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   <div id="page-me" class="hidden" ></div>
 
   <div id="page-profile" class="hidden"></div>
+
+  <div id="page-admin" class="hidden"></div>
 
   <nav class="bottomnav" id="bottomNav"></nav>
 </div>
@@ -471,7 +480,7 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
 const PUB_COLS='id,username,display_name,bio,avatar_url,account_type,is_verified,sub_price_cents,created_at';
 
-const store = {users:[],posts:[],raffles:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
+const store = {users:[],posts:[],raffles:[],raffleResults:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
@@ -482,7 +491,8 @@ function mapUser(p,followers){
   return {id:p.id,username:p.username,name:p.display_name||p.username,role:p.account_type,
     av:'a'+(1+hue(p.username)%6),em:p.account_type==='creator'?'✦':'🫧',verified:!!p.is_verified,
     subPrice:p.sub_price_cents,followers:followers||0,earnings:Number(p.earnings_cents||0),
-    wallet:Number(p.wallet_cents||0),ageVerified:!!p.age_verified,bio:p.bio||'',live:false};
+    wallet:Number(p.wallet_cents||0),ageVerified:!!p.age_verified,bio:p.bio||'',live:false,
+    staffRole:p.staff_role||null,isBanned:!!p.is_banned,banReason:p.ban_reason||''};
 }
 function friendly(m){
   if(/Insufficient wallet/i.test(m)) return 'Not enough balance in your wallet';
@@ -560,6 +570,9 @@ async function hydrate(){
     return {id:r.id,title:r.title,host:r.host_id&&user(r.host_id)?user(r.host_id).username:'OverVibez',prize:r.prize,
       price:r.entry_price_cents,entries:Number(t.entries||0),players:Number(t.players||0),
       seed:r.seed_hash.slice(0,6)+'…'+r.seed_hash.slice(-4),ends:new Date(r.closes_at).getTime()}; });
+  const drawn=await sb.from('raffles').select('id,title,prize').not('winner_entry_id','is',null).order('closes_at',{ascending:false}).limit(5);
+  const dres=await Promise.all((drawn.data||[]).map(d=>sb.rpc('raffle_result',{p_raffle:d.id})));
+  store.raffleResults=(drawn.data||[]).map((d,i)=>Object.assign({title:d.title,prize:d.prize},(dres[i].data||[{}])[0]||{})).filter(x=>x.winner_username);
   await loadThreads();
 }
 
@@ -614,7 +627,7 @@ async function startSession(uid){
   enterApp(uid); subscribeRealtime();
 }
 function clearSession(){
-  store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[];
+  store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
   store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={};
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
@@ -659,6 +672,9 @@ function renderShell(){
   badge.textContent=isC?'✦ CREATOR':'♥ FOLLOWER'; badge.classList.toggle('f',!isC);
   document.getElementById('walletPill').style.display=isC?'none':'flex';
   updateWallet();
+  const bb=document.getElementById('banBanner');
+  bb.classList.toggle('hidden',!u.isBanned);
+  if(u.isBanned) bb.textContent='Your account is suspended'+(u.banReason?': '+u.banReason:'')+'. You can browse but cannot post, comment, message or spend. Contact support to appeal.';
   document.getElementById('bottomNav').innerHTML = isC ? `
     <button class="nav-btn on" data-page="home" onclick="go('home',this)">⌂<span>Home</span></button>
     <button class="nav-btn" data-page="studio" onclick="go('studio',this)">◔<span>Studio</span></button>
@@ -672,7 +688,7 @@ function renderShell(){
     <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>`;
 }
 function go(page,btn){
-  ['home','explore','raffles','messages','studio','me','profile'].forEach(p=>{
+  ['home','explore','raffles','messages','studio','me','profile','admin'].forEach(p=>{
     const el=document.getElementById('page-'+p); if(el) el.classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
@@ -684,6 +700,7 @@ function go(page,btn){
   if(page==='studio')renderStudio();
   if(page==='me')renderMe();
   if(page==='profile')renderProfile();
+  if(page==='admin')renderAdmin();
   window.scrollTo({top:0});
 }
 function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt').textContent=$$(u.wallet); }
@@ -863,6 +880,8 @@ function renderRaffles(){
     <div class="raffle-meta"><span>🎟️ ${r.entries.toLocaleString()} entries</span><span>💵 ${$$(r.price)} / entry</span><span>👥 ${r.players.toLocaleString()} players</span></div>
     <button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries — ${$$(r.price)} each</button></div>`;
   }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No raffles running right now.</p>';
+  if(store.raffleResults.length) document.getElementById('raffleList').innerHTML+=`<div class="section-title" style="padding-top:8px">Recent winners</div><div class="list-card">${
+    store.raffleResults.map(w=>`<div class="row" style="cursor:default"><div class="r-ic">🏆</div><div style="flex:1;min-width:0"><b>@${esc(w.winner_username)}</b> won ${esc(w.prize)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(w.title)} · ${Number(w.total_tickets)} tickets · ${w.hash_ok?'seed verified ✓':'seed mismatch ⚠'}</span></div></div>`).join('')}</div>`;
 }
 setInterval(()=>{ if(!document.getElementById('page-raffles').classList.contains('hidden')&&store.session) renderRaffles(); },1000);
 function openRaffle(id){ activeRaffle=store.raffles.find(r=>r.id===id); qty=5;
@@ -1004,6 +1023,7 @@ function renderMe(){
       ${isC?`<div class="row" onclick="changeSubPrice()"><div class="r-ic">💜</div>Subscription price<span class="sub">${$$(u.subPrice)}/mo</span></div>
              <div class="row" onclick="toast('Bank payouts are not connected yet')"><div class="r-ic">🏦</div>Payout method<span class="sub">Coming soon</span></div>`
            :`<div class="row" onclick="openTopup()"><div class="r-ic">◈</div>Wallet<span class="sub">${$$(u.wallet)}</span></div>`}
+      ${u.staffRole?`<div class="row" onclick="go('admin')"><div class="r-ic">🛡️</div>${u.staffRole==='admin'?'Admin console':'Moderator tools'}<span class="sub">${u.staffRole}</span></div>`:''}
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
       <div class="row" onclick="toast('${u.ageVerified?'Age verified ✅':'ID verification is launching soon — purchases and publishing unlock once verified'}')"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':'Not verified'}</span></div>
       <div class="row" onclick="logOut()"><div class="r-ic">🚪</div>Log out</div>
@@ -1023,7 +1043,7 @@ let currentProfile=null;
 function openProfile(cid){ currentProfile=cid; go('profile'); }
 function rerender(){
   updateWallet();
-  const vis=['home','explore','raffles','messages','studio','me','profile'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
+  const vis=['home','explore','raffles','messages','studio','me','profile','admin'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
   if(vis==='home'){renderStories();renderFeed()} else if(vis==='explore')renderExplore();
   else if(vis==='raffles')renderRaffles(); else if(vis==='messages'){ if(!document.getElementById('threads-view').classList.contains('hidden'))renderThreads(); }
   else if(vis==='studio')renderStudio(); else if(vis==='me')renderMe(); else if(vis==='profile')renderProfile();
@@ -1105,6 +1125,183 @@ window.addEventListener('hashchange',()=>{ const c=hashUser(); if(c&&store.sessi
       <span style="color:var(--muted)">Log in or sign up to view their page${c.role==='creator'?' and subscribe from '+$$(c.subPrice)+'/mo':''}</span></div>
     </div>`);
 })();
+
+/* ═══════════ ADMIN / MODERATION CONSOLE ═══════════
+   Everything here calls admin_* database functions. Those functions re-check the caller's role on the server,
+   so hiding this screen from non-staff is only cosmetic — it is not the security boundary. */
+const isStaff=()=>!!(me()&&me().staffRole), isAdmin=()=>!!(me()&&me().staffRole==='admin');
+let adminTab='reports', adminSub={reports:'open',content:'post'}, adminUserQ='';
+const admBody=()=>document.getElementById('adminBody');
+const admLoading=()=>{ const b=admBody(); if(b) b.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">Loading…</p>'; };
+const admEmpty=t=>`<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">${t}</p>`;
+async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}); if(error){ toast(error.message); return {error}; } return {data}; }
+const admMoney=c=>$$(c);
+function renderAdmin(){
+  if(!isStaff()){ go('home'); return; }
+  const tabs=[['reports','Reports'],['content','Content'],['users','Users']].concat(isAdmin()?[['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  document.getElementById('page-admin').innerHTML=`
+    <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
+    <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
+    <div class="chiprow">${tabs.map(([k,l])=>`<button class="chip ${adminTab===k?'on':''}" onclick="admTab('${k}')">${l}</button>`).join('')}</div>
+    <div id="adminBody"></div>`;
+  admLoad();
+}
+function admTab(t){ adminTab=t; renderAdmin(); }
+function admLoad(){ admLoading(); ({reports:admReports,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,audit:admAudit})[adminTab](); }
+
+/* --- reports queue --- */
+async function admReports(){
+  const st=adminSub.reports, {data,error}=await admCall('admin_list_reports',{p_status:st}); if(error) return;
+  admBody().innerHTML=`<div class="chiprow">${['open','actioned','dismissed'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.reports='${x}';admLoad()">${x}</button>`).join('')}</div>
+   <div class="admin-pad">${data.length?data.map(r=>`<div class="chart-card">
+     <div style="display:flex;justify-content:space-between;align-items:center"><b style="text-transform:capitalize">${esc(r.target_type)} report</b><span style="font-size:12px;color:var(--muted)">${ago(r.created_at)} ago</span></div>
+     <div style="font-size:13px;margin:6px 0">${esc(r.reason)}</div>
+     ${r.preview?`<div style="background:var(--panel-2);border-radius:10px;padding:10px;font-size:13px;margin:6px 0;word-break:break-word">${esc(r.preview)}${r.already_removed?' <i style="color:var(--muted)">(already removed)</i>':''}</div>`:''}
+     <div style="font-size:12px;color:var(--muted)">Reported by @${esc(r.reporter||'deleted user')} · target @${esc(r.target_username||'unknown')}</div>
+     ${st==='open'?`<div style="margin-top:8px">
+       <button class="abtn" onclick="admResolve('${r.id}','dismiss')">Dismiss</button>
+       ${['post','comment','message'].includes(r.target_type)&&!r.already_removed?`<button class="abtn danger" onclick="admResolve('${r.id}','remove_content')">Remove content</button>`:''}
+       ${r.target_user_id?`<button class="abtn danger" onclick="admResolve('${r.id}','ban_user')">Ban user</button>`:''}
+       ${['post','comment','message'].includes(r.target_type)&&!r.already_removed&&r.target_user_id?`<button class="abtn danger" onclick="admResolve('${r.id}','remove_and_ban')">Remove + ban</button>`:''}
+       ${r.target_user_id?`<button class="abtn" onclick="admOpenUser('${r.target_user_id}')">View user</button>`:''}</div>`:''}
+   </div>`).join(''):admEmpty('Nothing here — the queue is clear ✓')}</div>`;
+}
+async function admResolve(id,action){
+  const ban=action.includes('ban');
+  const note=prompt(ban?'Reason for the ban (the user will see this):':(action==='dismiss'?'Note (optional):':'Reason for removal:'));
+  if(note===null) return;
+  if(ban&&note.trim().length<3) return toast('A reason of at least 3 characters is required to ban');
+  const {error}=await admCall('admin_resolve_report',{p_report:id,p_action:action,p_note:note.trim()||null});
+  if(!error){ toast('Done'); admLoad(); }
+}
+
+/* --- content review --- */
+async function admContent(){
+  const k=adminSub.content, {data,error}=await admCall('admin_list_content',{p_kind:k,p_limit:40}); if(error) return;
+  admBody().innerHTML=`<div class="chiprow">${[['post','Posts'],['comment','Comments']].map(([x,l])=>`<button class="chip ${k===x?'on':''}" onclick="adminSub.content='${x}';admLoad()">${l}</button>`).join('')}</div>
+   <div class="admin-pad">${data.length?data.map(c=>`<div class="chart-card" ${c.removed?'style="opacity:.65"':''}>
+     <div style="display:flex;justify-content:space-between"><b>@${esc(c.author)}${c.is_paid?' · 🔒 '+$$(c.price_cents):''}</b><span style="font-size:12px;color:var(--muted)">${ago(c.created_at)} ago</span></div>
+     <div style="font-size:13px;margin:6px 0;word-break:break-word">${esc(c.preview)}</div>
+     ${c.removed?`<div style="font-size:12px;color:var(--live)">Removed: ${esc(c.removed_reason||'')}</div><button class="abtn ok" onclick="admRestore('${c.kind}','${c.id}')">Restore</button>`
+       :`<button class="abtn danger" onclick="admRemove('${c.kind}','${c.id}')">Remove</button>`}
+   </div>`).join(''):admEmpty('No content yet.')}</div>`;
+}
+async function admRemove(kind,id){
+  const reason=prompt('Reason for removal (kept in the audit log):'); if(reason===null) return;
+  if(reason.trim().length<3) return toast('A reason is required');
+  const {error}=await admCall('admin_remove_content',{p_kind:kind,p_id:id,p_reason:reason.trim()}); if(!error){ toast('Removed'); admLoad(); }
+}
+async function admRestore(kind,id){
+  const {error}=await admCall('admin_restore_content',{p_kind:kind,p_id:id}); if(!error){ toast('Restored'); admLoad(); }
+}
+
+/* --- users --- */
+function admUsers(){
+  admBody().innerHTML=`<div class="admin-pad"><div class="field"><input id="admQ" placeholder="Search username…" value="${esc(adminUserQ)}" onkeydown="if(event.key==='Enter')admSearch()"></div>
+    <button class="primary" style="margin-top:0" onclick="admSearch()">Search</button></div><div id="admRes" class="admin-pad" style="padding-top:12px"></div>`;
+  admSearch();
+}
+async function admSearch(){
+  adminUserQ=document.getElementById('admQ').value.trim();
+  const {data,error}=await admCall('admin_search_users',{p_q:adminUserQ}); if(error) return;
+  document.getElementById('admRes').innerHTML=data.length?`<div class="list-card" style="margin:0">${data.map(u=>`<div class="row" onclick="admOpenUser('${u.id}')">
+    <div style="flex:1;min-width:0"><b>@${esc(u.username)}</b><br><span style="font-size:11.5px;color:var(--muted)">${esc(u.account_type)}${u.staff_role?' · '+esc(u.staff_role):''}${u.age_verified?' · 18+ ✓':' · unverified'}${u.is_verified?' · badge':''}${u.is_banned?' · BANNED':''}${u.wallet_cents!=null?' · wallet '+admMoney(u.wallet_cents)+' · earned '+admMoney(u.earnings_cents):''}</span></div></div>`).join('')}</div>`:admEmpty('No users found.');
+}
+async function admOpenUser(id){
+  adminTab='users'; if(document.getElementById('page-admin').classList.contains('hidden')) go('admin');
+  admLoading();
+  const {data:d,error}=await admCall('admin_user_detail',{p_user:id}); if(error) return admLoad();
+  const adm=isAdmin();
+  admBody().innerHTML=`<div class="admin-pad"><button class="back-btn" onclick="admLoad()" style="padding:0 0 10px">← Results</button>
+   <div class="chart-card"><h4 style="font-size:17px">@${esc(d.username)} ${d.is_verified?'<span class="verified">✔</span>':''}</h4>
+     <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${esc(d.account_type)}${d.staff_role?' · '+esc(d.staff_role):''} · joined ${new Date(d.created_at).toLocaleDateString()} · ${d.age_verified?'18+ verified':'NOT age verified'}</div>
+     ${d.is_banned?`<div style="background:rgba(255,71,87,.15);border:1px solid var(--live);border-radius:10px;padding:10px;font-size:13px;margin-bottom:8px"><b>Banned</b> ${d.banned_at?new Date(d.banned_at).toLocaleDateString():''}<br>${esc(d.ban_reason||'')}</div>`:''}
+     <div class="stat-row" style="padding:0;margin:8px 0">
+       <div class="stat"><b>${d.posts}</b><span>Posts (${d.posts_removed} removed)</span></div><div class="stat"><b>${d.comments}</b><span>Comments</span></div>
+       <div class="stat"><b>${d.reports_against}</b><span>Reports against (${d.open_reports_against} open)</span></div></div>
+     <div>${d.is_banned?`<button class="abtn ok" onclick="admBan('${d.id}',false)">Unban</button>`:`<button class="abtn danger" onclick="admBan('${d.id}',true)">Ban user</button>`}
+       ${adm?`<button class="abtn" onclick="admFlag('${d.id}',{p_age_verified:${!d.age_verified}})">${d.age_verified?'Remove 18+ verification':'Mark 18+ verified'}</button>
+       <button class="abtn" onclick="admFlag('${d.id}',{p_verified:${!d.is_verified}})">${d.is_verified?'Remove badge':'Give verified badge'}</button>
+       <button class="abtn" onclick="admCredit('${d.id}')">Credit wallet</button>
+       <button class="abtn" onclick="admRole('${d.id}')">Set staff role</button>`:''}</div></div>
+   <div class="section-title" style="padding:6px 0">Moderation history</div>
+   <div class="list-card" style="margin:0">${d.history.length?d.history.map(h=>`<div class="row" style="cursor:default"><div style="flex:1;font-size:13px"><b>${esc(h.action)}</b> by @${esc(h.by||'system')}<br><span style="font-size:11.5px;color:var(--muted)">${new Date(h.at).toLocaleString()}${h.details&&h.details.reason?' · '+esc(h.details.reason):''}${h.details&&h.details.note?' · '+esc(h.details.note):''}</span></div></div>`).join(''):'<div class="row" style="cursor:default;color:var(--muted)">No actions yet</div>'}</div></div>`;
+}
+async function admBan(id,banned){
+  let reason=null;
+  if(banned){ reason=prompt('Reason for the ban (the user will see this):'); if(reason===null) return; if(reason.trim().length<3) return toast('A reason is required'); }
+  const {error}=await admCall('admin_set_ban',{p_user:id,p_banned:banned,p_reason:reason&&reason.trim()}); if(!error){ toast(banned?'User banned':'User unbanned'); admOpenUser(id); }
+}
+async function admFlag(id,flags){
+  const {error}=await admCall('admin_set_user_flags',Object.assign({p_user:id},flags)); if(!error){ toast('Updated'); admOpenUser(id); }
+}
+async function admCredit(id){
+  const v=prompt('Credit how many dollars? (0.01–1000)'); if(v===null) return;
+  const cents=Math.round(parseFloat(v)*100); if(isNaN(cents)) return toast('Enter an amount like 25.00');
+  const reason=prompt('Reason (kept in the audit log):'); if(reason===null) return;
+  const {error}=await admCall('admin_credit_wallet',{p_user:id,p_cents:cents,p_reason:reason.trim()}); if(!error){ toast('Wallet credited '+$$(cents)); admOpenUser(id); }
+}
+async function admRole(id){
+  const v=prompt('Staff role: type moderator, admin, or none'); if(v===null) return;
+  const role=v.trim().toLowerCase(); if(!['moderator','admin','none'].includes(role)) return toast('Type moderator, admin or none');
+  if(role==='admin'&&!confirm('Admins can see and move money, ban users and run raffles. Give admin access?')) return;
+  const {error}=await admCall('admin_set_staff_role',{p_user:id,p_role:role==='none'?null:role}); if(!error){ toast('Role updated'); admOpenUser(id); }
+}
+
+/* --- stats / payouts / raffles / audit (admin only) --- */
+async function admStats(){
+  const {data:s,error}=await admCall('admin_stats'); if(error) return;
+  const items=[['Users',s.users],['Creators',s.creators],['Followers',s.followers],['Age verified',s.age_verified],['New (7 days)',s.new_users_7d],['Banned',s.banned],
+    ['Posts',s.posts],['Posts removed',s.posts_removed],['Comments',s.comments],['Open reports',s.open_reports],
+    ['Gross sales',admMoney(s.gross_cents)],['Platform fees (15%)',admMoney(s.platform_fees_cents)],['Raffle revenue',admMoney(s.raffle_revenue_cents)],
+    ['Owed to creators',admMoney(s.creator_earnings_owed_cents)],['User wallet balances',admMoney(s.wallet_liability_cents)],['Pending payouts',admMoney(s.pending_payouts_cents)+' ('+s.pending_payouts+')']];
+  admBody().innerHTML=`<div class="admin-grid">${items.map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+   <p class="admin-pad" style="font-size:12px;color:var(--muted);line-height:1.5">Wallet balances and creator earnings are money you hold on behalf of users, so they are liabilities, not revenue.</p>`;
+}
+async function admPayouts(){
+  const {data,error}=await admCall('admin_list_payouts',{p_status:'pending'}); if(error) return;
+  admBody().innerHTML=`<div class="admin-pad"><p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:10px">Bank payouts are not automated yet. Pay each creator yourself (bank transfer or your payment provider), then press <b>Mark paid</b>.</p>
+   ${data.length?data.map(p=>`<div class="chart-card"><div style="display:flex;justify-content:space-between"><b>@${esc(p.creator_username)}</b><b style="color:var(--money)">${$$(p.amount_cents)}</b></div>
+     <div style="font-size:12px;color:var(--muted);margin:4px 0">Requested ${ago(p.created_at)} ago</div><button class="abtn ok" onclick="admPaid('${p.id}')">Mark paid</button></div>`).join(''):admEmpty('No pending payouts.')}</div>`;
+}
+async function admPaid(id){
+  if(!confirm('Confirm you have sent this payout?')) return;
+  const {error}=await admCall('admin_mark_payout_paid',{p_id:id}); if(!error){ toast('Marked paid'); admLoad(); }
+}
+async function admRaffles(){
+  const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,closes_at,winner_entry_id').order('created_at',{ascending:false}).limit(20);
+  if(error) return toast(error.message);
+  const totals=await Promise.all(rs.map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
+  const results=await Promise.all(rs.map(r=>r.winner_entry_id?sb.rpc('raffle_result',{p_raffle:r.id}):Promise.resolve({data:null})));
+  admBody().innerHTML=`<div class="admin-pad">
+   <div class="chart-card"><h4>Create a raffle</h4>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">Paid prize draws are regulated as gambling or sweepstakes in many places. Check the rules for where your users live before running one.</p>
+     <div class="field"><label>Title</label><input id="rfTitle" maxlength="120" placeholder="Creator Fund Drop"></div>
+     <div class="field"><label>Prize</label><input id="rfPrize" maxlength="120" placeholder="$2,500"></div>
+     <div class="field"><label>Entry price (USD)</label><input id="rfPrice" type="number" min="0.5" step="0.5" value="2.00"></div>
+     <div class="field"><label>Open for (hours)</label><input id="rfHours" type="number" min="1" max="1440" value="72"></div>
+     <button class="primary" onclick="admCreateRaffle()">Create raffle</button></div>
+   ${rs.map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, res=(results[i].data||[])[0], closed=new Date(r.closes_at)<new Date();
+     return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${$$(r.entry_price_cents)}/entry</span>
+       <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} tickets · ${Number(t.players||0)} players · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
+       ${res?`<div style="font-size:13px">🏆 <b>@${esc(res.winner_username)}</b> · seed ${res.hash_ok?'verified ✓':'MISMATCH ⚠'}</div>`
+         :(closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">Draw winner</button>`:'')}</div>`; }).join('')}</div>`;
+}
+async function admCreateRaffle(){
+  const price=Math.round(parseFloat(document.getElementById('rfPrice').value)*100), hours=parseInt(document.getElementById('rfHours').value,10);
+  if(isNaN(price)||isNaN(hours)) return toast('Enter a price and duration');
+  const {error}=await admCall('admin_create_raffle',{p_title:document.getElementById('rfTitle').value,p_prize:document.getElementById('rfPrize').value,p_price_cents:price,p_hours:hours});
+  if(!error){ toast('Raffle created — it is now live for users'); admLoad(); }
+}
+async function admDraw(id){
+  if(!confirm('Draw the winner now? This cannot be undone.')) return;
+  const {error}=await admCall('admin_draw_raffle',{p_raffle:id}); if(!error){ toast('Winner drawn'); admLoad(); }
+}
+async function admAudit(){
+  const {data,error}=await admCall('admin_list_actions',{p_limit:100}); if(error) return;
+  admBody().innerHTML=`<div class="admin-pad">${data.length?`<div class="list-card" style="margin:0">${data.map(a=>`<div class="row" style="cursor:default"><div style="flex:1;font-size:13px;word-break:break-word"><b>${esc(a.action)}</b> · @${esc(a.admin||'system')}${a.target?' → @'+esc(a.target):''}<br>
+     <span style="font-size:11.5px;color:var(--muted)">${new Date(a.created_at).toLocaleString()}${a.details?' · '+esc(JSON.stringify(a.details)).slice(0,180):''}</span></div></div>`).join('')}</div>`:admEmpty('No staff actions yet.')}</div>`;
+}
 
 /* ═══════════ UTIL ═══════════ */
 function openModal(id){document.getElementById(id).classList.add('open')}
