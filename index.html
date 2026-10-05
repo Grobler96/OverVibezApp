@@ -776,8 +776,11 @@ function startUnlock(pid){
   document.getElementById('payCreator').textContent=$$(Math.round(p.price*(1-FEE)));
   document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-p.price));
   document.getElementById('payConfirmBtn').onclick=async()=>{
-    closeModal('payModal');
-    if(await rpc('purchase_post',{p_post_id:pid})){ await settled(); toast('Unlocked 💜'); }
+    closeModal('payModal'); toast('Processing payment…');
+    if(await rpc('purchase_post',{p_post_id:pid})){
+      store.unlocks[u.id+pid]=true; u.wallet=Math.max(0,u.wallet-p.price); rerender(); toast('Unlocked 💜');
+      settled();                                   // refresh from the server in the background (signed media URLs etc.)
+    }
   };
   openModal('payModal');
 }
@@ -790,15 +793,21 @@ function subscribe(cid){
   document.getElementById('payCreator').textContent=$$(Math.round(c.subPrice*(1-FEE)));
   document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-c.subPrice));
   document.getElementById('payConfirmBtn').onclick=async()=>{
-    closeModal('payModal');
+    closeModal('payModal'); toast('Processing payment…');
     if(await rpc('subscribe_to_creator',{p_creator:cid})){
+      store.subs[u.id+cid]=true; store.subEnds[cid]=new Date(Date.now()+30*864e5).toISOString();
+      u.wallet=Math.max(0,u.wallet-c.subPrice); rerender(); toast('Subscribed to '+c.username+' ✦ all paid posts unlocked');
       await sb.from('follows').upsert({follower_id:u.id,creator_id:cid},{ignoreDuplicates:true});
-      await settled(); toast('Subscribed to '+c.username+' ✦ all paid posts unlocked'); }
+      settled();
+    }
   };
   openModal('payModal');
 }
 async function tip(cid,pid){
-  if(await rpc('tip_creator',{p_creator:cid,p_amount:200,p_post:pid||null})){ await settled(); toast(`Tipped ${user(cid).username} $2.00 — they keep $1.70 ✨`); }
+  toast('Processing tip…');
+  if(await rpc('tip_creator',{p_creator:cid,p_amount:200,p_post:pid||null})){
+    const u=me(); u.wallet=Math.max(0,u.wallet-200); updateWallet();
+    toast(`Tipped ${user(cid).username} $2.00 — they keep $1.70 ✨`); settled(); }
 }
 function openTopup(){ const u=me(); if(u.role==='creator')return; document.getElementById('topupBal').textContent=$$(u.wallet); openModal('topupModal'); }
 
@@ -835,8 +844,10 @@ function openRaffle(id){ activeRaffle=store.raffles.find(r=>r.id===id); qty=5;
 function chgQty(d){ qty=Math.min(1000,Math.max(1,qty+d)); document.getElementById('qty').textContent=qty;
   document.getElementById('raffleTotal').textContent=$$(qty*activeRaffle.price); }
 async function confirmRaffle(){
-  closeModal('raffleModal');
-  if(await rpc('buy_raffle_entries',{p_raffle:activeRaffle.id,p_qty:qty})){ await settled(); toast(`${qty} entries confirmed 🎟️ Good luck!`); }
+  closeModal('raffleModal'); toast('Processing payment…');
+  if(await rpc('buy_raffle_entries',{p_raffle:activeRaffle.id,p_qty:qty})){
+    const u=me(); u.wallet=Math.max(0,u.wallet-qty*activeRaffle.price); updateWallet();
+    toast(`${qty} entries confirmed 🎟️ Good luck!`); settled(); }
 }
 
 /* ═══════════ CHAT ═══════════ */
