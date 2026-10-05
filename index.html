@@ -424,6 +424,18 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   </div>
 </div>
 
+<div class="overlay" id="commentsModal" onclick="if(event.target===this)closeModal('commentsModal')">
+  <div class="sheet" style="max-height:82vh;display:flex;flex-direction:column">
+    <h3>Comments</h3>
+    <div id="commentList" style="overflow-y:auto;flex:1;min-height:90px;margin:4px 0 12px"></div>
+    <div style="display:flex;gap:8px">
+      <input id="commentInput" maxlength="2000" placeholder="Add a comment…" style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px;outline:none" onkeydown="if(event.key==='Enter')sendComment()">
+      <button class="primary" style="width:auto;margin:0;padding:0 20px" onclick="sendComment()">Post</button>
+    </div>
+    <button class="ghost" onclick="closeModal('commentsModal')">Close</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -516,7 +528,7 @@ async function hydrate(){
     store.subs[uid+x.creator_id]=true; store.subEnds[x.creator_id]=x.current_period_end; }});
   const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
   store.posts=(posts.data||[]).map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
-    paid:p.is_paid,price:p.price_cents||0,likes:p.like_count,earned:earned[p.id]||0,ts:ago(p.created_at),
+    paid:p.is_paid,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),
     mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null}));
   // media URLs: free media is public; paid media needs a signed URL, issued only if storage RLS agrees
   const paidPaths=[];
@@ -693,7 +705,7 @@ function postCard(p){
     </div>
     <div class="card-actions">
       <button class="act ${liked?'liked':''}" onclick="likePost('${p.id}')">${liked?'♥':'♡'} ${p.likes.toLocaleString()}</button>
-      <button class="act" onclick="toast('Comments are coming soon')">💬</button>
+      <button class="act" onclick="openComments('${p.id}')">💬 ${p.comments||0}</button>
       <button class="act" onclick="shareProfile('${esc(c.username)}')">↗</button>
       ${mine?`<span class="act tip">earned ${$$(Math.round(p.earned*(1-FEE)))}</span>`:
         `<button class="act tip" onclick="tip('${p.by}','${p.id}')">💰 Tip $2</button>`}
@@ -711,6 +723,45 @@ async function likePost(id){
   const {error}=was ? await sb.from('likes').delete().eq('post_id',id).eq('user_id',u.id)
                     : await sb.from('likes').insert({post_id:id,user_id:u.id});
   if(error){ store.likes[k]=was; p.likes+=was?1:-1; refresh(); toast(error.message); }
+}
+
+/* ═══════════ COMMENTS ═══════════ */
+let commentPost=null;
+function openComments(pid){
+  commentPost=pid;
+  document.getElementById('commentList').innerHTML='<p style="color:var(--muted);text-align:center;padding:20px;font-size:13px">Loading…</p>';
+  document.getElementById('commentInput').value='';
+  openModal('commentsModal'); loadComments();
+}
+async function loadComments(){
+  const pid=commentPost;
+  const {data,error}=await sb.from('comments').select('id,user_id,body,created_at').eq('post_id',pid).order('created_at').limit(200);
+  if(error) return toast(error.message);
+  await ensureUsers(data.map(c=>c.user_id));
+  if(pid!==commentPost) return;
+  const p=store.posts.find(x=>x.id===pid); if(p&&data.length<200) p.comments=data.length;
+  const el=document.getElementById('commentList'), myId=store.session;
+  el.innerHTML=data.length?data.map(c=>{ const a=user(c.user_id)||{username:'user',em:'🫧',av:'a1'};
+    return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start">
+      <div class="av ${a.av}" style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex:none">${a.em}</div>
+      <div style="flex:1;min-width:0;font-size:13.5px;line-height:1.45;word-break:break-word"><b>${esc(a.username)}</b> <span style="color:var(--muted);font-size:11.5px">${ago(c.created_at)}</span><br>${esc(c.body)}</div>
+      ${c.user_id===myId?`<button onclick="deleteComment('${c.id}')" title="Delete" style="color:var(--muted);font-size:15px;padding:2px 6px">✕</button>`:''}
+    </div>`; }).join('')
+    :'<p style="color:var(--muted);text-align:center;padding:24px 10px;font-size:13.5px">No comments yet — be the first.</p>';
+  rerender();
+  el.scrollTop=el.scrollHeight;
+}
+async function sendComment(){
+  const inp=document.getElementById('commentInput'), body=inp.value.trim(); if(!body||!commentPost) return;
+  inp.value='';
+  const {error}=await sb.from('comments').insert({post_id:commentPost,user_id:store.session,body});
+  if(error){ inp.value=body; return toast(error.message); }
+  loadComments();
+}
+async function deleteComment(id){
+  const {error}=await sb.from('comments').delete().eq('id',id);
+  if(error) return toast(error.message);
+  loadComments();
 }
 
 /* ═══════════ PAYMENTS ═══════════ */
