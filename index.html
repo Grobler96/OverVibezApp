@@ -270,6 +270,10 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 #payModal,#reportModal,#commentsModal{z-index:130}
 #liveVideoWrap{position:absolute;inset:0;background:#000;display:grid;place-items:center}
 #liveVideoWrap video{width:100%;height:100%;object-fit:cover}
+.av,.r-ic{overflow:hidden}
+.av img,.r-ic img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.cover{height:130px;background:var(--panel-2) center/cover no-repeat;margin:0 14px;border-radius:18px}
+#pwModal,#editProfileModal{z-index:130}
 .abtn{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:4px 6px 0 0}
 .abtn.danger{color:var(--live);border-color:var(--live)} .abtn.ok{color:var(--ok);border-color:var(--ok)}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px}
@@ -295,6 +299,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="field"><label>Email</label><input id="liUser" type="email" placeholder="you@example.com" autocomplete="email"></div>
     <div class="field"><label>Password</label><input id="liPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
     <button class="primary" onclick="doLogin()">Log in</button>
+    <button class="ghost" onclick="doForgot()">Forgot password?</button>
     <div class="err" id="liErr"></div>
   </div>
 
@@ -310,6 +315,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
         <span>Discover creators, subscribe, unlock exclusive drops</span>
       </div>
     </div>
+    <div class="field hidden" id="suInviteWrap"><label>Invite code <span style="color:var(--muted)">(the beta is invite-only)</span></label><input id="suInvite" placeholder="VIBE-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off"></div>
     <div class="field"><label>Username</label><input id="suUser" placeholder="lowercase, 3–24 chars" maxlength="24"></div>
     <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="you@example.com"></div>
     <div class="field"><label>Password</label><input id="suPass" type="password" placeholder="min 8 characters"></div>
@@ -505,6 +511,35 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   </div>
 </div>
 
+<div class="overlay" id="pwModal" onclick="if(event.target===this)closeModal('pwModal')">
+  <div class="sheet">
+    <h3 id="pwTitle">Change password</h3>
+    <p id="pwSub">Choose a new password (at least 8 characters).</p>
+    <div class="field" id="pwCurWrap"><label>Current password</label><input id="pwCur" type="password" autocomplete="current-password"></div>
+    <div class="field"><label>New password</label><input id="pwNew" type="password" autocomplete="new-password"></div>
+    <div class="field"><label>Repeat new password</label><input id="pwNew2" type="password" autocomplete="new-password"></div>
+    <div class="err" id="pwErr"></div>
+    <button class="primary" id="pwBtn" onclick="savePassword()">Save password</button>
+    <button class="ghost" onclick="closeModal('pwModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="editProfileModal" onclick="if(event.target===this)closeModal('editProfileModal')">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <h3>Edit profile</h3>
+    <div class="field"><label>Display name</label><input id="epName" maxlength="60"></div>
+    <div class="field"><label>Bio</label><textarea id="epBio" rows="3" maxlength="500" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
+    <div class="field"><label>Profile picture</label>
+      <div style="display:flex;gap:12px;align-items:center"><div class="av a1" id="epAvPrev" style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:24px;flex:none"></div>
+      <input id="epAvatar" type="file" accept="image/png,image/jpeg,image/webp" style="padding:8px"></div></div>
+    <div class="field"><label>Cover photo</label><div class="cover" id="epCoverPrev" style="margin:0 0 8px;height:70px"></div>
+      <input id="epCover" type="file" accept="image/png,image/jpeg,image/webp" style="padding:8px"></div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">Photos are resized and re-saved in your browser, which also removes hidden data such as GPS location.</p>
+    <button class="primary" id="epSave" onclick="saveProfile()">Save</button>
+    <button class="ghost" onclick="closeModal('editProfileModal')">Cancel</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -522,12 +557,14 @@ const FEE = 0.15; // platform share — creators keep 85% (enforced server-side 
 const $$ = c => '$' + ((Number(c)||0)/100).toFixed(2);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
-const PUB_COLS='id,username,display_name,bio,avatar_url,account_type,is_verified,sub_price_cents,created_at';
+const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at';
 
 const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
+const pubUrl=path=>sb?sb.storage.from('public-media').getPublicUrl(path).data.publicUrl:'';
+const avInner=u=>u.avatarUrl?`<img src="${esc(u.avatarUrl)}" alt="">`:u.em;
 function hue(str){ let h=0; for(const ch of str) h=(h*31+ch.charCodeAt(0))>>>0; return h; }
 function ago(iso){ const t=(Date.now()-new Date(iso))/1000;
   return t<60?'now':t<3600?Math.floor(t/60)+'m':t<86400?Math.floor(t/3600)+'h':Math.floor(t/86400)+'d'; }
@@ -536,7 +573,8 @@ function mapUser(p,followers){
     av:'a'+(1+hue(p.username)%6),em:p.account_type==='creator'?'✦':'🫧',verified:!!p.is_verified,
     subPrice:p.sub_price_cents,followers:followers||0,earnings:Number(p.earnings_cents||0),
     wallet:Number(p.wallet_cents||0),ageVerified:!!p.age_verified,bio:p.bio||'',live:false,
-    staffRole:p.staff_role||null,isBanned:!!p.is_banned,banReason:p.ban_reason||''};
+    staffRole:p.staff_role||null,isBanned:!!p.is_banned,banReason:p.ban_reason||'',
+    avatarPath:p.avatar_url||null,avatarUrl:p.avatar_url?pubUrl(p.avatar_url):null,coverUrl:p.cover_url?pubUrl(p.cover_url):null};
 }
 function friendly(m){
   if(/Insufficient wallet/i.test(m)) return 'Not enough balance in your wallet';
@@ -621,8 +659,25 @@ async function hydrate(){
   await loadThreads();
 }
 
+/* ═══════════ FEATURE FLAGS + BETA SETTINGS ═══════════ */
+let features={live:false,payments:false,identity:false}, settings={invite_only:true};
+async function loadFeatures(){
+  try{ const {data}=await sb.functions.invoke('features'); if(data&&typeof data.live==='boolean') features=data; }catch(e){}
+  const lv=document.getElementById('cmLive'); if(lv) lv.classList.toggle('hidden',!features.live);
+}
+async function loadPublicSettings(){
+  try{ const {data}=await sb.rpc('public_settings'); if(data) settings=data; }catch(e){}
+  document.getElementById('suInviteWrap').classList.toggle('hidden',!settings.invite_only);
+}
+(async function boot(){
+  if(!sb) return;
+  await Promise.all([loadFeatures(),loadPublicSettings()]);
+  const code=new URLSearchParams(location.search).get('invite');
+  if(code){ authTab('signup'); document.getElementById('suInvite').value=code; }
+})();
+
 /* ═══════════ AUTH ═══════════ */
-let signupRole='creator';
+let signupRole='creator', recoveryMode=false;
 function authTab(t){
   document.getElementById('tabLogin').classList.toggle('on',t==='login');
   document.getElementById('tabSignup').classList.toggle('on',t==='signup');
@@ -646,11 +701,19 @@ async function doSignup(){
   if(pw.length<8) return err.textContent='Password must be at least 8 characters.';
   if(!dob) return err.textContent='Date of birth is required.';
   if((Date.now()-new Date(dob).getTime())/3.15576e10<18) return err.textContent='You must be 18 or older to join OverVibez.';
+  let invite='';
+  if(settings.invite_only){
+    invite=document.getElementById('suInvite').value.trim().toUpperCase();
+    if(!invite) return err.textContent='You need an invite code — the beta is invite-only.';
+    const {data:valid}=await sb.rpc('check_invite',{p_code:invite});
+    if(!valid) return err.textContent='That invite code is not valid, or has been used up.';
+  }
   err.textContent='Creating account…';
   const {data:taken}=await sb.from('profiles').select('id').eq('username',un).maybeSingle();
   if(taken) return err.textContent='That username is taken.';
-  const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,display_name:un,account_type:signupRole}}});
-  if(error) return err.textContent=error.message;
+  const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,display_name:un,account_type:signupRole,invite_code:invite}}});
+  if(error) return err.textContent=/Database error saving new user/i.test(error.message)?'Could not create the account — the invite code may have just been used up, or that username/email is taken.':error.message;
+  if(new URLSearchParams(location.search).has('invite')) history.replaceState(null,'',location.pathname+location.hash);
   err.textContent='';
   if(!data.session){ authTab('login'); document.getElementById('liErr').textContent='Check your email to confirm your account, then log in.'; }
 }
@@ -663,13 +726,49 @@ async function doLogin(){
   const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
   if(error) err.textContent=error.message;
 }
+async function doForgot(){
+  const err=document.getElementById('liErr');
+  if(!sb) return err.textContent='Cannot reach OverVibez servers — check your connection and reload.';
+  let em=document.getElementById('liUser').value.trim();
+  if(!em||!em.includes('@')){ em=(prompt('Enter the email address of your account:')||'').trim(); if(!em) return; }
+  const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
+  err.style.color='var(--ok)';
+  err.textContent=error?error.message:'If an account exists for that email, we have sent a link to reset your password. Check your inbox (and spam).';
+  if(error) err.style.color='';
+}
+let pwMode='change';
+function openPassword(recovery){
+  pwMode=recovery?'recovery':'change';
+  document.getElementById('pwTitle').textContent=recovery?'Set a new password':'Change password';
+  document.getElementById('pwSub').textContent=recovery?'Choose a new password for your account (at least 8 characters).':'Enter your current password, then choose a new one (at least 8 characters).';
+  document.getElementById('pwCurWrap').classList.toggle('hidden',recovery);
+  ['pwCur','pwNew','pwNew2'].forEach(i=>document.getElementById(i).value=''); document.getElementById('pwErr').textContent='';
+  openModal('pwModal');
+}
+async function savePassword(){
+  const err=document.getElementById('pwErr'), cur=document.getElementById('pwCur').value, nw=document.getElementById('pwNew').value, nw2=document.getElementById('pwNew2').value;
+  if(nw.length<8) return err.textContent='Your new password must be at least 8 characters.';
+  if(nw!==nw2) return err.textContent='The two new passwords do not match.';
+  const btn=document.getElementById('pwBtn'); btn.disabled=true; err.textContent='';
+  try{
+    if(pwMode==='change'){
+      const {data:{user}}=await sb.auth.getUser();
+      const {error:e1}=await sb.auth.signInWithPassword({email:user.email,password:cur});
+      if(e1) return err.textContent='Your current password is not correct.';
+    }
+    const {error}=await sb.auth.updateUser({password:nw});
+    if(error) return err.textContent=error.message;
+    closeModal('pwModal'); toast('Password updated ✓');
+  } finally { btn.disabled=false; }
+}
 async function logOut(){ if(sb) await sb.auth.signOut(); }
 async function startSession(uid){
   if(store.session===uid) return;
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  enterApp(uid); subscribeRealtime(); handleStripeReturn();
+  enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures();
+  if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
   store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
@@ -680,6 +779,7 @@ function clearSession(){
   document.getElementById('authScreen').classList.remove('hidden');
 }
 if(sb) sb.auth.onAuthStateChange((ev,session)=>{
+  if(ev==='PASSWORD_RECOVERY') recoveryMode=true;
   setTimeout(()=>{ if(session&&session.user) startSession(session.user.id); else if(store.session) clearSession(); },0);
 });
 
@@ -756,7 +856,7 @@ function renderStories(){
   const creators=store.users.filter(u=>u.role==='creator').sort((a,b)=>(liveOf(b.id)?1:0)-(liveOf(a.id)?1:0));
   document.getElementById('storiesRow').innerHTML=creators.map((c,i)=>{ const l=liveOf(c.id); return `
     <div class="story" onclick="${l?`openLive('${l.id}')`:`openProfile('${c.id}')`}">
-      <div class="ring"><div class="av ${c.av}">${c.em}</div>${l?'<span class="live-tag">LIVE</span>':''}</div>
+      <div class="ring"><div class="av ${c.av}">${avInner(c)}</div>${l?'<span class="live-tag">LIVE</span>':''}</div>
       <span class="name">${esc(c.username)}</span></div>`; }).join('');
 }
 function canView(p){
@@ -768,7 +868,7 @@ function postCard(p){
   const mine=p.by===u.id, open=canView(p), liked=store.likes[u.id+p.id];
   return `<article class="card">
     <div class="card-head">
-      <div class="av ${c.av}" style="cursor:pointer" onclick="openProfile('${p.by}')">${c.em}</div>
+      <div class="av ${c.av}" style="cursor:pointer" onclick="openProfile('${p.by}')">${avInner(c)}</div>
       <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}</span></div>
       ${mine?'<span class="own-tag">Your post</span>':
         `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?(store.subCanceled[p.by]?'Ends '+new Date(store.subEnds[p.by]).toLocaleDateString():'Subscribed'):'Subscribe '+$$(c.subPrice)}</button>`}
@@ -795,7 +895,7 @@ function postCard(p){
 }
 function liveBanners(){
   return store.live.filter(l=>l.creator_id!==store.session).map(l=>{ const c=user(l.creator_id); if(!c) return '';
-    return `<div class="live-banner" onclick="openLive('${l.id}')"><div class="av ${c.av}" style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px">${c.em}</div>
+    return `<div class="live-banner" onclick="openLive('${l.id}')"><div class="av ${c.av}" style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px">${avInner(c)}</div>
       <div style="flex:1;min-width:0"><b style="font-size:14px">${esc(c.username)} is live</b><div style="font-size:12px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.title)} · ${l.entry_price_cents?$$(l.entry_price_cents)+' entry':'Free'} · tap to join</div></div>
       <span class="live-tag" style="position:static;transform:none">LIVE</span></div>`; }).join('');
 }
@@ -829,7 +929,7 @@ async function loadComments(){
   const el=document.getElementById('commentList'), myId=store.session;
   el.innerHTML=data.length?data.map(c=>{ const a=user(c.user_id)||{username:'user',em:'🫧',av:'a1'};
     return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start">
-      <div class="av ${a.av}" style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex:none">${a.em}</div>
+      <div class="av ${a.av}" style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex:none">${avInner(a)}</div>
       <div style="flex:1;min-width:0;font-size:13.5px;line-height:1.45;word-break:break-word"><b>${esc(a.username)}</b> <span style="color:var(--muted);font-size:11.5px">${ago(c.created_at)}</span><br>${esc(c.body)}</div>
       ${c.user_id===myId?`<button onclick="deleteComment('${c.id}')" title="Delete" style="color:var(--muted);font-size:15px;padding:2px 6px">✕</button>`
       :`<button onclick="closeModal('commentsModal');openReport('comment','${c.id}')" title="Report" style="color:var(--muted);font-size:14px;padding:2px 6px">⚑</button>`}
@@ -909,6 +1009,7 @@ async function tip(cid,pid){
 }
 function openTopup(){
   const u=me(); if(u.role==='creator')return;
+  if(!features.payments){ toast('Adding funds is coming soon — we will tell you when it is ready'); return; }
   if(!u.ageVerified){ if(confirm('Adding funds needs a one-time age check (18+) with a government ID and a selfie, done securely by Stripe. Start the check now?')) startVerification(); return; }
   document.getElementById('topupBal').textContent=$$(u.wallet); openModal('topupModal');
 }
@@ -985,7 +1086,7 @@ function renderThreads(){
   document.getElementById('threadList').innerHTML=store.threads.length?store.threads.map(t=>{
     const c=user(t.withU); if(!c) return ''; const last=t.msgs[t.msgs.length-1]||{me:false,t:'Say hi 👋'};
     return `<div class="thread" onclick="openChat('${t.id}')">
-      <div class="av ${c.av}">${c.em}</div>
+      <div class="av ${c.av}">${avInner(c)}</div>
       <div class="tx"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${last.me?'You: ':''}${esc(last.t)}</span></div>
       <div class="meta">${last.ts?ago(last.ts):''}</div></div>`;
   }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No conversations yet. Visit a creator’s page and tap Message.</p>';
@@ -1085,7 +1186,7 @@ function setCreateMode(m){ createMode=m;
 function setLiveEntry(t){ liveEntry=t;
   document.getElementById('leFree').classList.toggle('on',t==='free'); document.getElementById('lePaid').classList.toggle('on',t==='paid');
   document.getElementById('livePriceField').classList.toggle('hidden',t==='free'); }
-function openCreate(){ setCreateMode('post'); openModal('createModal'); }
+function openCreate(){ setCreateMode('post'); document.getElementById('cmLive').classList.toggle('hidden',!features.live); openModal('createModal'); }
 
 let liveRoom=null, liveState=null, liveTimer=null, liveBeat=null, livePollT=null, liveChannel=null, liveSeen=new Set();
 async function loadLive(){
@@ -1259,7 +1360,8 @@ function renderMe(){
   const mySubs=Object.keys(store.subs).filter(k=>store.subs[k]&&k.startsWith(u.id)).map(k=>user(k.replace(u.id,''))).filter(Boolean);
   document.getElementById('page-me').innerHTML=`
     <div class="me-head">
-      <div class="av ${u.av}">${u.em}</div>
+      ${u.coverUrl?`<div class="cover" style="background-image:url('${esc(u.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px"></div>`:''}
+      <div class="av ${u.av}">${avInner(u)}</div>
       <h2>${esc(u.name)} ${u.verified?'<span class="verified">✔</span>':''} <span class="role-badge ${isC?'':'f'}">${isC?'✦ CREATOR':'♥ FOLLOWER'}</span></h2>
       <div class="u">@${esc(u.username)}${u.bio?' · '+esc(u.bio):''}</div>
       <div class="me-stats">
@@ -1272,16 +1374,20 @@ function renderMe(){
       </div>
     </div>
     ${!isC&&mySubs.length?`<div class="section-title" style="padding-top:4px">Your subscriptions</div>
-      <div class="list-card">${mySubs.map(c=>`<div class="row"><div class="r-ic ${c.av}">${c.em}</div>${esc(c.username)}<span class="sub">${store.subCanceled[c.id]?'cancelled · ends ':'renews manually · until '}${new Date(store.subEnds[c.id]).toLocaleDateString()}</span></div>`).join('')}</div>`:''}
+      <div class="list-card">${mySubs.map(c=>`<div class="row"><div class="r-ic ${c.av}">${avInner(c)}</div>${esc(c.username)}<span class="sub">${store.subCanceled[c.id]?'cancelled · ends ':'renews manually · until '}${new Date(store.subEnds[c.id]).toLocaleDateString()}</span></div>`).join('')}</div>`:''}
     <div class="section-title" style="padding-top:4px">Settings</div>
     <div class="list-card">
       ${isC?`<div class="row" onclick="changeSubPrice()"><div class="r-ic">💜</div>Subscription price<span class="sub">${$$(u.subPrice)}/mo</span></div>
              <div class="row" onclick="toast('Bank payouts are not connected yet')"><div class="r-ic">🏦</div>Payout method<span class="sub">Coming soon</span></div>`
            :`<div class="row" onclick="openTopup()"><div class="r-ic">◈</div>Wallet<span class="sub">${$$(u.wallet)}</span></div>`}
       ${u.staffRole?`<div class="row" onclick="go('admin')"><div class="r-ic">🛡️</div>${u.staffRole==='admin'?'Admin console':'Moderator tools'}<span class="sub">${u.staffRole}</span></div>`:''}
+      <div class="row" onclick="openEditProfile()"><div class="r-ic">✏️</div>Edit profile<span class="sub">Name, bio, photos</span></div>
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
-      <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':'Verify now →'}</span></div>
+      <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:!features.identity?`toast('ID verification is coming soon — we will tell you when it is ready')`:`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':features.identity?'Verify now →':'Coming soon'}</span></div>
+      <div class="row" onclick="openPassword(false)"><div class="r-ic">🔑</div>Change password</div>
+      <div class="row" onclick="downloadMyData()"><div class="r-ic">📦</div>Download my data</div>
       <div class="row" onclick="logOut()"><div class="r-ic">🚪</div>Log out</div>
+      <div class="row" onclick="deleteMyAccount()" style="color:var(--live)"><div class="r-ic">🗑️</div>Delete my account</div>
     </div>`;
 }
 async function changeSubPrice(){
@@ -1291,6 +1397,68 @@ async function changeSubPrice(){
   const {error}=await sb.from('profiles').update({sub_price_cents:c}).eq('id',store.session);
   if(error) return toast(error.message);
   me().subPrice=c; renderMe(); toast('Subscription price updated to '+$$(c));
+}
+
+/* ═══════════ PROFILE EDITING, DATA EXPORT, ACCOUNT DELETION ═══════════ */
+function imgToBlob(file,w,h,q=0.86){
+  return new Promise((res,rej)=>{
+    if(!/^image\/(png|jpeg|webp)$/.test(file.type)) return rej(new Error('Please choose a PNG, JPG or WebP image'));
+    if(file.size>15*1024*1024) return rej(new Error('That image is too large (max 15 MB)'));
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{ const c=document.createElement('canvas'); c.width=w; c.height=h; const ctx=c.getContext('2d');
+      const r=Math.max(w/img.width,h/img.height), sw=w/r, sh=h/r;            // centre-crop to fill
+      ctx.drawImage(img,(img.width-sw)/2,(img.height-sh)/2,sw,sh,0,0,w,h); URL.revokeObjectURL(url);
+      c.toBlob(b=>b?res(b):rej(new Error('Could not process the image')),'image/jpeg',q); };   // re-encoding drops EXIF/GPS data
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('That file could not be read as an image')); };
+    img.src=url;
+  });
+}
+function openEditProfile(){
+  const u=me();
+  document.getElementById('epName').value=u.name; document.getElementById('epBio').value=u.bio||'';
+  document.getElementById('epAvatar').value=''; document.getElementById('epCover').value='';
+  const av=document.getElementById('epAvPrev'); av.className='av '+u.av; av.innerHTML=avInner(u);
+  document.getElementById('epCoverPrev').style.backgroundImage=u.coverUrl?`url('${u.coverUrl}')`:'none';
+  openModal('editProfileModal');
+}
+document.addEventListener('change',e=>{
+  if(e.target&&(e.target.id==='epAvatar'||e.target.id==='epCover')&&e.target.files[0]){
+    const url=URL.createObjectURL(e.target.files[0]);
+    if(e.target.id==='epAvatar') document.getElementById('epAvPrev').innerHTML=`<img src="${url}" alt="">`;
+    else document.getElementById('epCoverPrev').style.backgroundImage=`url('${url}')`;
+  }
+});
+async function saveProfile(){
+  const u=me(), btn=document.getElementById('epSave'), name=document.getElementById('epName').value.trim(), bio=document.getElementById('epBio').value.trim();
+  if(!name) return toast('Your display name cannot be empty');
+  btn.disabled=true; toast('Saving…');
+  try{
+    const patch={display_name:name,bio:bio||null}, old=[];
+    const up=async(file,w,h,kind)=>{
+      const blob=await imgToBlob(file,w,h), path=`${u.id}/${kind}-${Date.now()}.jpg`;
+      const {error}=await sb.storage.from('public-media').upload(path,blob,{contentType:'image/jpeg'}); if(error) throw new Error(error.message);
+      return path;
+    };
+    const af=document.getElementById('epAvatar').files[0], cf=document.getElementById('epCover').files[0];
+    if(af){ patch.avatar_url=await up(af,512,512,'avatar'); if(u.avatarPath) old.push(u.avatarPath); }
+    if(cf){ patch.cover_url=await up(cf,1200,400,'cover'); }
+    const {error}=await sb.from('profiles').update(patch).eq('id',u.id); if(error) throw new Error(error.message);
+    if(old.length) sb.storage.from('public-media').remove(old).then(()=>{});          // tidy the replaced picture
+    closeModal('editProfileModal'); await hydrate(); rerender(); toast('Profile saved ✓');
+  }catch(e){ toast(e.message||'Could not save your profile'); }
+  finally{ btn.disabled=false; }
+}
+async function downloadMyData(){
+  const {data,error}=await sb.rpc('export_my_data'); if(error) return toast(error.message);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));
+  a.download='overvibez-my-data.json'; document.body.appendChild(a); a.click(); a.remove(); toast('Your data has been downloaded');
+}
+async function deleteMyAccount(){
+  const u=me();
+  if(!confirm('Delete your OverVibez account?\n\nThis permanently removes your profile, posts, comments, messages and uploaded files. It cannot be undone. Money records are kept for accounting without your name.')) return;
+  const typed=prompt('To confirm, type your username ('+u.username+'):'); if(typed===null) return;
+  try{ await stripeCall('delete-account',{confirm:typed}); toast('Your account has been deleted. Goodbye 👋'); await sb.auth.signOut(); }
+  catch(e){ toast(e.message||'Could not delete your account'); }
 }
 
 /* ═══════════ CREATOR PROFILE PAGES + SHAREABLE LINKS ═══════════ */
@@ -1342,7 +1510,8 @@ function renderProfile(){
   document.getElementById('page-profile').innerHTML=`
     <button class="back-btn" onclick="go('home')" style="padding:14px 18px 0">← Home</button>
     <div class="me-head">
-      <div class="av ${c.av}">${c.em}</div>
+      ${c.coverUrl?`<div class="cover" style="background-image:url('${esc(c.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px"></div>`:''}
+      <div class="av ${c.av}">${avInner(c)}</div>
       <h2>${esc(c.name)} ${c.verified?'<span class="verified">✔</span>':''} ${c.role==='creator'?'<span class="role-badge">✦ CREATOR</span>':'<span class="role-badge f">♥ FOLLOWER</span>'}</h2>
       <div class="u">@${esc(c.username)}${c.bio?' · '+esc(c.bio):''}</div>
       <div class="me-stats">
@@ -1376,7 +1545,7 @@ window.addEventListener('hashchange',()=>{ const c=hashUser(); if(c&&store.sessi
   const c=mapUser(data,0), tag=document.querySelector('.auth .tag');
   if(tag) tag.insertAdjacentHTML('afterend',
     `<div style="display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:20px">
-      <div class="av ${c.av}" style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:18px">${c.em}</div>
+      <div class="av ${c.av}" style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:18px">${avInner(c)}</div>
       <div style="font-size:13px;line-height:1.45"><b>You've been invited to @${esc(c.username)}</b><br>
       <span style="color:var(--muted)">Log in or sign up to view their page${c.role==='creator'?' and subscribe from '+$$(c.subPrice)+'/mo':''}</span></div>
     </div>`);
@@ -1394,7 +1563,7 @@ async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}
 const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  const tabs=[['reports','Reports'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  const tabs=[['reports','Reports'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -1403,7 +1572,7 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({reports:admReports,live:admLive,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({reports:admReports,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,audit:admAudit})[adminTab](); }
 
 /* --- reports queue --- */
 async function admReports(){
@@ -1518,6 +1687,43 @@ async function admRole(id){
   const role=v.trim().toLowerCase(); if(!['moderator','admin','none'].includes(role)) return toast('Type moderator, admin or none');
   if(role==='admin'&&!confirm('Admins can see and move money, ban users and run raffles. Give admin access?')) return;
   const {error}=await admCall('admin_set_staff_role',{p_user:id,p_role:role==='none'?null:role}); if(!error){ toast('Role updated'); admOpenUser(id); }
+}
+
+/* --- invites (admin only) --- */
+const inviteLink=c=>location.origin+location.pathname+'?invite='+encodeURIComponent(c);
+async function admInvites(){
+  const [st,li]=await Promise.all([sb.rpc('public_settings'),admCall('admin_list_invites')]); if(li.error) return;
+  const on=st.data&&st.data.invite_only; settings.invite_only=on;
+  admBody().innerHTML=`<div class="admin-pad">
+    <div class="chart-card"><div style="display:flex;justify-content:space-between;align-items:center"><div><b>Invite-only beta: ${on?'ON':'OFF'}</b>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">${on?'Nobody can sign up without a valid code.':'Anyone can sign up.'}</div></div>
+      <button class="abtn ${on?'danger':'ok'}" onclick="admInviteOnly(${!on})">${on?'Open to everyone':'Require invites'}</button></div></div>
+    <div class="chart-card"><h4>Create an invite</h4>
+      <div class="field"><label>Who is it for? (note)</label><input id="invNote" maxlength="100" placeholder="e.g. Sarah — beta creator"></div>
+      <div class="field"><label>How many people can use it</label><input id="invUses" type="number" min="1" max="1000" value="1"></div>
+      <div class="field"><label>Expires after (days, blank = never)</label><input id="invDays" type="number" min="1" max="365" placeholder="never"></div>
+      <button class="primary" onclick="admCreateInvite()">Create code</button><div id="invNew" style="margin-top:10px"></div></div>
+    ${li.data.length?li.data.map(c=>`<div class="chart-card" ${!c.active?'style="opacity:.6"':''}>
+      <div style="display:flex;justify-content:space-between;gap:8px"><b style="font-family:monospace;font-size:13px">${esc(c.code)}</b><span style="font-size:12px;color:var(--muted)">${c.uses}/${c.max_uses} used</span></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:4px 0">${esc(c.note||'')}${c.redeemed_by?' · joined: '+esc(c.redeemed_by):''}${c.expires_at?' · expires '+new Date(c.expires_at).toLocaleDateString():''}${!c.active?' · REVOKED':''}</div>
+      ${c.active?`<button class="abtn" onclick="copyText('${esc(c.code)}')">Copy code</button><button class="abtn" onclick="copyText(inviteLink('${esc(c.code)}'))">Copy invite link</button><button class="abtn danger" onclick="admRevokeInvite('${esc(c.code)}')">Revoke</button>`:''}
+    </div>`).join(''):admEmpty('No invite codes yet — create one above.')}</div>`;
+}
+function copyText(t){ (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Copied ✓')).catch(()=>prompt('Copy this:',t)); }
+async function admInviteOnly(on){
+  if(!on&&!confirm('Open sign-up to everyone? Anyone with the link will be able to create an account.')) return;
+  const {error}=await admCall('admin_set_invite_only',{p_on:on}); if(!error){ toast(on?'Invite-only is ON':'Sign-up is now open'); admLoad(); }
+}
+async function admCreateInvite(){
+  const note=document.getElementById('invNote').value.trim(), uses=parseInt(document.getElementById('invUses').value,10)||1, d=document.getElementById('invDays').value;
+  const {data,error}=await admCall('admin_create_invite',{p_note:note||null,p_max_uses:uses,p_days:d?parseInt(d,10):null}); if(error) return;
+  admLoad();
+  setTimeout(()=>{ const el=document.getElementById('invNew'); if(el) el.innerHTML=`<div style="background:var(--panel-2);border-radius:12px;padding:12px;font-size:13px">New code: <b style="font-family:monospace">${esc(data)}</b><br>
+    <button class="abtn" onclick="copyText('${esc(data)}')">Copy code</button><button class="abtn ok" onclick="copyText(inviteLink('${esc(data)}'))">Copy invite link</button></div>`; },600);
+}
+async function admRevokeInvite(code){
+  if(!confirm('Revoke this code? It will stop working immediately (people who already joined keep their accounts).')) return;
+  const {error}=await admCall('admin_revoke_invite',{p_code:code}); if(!error){ toast('Code revoked'); admLoad(); }
 }
 
 /* --- stats / payouts / raffles / audit (admin only) --- */

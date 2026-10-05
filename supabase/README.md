@@ -13,6 +13,17 @@ Apply migrations in order: `001_core_schema.sql`, `002_storage_realtime.sql`, `0
   (85/15 split in `_settle`). All require `age_verified`.
 - Paid media lives in the private `paid-media` bucket; storage RLS defers to `can_view_post()`.
 
+## Invite-only beta, profiles and account safety (migration 010 + `features`, `delete-account` functions)
+- **Sign-up is invite-only by default** and enforced in the database (the `handle_new_user` trigger), not just the form. Admins make
+  codes in Admin console → **Invites** (single- or multi-use, optional expiry), can copy an invite *link* (`?invite=CODE` pre-fills sign-up),
+  revoke codes, or switch invite-only off to open sign-up. Turning it off is a one-click admin action; existing users are never affected.
+- Profile pictures/covers are stored in `public-media/<user id>/…`; `avatar_url`/`cover_url` hold a path that must be inside the user's
+  own folder (database constraint), so a profile can never load an outside tracking URL. Photos are resized and re-encoded in the browser.
+- Users can change their password, reset it by email, download their data (`export_my_data`) and delete their account (`delete-account`:
+  refuses while money is owed either way or if they are the only admin; removes uploaded files; financial records are kept without a name).
+- `features` (public) tells the app which integrations have secrets set, so Go live / Add funds / ID check are hidden or say "coming soon" until then.
+- **Password-reset emails need Supabase's Site URL set** (Authentication → URL Configuration) to `https://grobler96.github.io/OverVibezApp/`.
+
 ## Staff roles (migration 007)
 - `profiles.staff_role` is `moderator` or `admin`. Users cannot set it (no column grant); only an admin can change roles in the app
   (Admin console → Users → Set staff role), or you can set it directly in the Supabase SQL editor:
