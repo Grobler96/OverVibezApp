@@ -23,8 +23,21 @@ Apply migrations in order: `001_core_schema.sql`, `002_storage_realtime.sql`, `0
 - Banned users can still log in and read but cannot post, comment, message, like, follow or spend.
 - `dev.creator` is currently an admin.
 
+## Live streaming (migration 008 + `live-token` edge function)
+Video is carried by **LiveKit Cloud**; our database decides who may broadcast or watch.
+- Creators (verified) start a stream with `start_live_stream`; viewers of paid streams buy a ticket with `buy_live_ticket`
+  (85/15 split like every other purchase); tips use `tip_creator`.
+- The `live-token` edge function calls `live_access()` with the caller's own login, and only then mints a short-lived LiveKit
+  token. Viewers get subscribe-only tokens (no publishing, no data); broadcasters may publish camera + microphone only.
+- Chat is stored in `live_comments` (rate limited, moderated, ban-aware). A heartbeat every 30s detects crashed streams; if a
+  moderator ends a stream, the broadcaster and viewers are cut off within about 30 seconds.
+- **To switch it on:** create a LiveKit Cloud project, then in Supabase Dashboard → Edge Functions → Secrets add
+  `LIVEKIT_URL` (wss://your-project.livekit.cloud), `LIVEKIT_API_KEY` and `LIVEKIT_API_SECRET`. Until they exist the function
+  answers `503 not_configured` and the app says "Live streaming is not switched on yet".
+- Source: `supabase/functions/live-token/` (`token.js` is dependency-free and was verified against LiveKit's official SDK).
+
 ## Not built yet (needed before launch)
 - Automatic ID verification: until a provider is connected, an admin marks users 18+ verified by hand (Users → Mark 18+ verified).
 - Wallet top-ups (Stripe webhook that credits `wallet_cents` and logs a `wallet_topup` transaction) and automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console.
-- Live streaming and notifications. Terms/Privacy pages exist as lawyer-review drafts.
+- Notifications, live recording/replays, and multi-guest streams. Terms/Privacy pages exist as lawyer-review drafts.
 - Auth: decide whether email confirmation stays on (the app handles both).
