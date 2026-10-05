@@ -6,6 +6,7 @@
 <title>OverVibez — Social. Amplified.</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --bg:#0E0A14; --panel:#171021; --panel-2:#1F1630; --line:#2C2140;
@@ -281,14 +282,10 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 
   <!-- LOGIN -->
   <div id="loginForm">
-    <div class="field"><label>Email or username</label><input id="liUser" placeholder="you@example.com" autocomplete="username"></div>
+    <div class="field"><label>Email</label><input id="liUser" type="email" placeholder="you@example.com" autocomplete="email"></div>
     <div class="field"><label>Password</label><input id="liPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
     <button class="primary" onclick="doLogin()">Log in</button>
     <div class="err" id="liErr"></div>
-    <div class="demo-row">
-      <button class="demo-btn" onclick="demoLogin('creator')"><b>✦ Demo Vibe Creator</b>Studio, publishing, earnings</button>
-      <button class="demo-btn" onclick="demoLogin('follower')"><b>♥ Demo Vibe Follower</b>Feed, wallet, unlocks</button>
-    </div>
   </div>
 
   <!-- SIGNUP -->
@@ -307,26 +304,11 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="you@example.com"></div>
     <div class="field"><label>Password</label><input id="suPass" type="password" placeholder="min 8 characters"></div>
     <div class="field"><label>Date of birth (18+ required)</label><input id="suDob" type="date"></div>
-    <button class="primary" onclick="doSignup()">Continue to verification</button>
+    <button class="primary" onclick="doSignup()">Create account</button>
     <div class="err" id="suErr"></div>
   </div>
 
-  <!-- VERIFY STEP -->
-  <div id="verifyForm" class="hidden">
-    <div class="section-title" style="padding-left:0">Identity verification</div>
-    <p style="color:var(--muted);font-size:13.5px;line-height:1.6;margin-bottom:16px">
-      OverVibez is an 18+ platform. Verification is handled by a secure third-party provider — your ID is never shown publicly.
-      <b id="verifyRoleNote"></b>
-    </p>
-    <div class="verify-steps" id="verifySteps">
-      <div id="vs1">⬜ Date of birth confirmed</div>
-      <div id="vs2">⬜ Government ID check</div>
-      <div id="vs3">⬜ Liveness selfie match</div>
-    </div>
-    <button class="primary" id="verifyBtn" onclick="runVerify()">Start verification</button>
-  </div>
-
-  <div class="auth-note">By continuing you confirm you are 18+, and agree to the OverVibez Terms, Creator Agreement and Privacy Policy.<br>Demo build — no real payments or personal data are processed.</div>
+  <div class="auth-note">By continuing you confirm you are 18+. Beta build — payments and ID verification are not live yet.</div>
 </div>
 
 <!-- ═══════════ APP SHELL ═══════════ -->
@@ -418,10 +400,6 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 <div class="overlay" id="createModal" onclick="if(event.target===this)closeModal('createModal')">
   <div class="sheet">
     <h3>Create</h3>
-    <div class="toggle-row">
-      <button id="cmPost" class="on" onclick="setCreateMode('post')">📝 New drop</button>
-      <button id="cmLive" onclick="setCreateMode('live')">🔴 Go live</button>
-    </div>
     <div id="createPostSection">
       <p>Publish to your followers — free, or set a price and keep 85%.</p>
       <div class="toggle-row">
@@ -431,72 +409,17 @@ input,textarea,select{font-family:inherit;color:var(--text)}
       <div class="field hidden" id="priceField"><label>Price (USD)</label><input id="postPrice" type="number" min="0.99" max="499" step="0.5" value="3.00"></div>
       <div class="field"><label>Caption</label><textarea id="postCap" rows="3" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none" placeholder="What are you dropping?"></textarea></div>
       <div class="field"><label>Attach photo or video (optional)</label><input id="postMedia" type="file" accept="image/*,video/*" style="padding:10px"></div>
-      <label style="font-size:12px;color:var(--muted)">Cover (used if no media attached)</label>
-      <div class="emoji-pick" id="emojiPick"></div>
-      <button class="primary" onclick="publishPost()">Publish</button>
-    </div>
-    <div id="createLiveSection" class="hidden">
-      <p>Start broadcasting — free for everyone, or charge for entry and keep 85% of every ticket and tip.</p>
-      <div class="field"><label>Stream title</label><input id="liveTitle" placeholder="Friday rooftop session 🎧"></div>
-      <div class="toggle-row">
-        <button id="leFree" class="on" onclick="setLiveEntry('free')">Free entry</button>
-        <button id="lePaid" onclick="setLiveEntry('paid')">Paid entry 🎟</button>
-      </div>
-      <div class="field hidden" id="livePriceField"><label>Entry price (USD)</label><input id="livePrice" type="number" min="0.99" max="99" step="0.5" value="4.99"></div>
-      <button class="primary" onclick="startLive()">Start broadcasting</button>
+      <button class="primary" id="publishBtn" onclick="publishPost()">Publish</button>
     </div>
     <button class="ghost" onclick="closeModal('createModal')">Cancel</button>
-  </div>
-</div>
-
-<!-- ═══════════ LIVE: BROADCASTER ═══════════ -->
-<div class="live-overlay" id="liveBroadcast">
-  <div id="bcStage" class="live-stage">
-    <video id="bcVideo" autoplay muted playsinline></video>
-    <div id="bcFallback" class="live-fallback hidden">
-      <div class="viz"><i></i><i></i><i></i><i></i><i></i></div>
-      <p>Camera unavailable in this preview.<br>Open the file directly in your browser and allow camera + mic access to broadcast with real video.</p>
-    </div>
-    <div class="live-top">
-      <span class="live-pill red">● LIVE <b id="bcTime">00:00</b></span>
-      <span class="live-pill">👁 <b id="bcViewers">1</b></span>
-      <span class="live-pill gold">◈ <b id="bcEarn">$0.00</b></span>
-      <button class="live-end" onclick="endLive()">End</button>
-    </div>
-    <div class="live-title-bar"><b id="bcTitle"></b><span id="bcPrice"></span></div>
-    <div class="lchat" id="bcChat"></div>
-  </div>
-  <div id="bcSummary" class="live-summary hidden"></div>
-</div>
-
-<!-- ═══════════ LIVE: VIEWER ═══════════ -->
-<div class="live-overlay" id="liveViewer">
-  <div class="live-stage">
-    <div class="viz big"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-    <div class="live-top">
-      <span class="live-pill red">● LIVE</span>
-      <span class="live-pill">👁 <b id="vwViewers">1,204</b></span>
-      <button class="live-end" onclick="leaveViewer()">Leave</button>
-    </div>
-    <div class="live-title-bar"><div style="display:flex;align-items:center;gap:9px"><div id="vwAv" class="av a1" style="width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:15px">🎧</div><b id="vwName">nova.mixes</b></div><span>Paid stream · creator keeps 85%</span></div>
-    <div id="floatLayer"></div>
-    <div class="lchat" id="vwChat"></div>
-    <div class="live-bottom">
-      <input id="vwInput" placeholder="Say something…" onkeydown="if(event.key==='Enter')vwSend()">
-      <button onclick="react('❤️')" title="React">❤️</button>
-      <button onclick="react('🔥')" title="React">🔥</button>
-      <button onclick="vwTip()" title="Tip $2">💰</button>
-    </div>
   </div>
 </div>
 
 <div class="overlay" id="topupModal" onclick="if(event.target===this)closeModal('topupModal')">
   <div class="sheet">
     <h3>Wallet</h3>
-    <p>Demo wallet — in production this connects to the payment gateway (card / Apple Pay / Google Pay).</p>
+    <p>Card payments are not connected yet. Wallet top-ups will be available once the payment provider is live.</p>
     <div class="pay-row"><span>Current balance</span><span id="topupBal"></span></div>
-    <button class="primary" onclick="topUp(2500)">Add $25.00</button>
-    <button class="primary" style="margin-top:10px;filter:saturate(.7)" onclick="topUp(10000)">Add $100.00</button>
     <button class="ghost" onclick="closeModal('topupModal')">Close</button>
   </div>
 </div>
@@ -505,67 +428,129 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 
 <script>
 /* ═════════════════════════════════════════════════════════════
-   DATA LAYER — swap `LocalAdapter` for `SupabaseAdapter` later.
-   Every mutation in the app goes through DB.* so wiring Supabase
-   is a drop-in change (see overvibez_schema.sql for the backend).
-   ─────────────────────────────────────────────────────────────
-   // import { createClient } from '@supabase/supabase-js'
-   // const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
-   // signUp   → supabase.auth.signUp({email, password, options:{data:{username, account_type}}})
-   // unlock   → supabase.rpc('purchase_post', {p_post_id})
-   // subscribe→ supabase.rpc('subscribe_to_creator', {p_creator})
-   // raffle   → supabase.rpc('buy_raffle_entries', {p_raffle, p_qty})
-   // realtime → supabase.channel('messages').on('postgres_changes', ...)
+   DATA LAYER — Supabase. `store` is a client-side cache hydrated from
+   the database after login; every mutation goes through the server
+   (RLS + SECURITY DEFINER functions), then re-hydrates.
+   See supabase/migrations/ for the schema.
    ═════════════════════════════════════════════════════════════ */
+const SUPABASE_URL='https://ectwnzhuebgnvejdpgdk.supabase.co';
+const SUPABASE_KEY='sb_publishable_jiM3fKJ42PZ7MFir6gKUoQ_JeleNdaW'; // publishable key — safe to ship; RLS enforces access
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
 
-const FEE = 0.15; // platform share — creators keep 85%
-const $$ = c => '$' + (c/100).toFixed(2);
+const FEE = 0.15; // platform share — creators keep 85% (enforced server-side in _settle())
+const $$ = c => '$' + ((Number(c)||0)/100).toFixed(2);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
+const PUB_COLS='id,username,display_name,bio,avatar_url,account_type,is_verified,sub_price_cents,created_at';
 
-const store = {
-  users: [
-    {id:'u1',username:'nova.mixes',name:'Nova',role:'creator',av:'a1',em:'🎧',verified:true,subPrice:499,followers:12400,earnings:421860,wallet:0,live:true,bio:'DJ · rooftop sets · weekly paid mixes'},
-    {id:'u2',username:'flexwithkai',name:'Kai',role:'creator',av:'a2',em:'🏋️',verified:false,subPrice:799,followers:8300,earnings:112040,wallet:0,bio:'Hypertrophy coach'},
-    {id:'u3',username:'inkbyluna',name:'Luna',role:'creator',av:'a3',em:'🎨',verified:true,subPrice:399,followers:21050,earnings:389220,wallet:0,bio:'Tattoo artist · process videos'},
-    {id:'u4',username:'chefmarrow',name:'Marrow',role:'creator',av:'a4',em:'🍳',verified:false,subPrice:299,followers:4400,earnings:23100,wallet:0,bio:'Fire food, zero gatekeeping'},
-    {id:'u5',username:'reelriya',name:'Riya',role:'creator',av:'a5',em:'📸',verified:true,subPrice:599,followers:15900,earnings:274400,wallet:0,bio:'Editorial photographer'},
-    {id:'f1',username:'rileyvibes',name:'Riley',role:'follower',av:'a6',em:'🫧',verified:false,wallet:5000,earnings:0,followers:0,bio:'Here for the drops'}
-  ],
-  posts: [
-    {id:'p1',by:'u1',cap:'Sunset rooftop set from Saturday. Full 90-min mix drops tonight 🔥',scene:'🎛️',paid:false,likes:2841,earned:0,ts:'2h'},
-    {id:'p2',by:'u3',cap:'Process video: full back-piece from sketch to final linework. 22 minutes.',scene:'🖋️',paid:true,price:300,likes:967,earned:91200,ts:'5h'},
-    {id:'p3',by:'u2',cap:'Free week of the hypertrophy program. Paid subs get the full 12-week plan + form checks.',scene:'💪',paid:false,likes:1532,earned:0,ts:'8h'},
-    {id:'p4',by:'u1',cap:'Full summer mix — 90 minutes, tracklist included 🎧',scene:'🌇',paid:true,price:300,likes:1204,earned:68800,ts:'1d'},
-    {id:'p5',by:'u5',cap:'Full editorial shoot — 42 RAW edits, lighting breakdown, preset pack.',scene:'🌆',paid:true,price:500,likes:684,earned:45500,ts:'1d'}
-  ],
-  raffles: [
-    {id:'r1',title:'Creator Fund Drop',host:'OverVibez',prize:'$2,500',price:200,entries:8412,players:3180,seed:'a91f…c2e7',ends:Date.now()+138720000},
-    {id:'r2',title:'Studio Gear Giveaway',host:'nova.mixes',prize:'DJ Rig',price:100,entries:2904,players:1022,seed:'7bd3…91aa',ends:Date.now()+195060000}
-  ],
-  likes:{}, unlocks:{}, subs:{}, session:null,
-  threads:[
-    {id:'t1',withU:'u1',msgs:[{me:false,t:'hey! saw you joined my last stream 🎧'},{me:true,t:'the set was unreal. that transition at the end??',rr:'Read ✓✓'},{me:false,t:'haha thank you!! full mix is up as a paid post 💜'}]},
-    {id:'t2',withU:'u3',msgs:[{me:false,t:'Commission slots open Friday 👀'}]}
-  ]
-};
+const store = {users:[],posts:[],raffles:[],likes:{},unlocks:{},subs:{},subEnds:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
+function hue(str){ let h=0; for(const ch of str) h=(h*31+ch.charCodeAt(0))>>>0; return h; }
+function ago(iso){ const t=(Date.now()-new Date(iso))/1000;
+  return t<60?'now':t<3600?Math.floor(t/60)+'m':t<86400?Math.floor(t/3600)+'h':Math.floor(t/86400)+'d'; }
+function mapUser(p,followers){
+  return {id:p.id,username:p.username,name:p.display_name||p.username,role:p.account_type,
+    av:'a'+(1+hue(p.username)%6),em:p.account_type==='creator'?'✦':'🫧',verified:!!p.is_verified,
+    subPrice:p.sub_price_cents,followers:followers||0,earnings:Number(p.earnings_cents||0),
+    wallet:Number(p.wallet_cents||0),ageVerified:!!p.age_verified,bio:p.bio||'',live:false};
+}
+function friendly(m){
+  if(/Insufficient wallet/i.test(m)) return 'Not enough balance in your wallet';
+  if(/Age verification/i.test(m)) return 'Age verification is required first — ID checks are launching soon';
+  return m||'Something went wrong';
+}
+async function rpc(name,args){
+  const {error}=await sb.rpc(name,args||{});
+  if(error){ toast(friendly(error.message)); return false; }
+  return true;
+}
+async function ensureUsers(ids){
+  const need=[...new Set(ids)].filter(id=>id&&!user(id));
+  if(!need.length) return;
+  const {data}=await sb.from('profiles').select(PUB_COLS).in('id',need);
+  (data||[]).forEach(p=>store.users.push(mapUser(p,0)));
+}
+async function loadThreads(){
+  const uid=store.session;
+  const [c,m]=await Promise.all([
+    sb.from('conversations').select('id,user_a,user_b'),
+    sb.from('messages').select('id,conversation_id,sender_id,body,read_at,created_at').order('created_at').limit(1000)]);
+  if(c.error) throw c.error;
+  const convs=c.data||[], msgs=m.data||[];
+  await ensureUsers(convs.map(x=>x.user_a===uid?x.user_b:x.user_a));
+  store.threads=convs.map(x=>({id:x.id,withU:x.user_a===uid?x.user_b:x.user_a,
+    msgs:msgs.filter(y=>y.conversation_id===x.id).map(mapMsg)}));
+  store.threads.sort((a,b)=>(b.msgs.length?b.msgs[b.msgs.length-1].ts:'')<(a.msgs.length?a.msgs[a.msgs.length-1].ts:'')?-1:1);
+  if(typeof activeThread!=='undefined'&&activeThread) activeThread=store.threads.find(t=>t.id===activeThread.id)||null;
+}
+function mapMsg(m){ return {id:m.id,me:m.sender_id===store.session,t:m.body,read:!!m.read_at,ts:m.created_at}; }
+
+async function hydrate(){
+  const uid=store.session; if(!uid) return;
+  const [mine,profs,posts,likes,unl,subs,raf,fol,tx]=await Promise.all([
+    sb.rpc('get_my_profile'),
+    sb.from('profiles').select(PUB_COLS).limit(500),
+    sb.from('posts').select('*').order('created_at',{ascending:false}).limit(100),
+    sb.from('likes').select('post_id').eq('user_id',uid),
+    sb.from('post_unlocks').select('post_id').eq('user_id',uid),
+    sb.from('subscriptions').select('creator_id,status,current_period_end').eq('subscriber_id',uid),
+    sb.from('raffles').select('*').gt('closes_at',new Date().toISOString()).is('winner_entry_id',null).order('closes_at'),
+    sb.from('follows').select('creator_id').limit(10000),
+    sb.from('transactions').select('reference_id,gross_cents').eq('payee_id',uid).in('type',['post_unlock','tip'])]);
+  const bad=[mine,profs,posts,likes,unl,subs,raf,fol,tx].find(r=>r.error); if(bad) throw bad.error;
+  const fc={}; (fol.data||[]).forEach(f=>fc[f.creator_id]=(fc[f.creator_id]||0)+1);
+  store.users=(profs.data||[]).map(p=>mapUser(p,fc[p.id]));
+  const m=mine.data; if(m){ const i=store.users.findIndex(u=>u.id===m.id), mu=mapUser(m,fc[m.id]);
+    if(i>=0) store.users[i]=mu; else store.users.push(mu); }
+  const h=decodeURIComponent(location.hash.slice(1)).toLowerCase();
+  if(h&&!store.users.some(u=>u.username===h)){
+    const {data}=await sb.from('profiles').select(PUB_COLS).eq('username',h).maybeSingle();
+    if(data) store.users.push(mapUser(data,0)); }
+  await ensureUsers((posts.data||[]).map(p=>p.creator_id));
+  store.likes={}; (likes.data||[]).forEach(l=>store.likes[uid+l.post_id]=true);
+  store.unlocks={}; (unl.data||[]).forEach(l=>store.unlocks[uid+l.post_id]=true);
+  store.subs={}; store.subEnds={};
+  (subs.data||[]).forEach(x=>{ if(x.status==='active'&&new Date(x.current_period_end)>new Date()){
+    store.subs[uid+x.creator_id]=true; store.subEnds[x.creator_id]=x.current_period_end; }});
+  const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
+  store.posts=(posts.data||[]).map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
+    paid:p.is_paid,price:p.price_cents||0,likes:p.like_count,earned:earned[p.id]||0,ts:ago(p.created_at),
+    mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null}));
+  // media URLs: free media is public; paid media needs a signed URL, issued only if storage RLS agrees
+  const paidPaths=[];
+  store.posts.forEach(p=>{ if(!p.mediaPath) return;
+    if(!p.paid) p.mediaUrl=sb.storage.from('public-media').getPublicUrl(p.mediaPath).data.publicUrl;
+    else if(canView(p)) paidPaths.push(p); });
+  if(paidPaths.length){
+    try{ const {data}=await sb.storage.from('paid-media').createSignedUrls(paidPaths.map(p=>p.mediaPath),3600);
+      (data||[]).forEach(d=>{ const p=paidPaths.find(x=>x.mediaPath===d.path); if(p&&d.signedUrl) p.mediaUrl=d.signedUrl; }); }catch(e){} }
+  const totals=await Promise.all((raf.data||[]).map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
+  await ensureUsers((raf.data||[]).map(r=>r.host_id));
+  store.raffles=(raf.data||[]).map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{};
+    return {id:r.id,title:r.title,host:r.host_id&&user(r.host_id)?user(r.host_id).username:'OverVibez',prize:r.prize,
+      price:r.entry_price_cents,entries:Number(t.entries||0),players:Number(t.players||0),
+      seed:r.seed_hash.slice(0,6)+'…'+r.seed_hash.slice(-4),ends:new Date(r.closes_at).getTime()}; });
+  await loadThreads();
+}
+
 /* ═══════════ AUTH ═══════════ */
-let signupRole='creator', pendingUser=null;
+let signupRole='creator';
 function authTab(t){
   document.getElementById('tabLogin').classList.toggle('on',t==='login');
   document.getElementById('tabSignup').classList.toggle('on',t==='signup');
   document.getElementById('loginForm').classList.toggle('hidden',t!=='login');
   document.getElementById('signupForm').classList.toggle('hidden',t!=='signup');
-  document.getElementById('verifyForm').classList.add('hidden');
 }
 function pickRole(r){
   signupRole=r;
   document.getElementById('rcCreator').classList.toggle('on',r==='creator');
   document.getElementById('rcFollower').classList.toggle('on',r==='follower');
 }
-function doSignup(){
+async function doSignup(){
   const err=document.getElementById('suErr');
+  if(!sb) return err.textContent='Cannot reach OverVibez servers — check your connection and reload.';
   const un=document.getElementById('suUser').value.trim().toLowerCase();
   const em=document.getElementById('suEmail').value.trim();
   const pw=document.getElementById('suPass').value;
@@ -574,36 +559,62 @@ function doSignup(){
   if(!em.includes('@')) return err.textContent='Enter a valid email.';
   if(pw.length<8) return err.textContent='Password must be at least 8 characters.';
   if(!dob) return err.textContent='Date of birth is required.';
-  const age=(Date.now()-new Date(dob).getTime())/3.15576e10;
-  if(age<18) return err.textContent='You must be 18 or older to join OverVibez.';
-  if(store.users.some(u=>u.username===un)) return err.textContent='That username is taken.';
+  if((Date.now()-new Date(dob).getTime())/3.15576e10<18) return err.textContent='You must be 18 or older to join OverVibez.';
+  err.textContent='Creating account…';
+  const {data:taken}=await sb.from('profiles').select('id').eq('username',un).maybeSingle();
+  if(taken) return err.textContent='That username is taken.';
+  const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,display_name:un,account_type:signupRole}}});
+  if(error) return err.textContent=error.message;
   err.textContent='';
-  pendingUser={id:'u'+Math.random().toString(36).slice(2,8),username:un,name:un,role:signupRole,
-    av:'a'+(1+Math.floor(Math.random()*6)),em:signupRole==='creator'?'✦':'🫧',verified:false,
-    subPrice:signupRole==='creator'?499:null,wallet:signupRole==='follower'?5000:0,earnings:0,followers:0,bio:''};
-  document.getElementById('signupForm').classList.add('hidden');
-  document.getElementById('verifyForm').classList.remove('hidden');
-  document.getElementById('verifyRoleNote').textContent = signupRole==='creator'
-    ? ' As a Vibe Creator, ID verification is mandatory before you can publish or receive payouts.'
-    : ' Followers verify age to access 18+ content.';
+  if(!data.session){ authTab('login'); document.getElementById('liErr').textContent='Check your email to confirm your account, then log in.'; }
 }
-function runVerify(){
-  const btn=document.getElementById('verifyBtn'); btn.disabled=true; btn.textContent='Verifying…';
-  const steps=['vs1','vs2','vs3'], labels=['Date of birth confirmed','Government ID check passed','Liveness selfie matched'];
-  steps.forEach((s,i)=>setTimeout(()=>{
-    const el=document.getElementById(s); el.textContent='✅ '+labels[i]; el.classList.add('done');
-    if(i===2) setTimeout(()=>{ store.users.push(pendingUser); enterApp(pendingUser.id);
-      toast(pendingUser.role==='creator'?'Verified ✅ Welcome, Vibe Creator — your Studio is ready':'Verified ✅ Welcome to OverVibez'); },600);
-  },(i+1)*900));
+async function doLogin(){
+  const err=document.getElementById('liErr');
+  if(!sb) return err.textContent='Cannot reach OverVibez servers — check your connection and reload.';
+  const em=document.getElementById('liUser').value.trim(), pw=document.getElementById('liPass').value;
+  if(!em||!pw) return err.textContent='Enter your email and password.';
+  err.textContent='';
+  const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
+  if(error) err.textContent=error.message;
 }
-function doLogin(){
-  const q=document.getElementById('liUser').value.trim().toLowerCase();
-  const u=store.users.find(x=>x.username===q);
-  if(!u||!document.getElementById('liPass').value) return document.getElementById('liErr').textContent='Account not found — try a demo login below.';
-  enterApp(u.id);
+async function logOut(){ if(sb) await sb.auth.signOut(); }
+async function startSession(uid){
+  if(store.session===uid) return;
+  store.session=uid;
+  try{ await hydrate(); }
+  catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
+  enterApp(uid); subscribeRealtime();
 }
-function demoLogin(role){ enterApp(role==='creator'?'u1':'f1'); toast(role==='creator'?'Logged in as nova.mixes ✦':'Logged in as rileyvibes ♥'); }
-function logOut(){ store.session=null; document.getElementById('app').classList.add('hidden'); document.getElementById('authScreen').classList.remove('hidden'); }
+function clearSession(){
+  store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[];
+  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={};
+  if(rt){ sb.removeChannel(rt); rt=null; }
+  document.getElementById('liPass').value='';
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('authScreen').classList.remove('hidden');
+}
+if(sb) sb.auth.onAuthStateChange((ev,session)=>{
+  setTimeout(()=>{ if(session&&session.user) startSession(session.user.id); else if(store.session) clearSession(); },0);
+});
+
+/* ═══════════ REALTIME CHAT ═══════════ */
+let rt=null;
+function subscribeRealtime(){
+  if(rt) sb.removeChannel(rt);
+  rt=sb.channel('my-messages').on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},async payload=>{
+    const m=payload.new; if(m.sender_id===store.session) return;
+    let t=store.threads.find(x=>x.id===m.conversation_id);
+    if(t) t.msgs.push(mapMsg(m)); else { await loadThreads(); t=store.threads.find(x=>x.id===m.conversation_id); }
+    if(!t) return;
+    const viewing=activeThread&&activeThread.id===t.id&&!document.getElementById('chat-view').classList.contains('hidden');
+    if(viewing){ renderChat(); markRead(t.id); }
+    else { if(!document.getElementById('threads-view').classList.contains('hidden')) renderThreads();
+      toast('New message from '+user(t.withU).username); }
+  }).subscribe();
+}
+function markRead(convId){
+  sb.from('messages').update({read_at:new Date().toISOString()}).eq('conversation_id',convId).neq('sender_id',store.session).is('read_at',null).then(()=>{});
+}
 
 /* ═══════════ APP SHELL ═══════════ */
 function enterApp(uid){
@@ -653,27 +664,28 @@ function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt'
 function renderStories(){
   const creators=store.users.filter(u=>u.role==='creator');
   document.getElementById('storiesRow').innerHTML=creators.map((c,i)=>`
-    <div class="story ${i>2?'seen':''}" onclick="${c.live?`joinLive('${c.id}')`:`toast('Viewing story')`}">
-      <div class="ring"><div class="av ${c.av}">${c.em}</div>${c.live?'<span class="live-tag">LIVE</span>':''}</div>
-      <span class="name">${c.username}</span></div>`).join('');
+    <div class="story" onclick="openProfile('${c.id}')">
+      <div class="ring"><div class="av ${c.av}">${c.em}</div></div>
+      <span class="name">${esc(c.username)}</span></div>`).join('');
 }
 function canView(p){
   const u=me();
   return !p.paid || p.by===u.id || store.unlocks[u.id+p.id] || store.subs[u.id+p.by];
 }
 function postCard(p){
-  const u=me(), c=user(p.by), mine=p.by===u.id, open=canView(p), liked=store.likes[u.id+p.id];
+  const u=me(), c=user(p.by); if(!c) return '';
+  const mine=p.by===u.id, open=canView(p), liked=store.likes[u.id+p.id];
   return `<article class="card">
     <div class="card-head">
       <div class="av ${c.av}" style="cursor:pointer" onclick="openProfile('${p.by}')">${c.em}</div>
-      <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${c.username} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}</span></div>
+      <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}</span></div>
       ${mine?'<span class="own-tag">Your post</span>':
         `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?'Subscribed':'Subscribe '+$$(c.subPrice)}</button>`}
     </div>
     <div class="media ${open?'':'locked'}">
       ${p.mediaUrl&&open?(p.mediaKind==='video'
-        ?`<video class="scene-media" src="${p.mediaUrl}" controls playsinline preload="metadata"></video>`
-        :`<img class="scene-media" src="${p.mediaUrl}" alt="">`)
+        ?`<video class="scene-media" src="${esc(p.mediaUrl)}" controls playsinline preload="metadata"></video>`
+        :`<img class="scene-media" src="${esc(p.mediaUrl)}" alt="">`)
         :`<div class="scene ${c.av}">${p.scene}</div>`}
       ${open?'':`<div class="lockglass"><div class="lock-ic">🔒</div>
         <button class="unlock-btn" onclick="startUnlock('${p.id}')">Unlock for <span class="price">${$$(p.price)}</span></button>
@@ -681,37 +693,30 @@ function postCard(p){
     </div>
     <div class="card-actions">
       <button class="act ${liked?'liked':''}" onclick="likePost('${p.id}')">${liked?'♥':'♡'} ${p.likes.toLocaleString()}</button>
-      <button class="act" onclick="toast('Comments open in production build')">💬</button>
-      <button class="act" onclick="shareProfile('${c.username}')">↗</button>
+      <button class="act" onclick="toast('Comments are coming soon')">💬</button>
+      <button class="act" onclick="shareProfile('${esc(c.username)}')">↗</button>
       ${mine?`<span class="act tip">earned ${$$(Math.round(p.earned*(1-FEE)))}</span>`:
         `<button class="act tip" onclick="tip('${p.by}','${p.id}')">💰 Tip $2</button>`}
     </div>
-    <div class="card-body"><div class="cap"><b style="cursor:pointer" onclick="openProfile('${p.by}')">${c.username}</b>${p.cap}</div></div>
+    <div class="card-body"><div class="cap"><b style="cursor:pointer" onclick="openProfile('${p.by}')">${esc(c.username)}</b>${esc(p.cap)}</div></div>
   </article>`;
 }
 function renderFeed(){
-  const u=me();
-  const liveC=store.users.find(x=>x.live&&x.id!==u.id);
-  const banner=liveC?`<div class="live-banner" onclick="joinLive('${liveC.id}')">
-      <div class="av ${liveC.av}" style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px">${liveC.em}</div>
-      <div style="flex:1"><b style="font-size:14px">${liveC.username} is live</b><div style="font-size:12px;opacity:.9">Rooftop set · ${$$(499)} entry · tap to join</div></div>
-      <span class="live-tag" style="position:static;transform:none">LIVE</span></div>`:'';
-  document.getElementById('feed').innerHTML=banner+[...store.posts].map(postCard).join('');
+  document.getElementById('feed').innerHTML=store.posts.length?store.posts.map(postCard).join('')
+    :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No drops yet.<br>Creators will appear here as they publish.</p>';
 }
-function likePost(id){ const u=me(),k=u.id+id,p=store.posts.find(x=>x.id===id);
-  store.likes[k]=!store.likes[k]; p.likes+=store.likes[k]?1:-1; refresh(); }
+async function likePost(id){
+  const u=me(), k=u.id+id, p=store.posts.find(x=>x.id===id), was=!!store.likes[k];
+  store.likes[k]=!was; p.likes+=was?-1:1; refresh();            // optimistic
+  const {error}=was ? await sb.from('likes').delete().eq('post_id',id).eq('user_id',u.id)
+                    : await sb.from('likes').insert({post_id:id,user_id:u.id});
+  if(error){ store.likes[k]=was; p.likes+=was?1:-1; refresh(); toast(error.message); }
+}
 
 /* ═══════════ PAYMENTS ═══════════ */
-function spend(cents){
-  const u=me();
-  if(u.role==='creator'){ toast('Creators demo account has no wallet — log in as a follower to buy'); return false; }
-  if(u.wallet<cents){ openTopup(); toast('Not enough balance — top up your wallet'); return false; }
-  u.wallet-=cents; updateWallet(); return true;
-}
-function credit(creatorId,gross,postId){
-  const c=user(creatorId); c.earnings+=Math.round(gross*(1-FEE));
-  if(postId){ const p=store.posts.find(x=>x.id===postId); if(p) p.earned+=gross; }
-}
+/* All money movement is server-side (purchase_post, subscribe_to_creator, tip_creator,
+   buy_raffle_entries, request_payout). The client only asks; the database decides. */
+async function settled(){ await hydrate(); rerender(); }
 function startUnlock(pid){
   const p=store.posts.find(x=>x.id===pid), u=me();
   document.getElementById('payTitle').textContent='Unlock this post';
@@ -719,48 +724,48 @@ function startUnlock(pid){
   document.getElementById('payPrice').textContent=$$(p.price);
   document.getElementById('payCreator').textContent=$$(Math.round(p.price*(1-FEE)));
   document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-p.price));
-  document.getElementById('payConfirmBtn').onclick=()=>{
-    if(!spend(p.price))return closeModal('payModal');
-    credit(p.by,p.price,pid); store.unlocks[u.id+pid]=true;
-    closeModal('payModal'); refresh();
-    toast(`Unlocked — ${user(p.by).username} earned ${$$(Math.round(p.price*(1-FEE)))} 💜`);
+  document.getElementById('payConfirmBtn').onclick=async()=>{
+    closeModal('payModal');
+    if(await rpc('purchase_post',{p_post_id:pid})){ await settled(); toast('Unlocked 💜'); }
   };
   openModal('payModal');
 }
 function subscribe(cid){
-  const u=me(),c=user(cid),k=u.id+cid;
-  if(store.subs[k]){ store.subs[k]=false; refresh(); return toast('Unsubscribed from '+c.username); }
+  const u=me(), c=user(cid);
+  if(store.subs[u.id+cid]) return toast('Subscribed to '+c.username+' until '+new Date(store.subEnds[cid]).toLocaleDateString());
   document.getElementById('payTitle').textContent='Subscribe to '+c.username;
-  document.getElementById('paySub').textContent='Monthly subscription unlocks all their paid posts. Cancel anytime.';
-  document.getElementById('payPrice').textContent=$$(c.subPrice)+' / month';
+  document.getElementById('paySub').textContent='30 days of access to all their paid posts. Renew anytime.';
+  document.getElementById('payPrice').textContent=$$(c.subPrice)+' / 30 days';
   document.getElementById('payCreator').textContent=$$(Math.round(c.subPrice*(1-FEE)));
   document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-c.subPrice));
-  document.getElementById('payConfirmBtn').onclick=()=>{
-    if(!spend(c.subPrice))return closeModal('payModal');
-    credit(cid,c.subPrice); store.subs[k]=true; c.followers++;
-    closeModal('payModal'); refresh();
-    toast(`Subscribed to ${c.username} ✦ all paid posts unlocked`);
+  document.getElementById('payConfirmBtn').onclick=async()=>{
+    closeModal('payModal');
+    if(await rpc('subscribe_to_creator',{p_creator:cid})){
+      await sb.from('follows').upsert({follower_id:u.id,creator_id:cid},{ignoreDuplicates:true});
+      await settled(); toast('Subscribed to '+c.username+' ✦ all paid posts unlocked'); }
   };
   openModal('payModal');
 }
-function tip(cid,pid){ if(!spend(200))return; credit(cid,200,pid); toast(`Tipped ${user(cid).username} $2.00 — they keep $1.70 ✨`); }
+async function tip(cid,pid){
+  if(await rpc('tip_creator',{p_creator:cid,p_amount:200,p_post:pid||null})){ await settled(); toast(`Tipped ${user(cid).username} $2.00 — they keep $1.70 ✨`); }
+}
 function openTopup(){ const u=me(); if(u.role==='creator')return; document.getElementById('topupBal').textContent=$$(u.wallet); openModal('topupModal'); }
-function topUp(c){ me().wallet+=c; updateWallet(); document.getElementById('topupBal').textContent=$$(me().wallet); toast('Added '+$$(c)+' to wallet'); }
 
 /* ═══════════ EXPLORE ═══════════ */
 function renderExplore(){
-  const scenes=[['a1','🎧',0,'big'],['a3','🖋️',300],['a4','🍜',0],['a2','🏄',0],['a5','📸',500],['a4','🌅',0],['a2','🧘',0],['a3','🖌️',0,'big'],['a1','🎹',200],['a5','🎬',0]];
-  document.getElementById('exploreGrid').innerHTML=scenes.map(([av,em,pr,big])=>
-    `<div class="tile ${big||''} ${av}" onclick="toast('${pr?'Paid post — subscribe or unlock to view':'Opening post'}')">${em}${pr?`<span class="t-lock">🔒 ${$$(pr)}</span>`:''}</div>`).join('');
+  const el=document.getElementById('exploreGrid');
+  if(!store.posts.length){ el.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px 20px;grid-column:1/-1;font-size:13.5px">Nothing to explore yet.</p>'; return; }
+  el.innerHTML=store.posts.slice(0,12).map((p,i)=>{ const c=user(p.by); if(!c) return '';
+    return `<div class="tile ${i%7===0?'big':''} ${c.av}" onclick="openProfile('${p.by}')">${p.scene}${p.paid?`<span class="t-lock">🔒 ${$$(p.price)}</span>`:''}</div>`; }).join('');
 }
 
 /* ═══════════ RAFFLES ═══════════ */
 let activeRaffle=null,qty=5;
 function renderRaffles(){
-  document.getElementById('raffleList').innerHTML=store.raffles.map(r=>{
-    const left=r.ends-Date.now(), d=Math.floor(left/864e5), h=Math.floor(left%864e5/36e5), m=Math.floor(left%36e5/6e4), s=Math.floor(left%6e4/1e3);
+  document.getElementById('raffleList').innerHTML=store.raffles.length?store.raffles.map(r=>{
+    const left=Math.max(0,r.ends-Date.now()), d=Math.floor(left/864e5), h=Math.floor(left%864e5/36e5), m=Math.floor(left%36e5/6e4), s=Math.floor(left%6e4/1e3);
     return `<div class="raffle-card">
-    <div class="raffle-top"><div><h3>${r.title}</h3><span style="font-size:12px;color:var(--muted)">hosted by ${r.host}</span></div><span class="prize">${r.prize}</span></div>
+    <div class="raffle-top"><div><h3>${esc(r.title)}</h3><span style="font-size:12px;color:var(--muted)">hosted by ${esc(r.host)}</span></div><span class="prize">${esc(r.prize)}</span></div>
     <div class="countdown">
       <div class="cd-unit"><b>${String(d).padStart(2,'0')}</b><span>days</span></div>
       <div class="cd-unit"><b>${String(h).padStart(2,'0')}</b><span>hrs</span></div>
@@ -768,52 +773,51 @@ function renderRaffles(){
       <div class="cd-unit"><b>${String(s).padStart(2,'0')}</b><span>sec</span></div></div>
     <div class="raffle-meta"><span>🎟️ ${r.entries.toLocaleString()} entries</span><span>💵 ${$$(r.price)} / entry</span><span>👥 ${r.players.toLocaleString()} players</span></div>
     <button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries — ${$$(r.price)} each</button></div>`;
-  }).join('');
+  }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No raffles running right now.</p>';
 }
-setInterval(()=>{ if(!document.getElementById('page-raffles').classList.contains('hidden')) renderRaffles(); },1000);
+setInterval(()=>{ if(!document.getElementById('page-raffles').classList.contains('hidden')&&store.session) renderRaffles(); },1000);
 function openRaffle(id){ activeRaffle=store.raffles.find(r=>r.id===id); qty=5;
   document.getElementById('raffleSeed').textContent=activeRaffle.seed;
   document.getElementById('qty').textContent=qty;
   document.getElementById('raffleTotal').textContent=$$(qty*activeRaffle.price);
   openModal('raffleModal'); }
-function chgQty(d){ qty=Math.max(1,qty+d); document.getElementById('qty').textContent=qty;
+function chgQty(d){ qty=Math.min(1000,Math.max(1,qty+d)); document.getElementById('qty').textContent=qty;
   document.getElementById('raffleTotal').textContent=$$(qty*activeRaffle.price); }
-function confirmRaffle(){ if(!spend(qty*activeRaffle.price))return closeModal('raffleModal');
-  activeRaffle.entries+=qty; closeModal('raffleModal'); toast(`${qty} entries confirmed 🎟️ Good luck!`); }
+async function confirmRaffle(){
+  closeModal('raffleModal');
+  if(await rpc('buy_raffle_entries',{p_raffle:activeRaffle.id,p_qty:qty})){ await settled(); toast(`${qty} entries confirmed 🎟️ Good luck!`); }
+}
 
 /* ═══════════ CHAT ═══════════ */
 let activeThread=null;
 function renderThreads(){
-  document.getElementById('threadList').innerHTML=store.threads.map(t=>{
-    const c=user(t.withU),last=t.msgs[t.msgs.length-1]||{me:false,t:'Say hi 👋'};
+  document.getElementById('threadList').innerHTML=store.threads.length?store.threads.map(t=>{
+    const c=user(t.withU); if(!c) return ''; const last=t.msgs[t.msgs.length-1]||{me:false,t:'Say hi 👋'};
     return `<div class="thread" onclick="openChat('${t.id}')">
       <div class="av ${c.av}">${c.em}</div>
-      <div class="tx"><b>${c.username} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${last.me?'You: ':''}${last.t}</span></div>
-      <div class="meta">now</div></div>`;
-  }).join('');
+      <div class="tx"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${last.me?'You: ':''}${esc(last.t)}</span></div>
+      <div class="meta">${last.ts?ago(last.ts):''}</div></div>`;
+  }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No conversations yet. Visit a creator’s page and tap Message.</p>';
 }
-function openChat(id){
-  activeThread=store.threads.find(t=>t.id===id);
-  document.getElementById('threads-view').classList.add('hidden');
-  document.getElementById('chat-view').classList.remove('hidden');
-  const m=document.getElementById('chatMsgs');
-  m.innerHTML=activeThread.msgs.map(x=>`<div class="bubble ${x.me?'me':'them'}">${x.t}${x.rr?`<span class="rr">${x.rr}</span>`:''}</div>`).join('')
-    +'<div class="typing hidden" id="typingDots"><i></i><i></i><i></i></div>';
-  document.getElementById('chatInput').placeholder='Message '+user(activeThread.withU).username+'…';
+function renderChat(){
+  const m=document.getElementById('chatMsgs'), msgs=activeThread.msgs, lastMe=msgs.map(x=>x.me).lastIndexOf(true);
+  m.innerHTML=msgs.map((x,i)=>`<div class="bubble ${x.me?'me':'them'}">${esc(x.t)}${i===lastMe?`<span class="rr">${x.read?'Read ✓✓':'Delivered ✓'}</span>`:''}</div>`).join('');
   m.scrollTop=m.scrollHeight;
 }
+function openChat(id){
+  activeThread=store.threads.find(t=>t.id===id); if(!activeThread) return;
+  document.getElementById('threads-view').classList.add('hidden');
+  document.getElementById('chat-view').classList.remove('hidden');
+  document.getElementById('chatInput').placeholder='Message '+user(activeThread.withU).username+'…';
+  renderChat(); markRead(id);
+}
 function closeChat(){ document.getElementById('chat-view').classList.add('hidden'); document.getElementById('threads-view').classList.remove('hidden'); renderThreads(); }
-function sendMsg(){
-  const inp=document.getElementById('chatInput'); if(!inp.value.trim()||!activeThread)return;
-  const m=document.getElementById('chatMsgs'),typing=document.getElementById('typingDots');
-  activeThread.msgs.push({me:true,t:inp.value});
-  const b=document.createElement('div'); b.className='bubble me'; b.innerHTML=inp.value+'<span class="rr">Delivered ✓</span>';
-  m.insertBefore(b,typing); inp.value=''; m.scrollTop=m.scrollHeight;
-  setTimeout(()=>{b.querySelector('.rr').textContent='Read ✓✓'; typing.classList.remove('hidden'); m.scrollTop=m.scrollHeight;},1100);
-  setTimeout(()=>{ typing.classList.add('hidden');
-    const reply={me:false,t:'love that — catch you at the next stream? 💜'}; activeThread.msgs.push(reply);
-    const r=document.createElement('div'); r.className='bubble them'; r.textContent=reply.t;
-    m.insertBefore(r,typing); m.scrollTop=m.scrollHeight; },2600);
+async function sendMsg(){
+  const inp=document.getElementById('chatInput'), text=inp.value.trim(); if(!text||!activeThread)return;
+  inp.value='';
+  const {data,error}=await sb.from('messages').insert({conversation_id:activeThread.id,sender_id:store.session,body:text}).select('id,created_at').single();
+  if(error){ inp.value=text; return toast(error.message); }
+  activeThread.msgs.push({id:data.id,me:true,t:text,read:false,ts:data.created_at}); renderChat();
 }
 
 /* ═══════════ STUDIO (creators) ═══════════ */
@@ -829,201 +833,72 @@ function renderStudio(){
       <div class="split">You keep 85% · platform fee ${$$(Math.round(gross*FEE))} · gross ${$$(gross)}</div>
     </div>
     <div class="stat-row">
-      <div class="stat"><b>${(u.followers/1000).toFixed(1)}k</b><span>Followers</span></div>
+      <div class="stat"><b>${fmtN(u.followers)}</b><span>Followers</span></div>
       <div class="stat"><b>${$$(u.subPrice)}</b><span>Sub price</span></div>
       <div class="stat"><b>${myPosts.length}</b><span>Drops</span></div>
     </div>
-    <div class="chart-card"><h4>Earnings — last 8 weeks</h4>
-      <svg viewBox="0 0 320 90" width="100%" height="90" role="img" aria-label="Earnings trend, rising">
-        <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#FF3D8A" stop-opacity=".45"/><stop offset="1" stop-color="#8B5CF6" stop-opacity="0"/></linearGradient></defs>
-        <path d="M0,70 L45,62 L90,66 L135,48 L180,52 L225,34 L270,28 L320,12 L320,90 L0,90 Z" fill="url(#g)"/>
-        <path d="M0,70 L45,62 L90,66 L135,48 L180,52 L225,34 L270,28 L320,12" fill="none" stroke="#FF3D8A" stroke-width="2.5" stroke-linecap="round"/></svg></div>
     <div class="chart-card"><h4>Your content</h4>
       ${myPosts.length?myPosts.map(p=>`
         <div class="content-row"><div class="sc ${u.av}">${p.scene}</div>
-          <div class="ti"><b>${p.cap}</b><span>${p.paid?'🔒 Paid · '+$$(p.price):'Free'} · ${p.likes.toLocaleString()} likes</span></div>
+          <div class="ti"><b>${esc(p.cap)||'(media)'}</b><span>${p.paid?'🔒 Paid · '+$$(p.price):'Free'} · ${p.likes.toLocaleString()} likes</span></div>
           <span class="earn">${$$(Math.round(p.earned*(1-FEE)))}</span></div>`).join('')
         :'<p style="color:var(--muted);font-size:13px">No drops yet — hit ＋ to publish your first post.</p>'}
     </div>
-    <button class="payout-btn" onclick="toast('Payout of ${$$(u.earnings)} scheduled — arrives in 1–2 days 💸')">Withdraw ${$$(u.earnings)} to bank</button>`;
+    <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(u.earnings)}</button>`;
+}
+async function requestPayout(){
+  const u=me();
+  if(u.earnings<1000) return toast('Minimum payout is $10.00');
+  if(await rpc('request_payout',{p_amount:u.earnings})){ await settled(); toast('Payout requested — it will be sent once bank payouts are connected'); }
 }
 
 /* ═══════════ CREATE (creators) ═══════════ */
-let postType='free', pickedEmoji='🎛️';
-const emojis=['🎛️','🎧','🌇','🏋️','🎨','📸','🍳','🌊','🔥','🎹'];
-function openCreate(){
-  setCreateMode('post');
-  document.getElementById('emojiPick').innerHTML=emojis.map(e=>
-    `<button class="${e===pickedEmoji?'on':''}" onclick="pickEmoji('${e}',this)">${e}</button>`).join('');
-  openModal('createModal');
-}
-function pickEmoji(e,btn){ pickedEmoji=e; document.querySelectorAll('#emojiPick button').forEach(b=>b.classList.toggle('on',b===btn)); }
+let postType='free';
+function openCreate(){ openModal('createModal'); }
 function setPostType(t){ postType=t;
   document.getElementById('ctFree').classList.toggle('on',t==='free');
   document.getElementById('ctPaid').classList.toggle('on',t==='paid');
   document.getElementById('priceField').classList.toggle('hidden',t==='free'); }
-function publishPost(){
-  const u=me(), cap=document.getElementById('postCap').value.trim();
-  if(!cap) return toast('Add a caption first');
+async function publishPost(){
+  const u=me(), cap=document.getElementById('postCap').value.trim(), f=document.getElementById('postMedia').files[0];
+  if(!cap&&!f) return toast('Add a caption or a photo/video first');
+  if(!u.ageVerified) return toast('ID verification is required before you can publish — launching soon');
   const price=Math.round(parseFloat(document.getElementById('postPrice').value||'3')*100);
-  const f=document.getElementById('postMedia').files[0];
-  let mediaUrl=null,mediaKind=null;
-  if(f){ mediaUrl=URL.createObjectURL(f); mediaKind=f.type.startsWith('video')?'video':'image'; }
-  store.posts.unshift({id:'p'+Math.random().toString(36).slice(2,8),by:u.id,cap,scene:pickedEmoji,mediaUrl,mediaKind,
-    paid:postType==='paid',price:postType==='paid'?price:0,likes:0,earned:0,ts:'now'});
-  document.getElementById('postCap').value=''; document.getElementById('postMedia').value='';
-  closeModal('createModal'); go('home');
-  toast(postType==='paid'?`Paid drop published 🔒 ${$$(price)} — you keep ${$$(Math.round(price*(1-FEE)))} per unlock`:'Post published ✨');
-}
-
-/* ═══════════ GO LIVE — broadcaster ═══════════
-   Demo engine: real camera capture in-browser; viewer distribution in
-   production plugs into LiveKit / Mux / Cloudflare Stream here.       */
-let createMode='post', liveEntry='free', liveTimer=null, liveMedia=null, liveState=null;
-function setCreateMode(m){ createMode=m;
-  document.getElementById('cmPost').classList.toggle('on',m==='post');
-  document.getElementById('cmLive').classList.toggle('on',m==='live');
-  document.getElementById('createPostSection').classList.toggle('hidden',m!=='post');
-  document.getElementById('createLiveSection').classList.toggle('hidden',m!=='live'); }
-function setLiveEntry(t){ liveEntry=t;
-  document.getElementById('leFree').classList.toggle('on',t==='free');
-  document.getElementById('lePaid').classList.toggle('on',t==='paid');
-  document.getElementById('livePriceField').classList.toggle('hidden',t==='free'); }
-async function startLive(){
-  const u=me();
-  if(u.role!=='creator') return toast('Going live is a Vibe Creator feature ✦');
-  const title=document.getElementById('liveTitle').value.trim()||'Live with '+u.username;
-  const price=liveEntry==='paid'?Math.round(parseFloat(document.getElementById('livePrice').value||'4.99')*100):0;
-  closeModal('createModal');
-  liveState={title,price,viewers:1,peak:1,gross:0,start:Date.now(),ended:false};
-  u.live=true;
-  document.getElementById('bcTitle').textContent=title;
-  document.getElementById('bcPrice').textContent=price?$$(price)+' entry · you keep 85%':'Free entry';
-  document.getElementById('bcChat').innerHTML='';
-  document.getElementById('bcSummary').classList.add('hidden');
-  document.getElementById('bcStage').classList.remove('hidden');
-  document.getElementById('liveBroadcast').classList.add('open');
+  if(postType==='paid'&&(isNaN(price)||price<99||price>49999)) return toast('Price must be between $0.99 and $499.99');
+  const btn=document.getElementById('publishBtn'); btn.disabled=true;
   try{
-    liveMedia=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:true});
-    const v=document.getElementById('bcVideo'); v.srcObject=liveMedia; v.classList.remove('hidden'); await v.play();
-    document.getElementById('bcFallback').classList.add('hidden');
-  }catch(e){
-    document.getElementById('bcVideo').classList.add('hidden');
-    document.getElementById('bcFallback').classList.remove('hidden');
-  }
-  const names=['zoe_afterdark','mixhead22','tk.wav','sunsetjunkie','vibecheck_ana','lofi_dan','rooftopritz'];
-  const lines=['this is 🔥🔥','been waiting all week','sound is crisp tonight','drop the tracklist pls','LETS GOOO','tuning in from Berlin 🇩🇪','best money I spent today'];
-  liveTimer=setInterval(()=>{
-    if(!liveState||liveState.ended)return;
-    const join=Math.random()<0.75?Math.ceil(Math.random()*3):0;
-    if(join){ liveState.viewers+=join; liveState.peak=Math.max(liveState.peak,liveState.viewers);
-      if(liveState.price){ const g=join*liveState.price; liveState.gross+=g; me().earnings+=Math.round(g*(1-FEE)); } }
-    if(Math.random()<0.15&&liveState.viewers>3) liveState.viewers--;
-    if(Math.random()<0.7) bcChatMsg(names[Math.floor(Math.random()*names.length)],lines[Math.floor(Math.random()*lines.length)]);
-    if(Math.random()<0.12){ const t=200*Math.ceil(Math.random()*3); liveState.gross+=t; me().earnings+=Math.round(t*(1-FEE));
-      bcChatMsg(names[Math.floor(Math.random()*names.length)],'tipped '+$$(t)+' 💰',true); }
-    const el=Date.now()-liveState.start, mm=String(Math.floor(el/60000)).padStart(2,'0'), ss=String(Math.floor(el/1000%60)).padStart(2,'0');
-    document.getElementById('bcTime').textContent=mm+':'+ss;
-    document.getElementById('bcViewers').textContent=liveState.viewers.toLocaleString();
-    document.getElementById('bcEarn').textContent=$$(Math.round(liveState.gross*(1-FEE)));
-  },1600);
-  toast('You are LIVE ✦');
+    const id=crypto.randomUUID(), paid=postType==='paid';
+    const kind=f?(f.type.startsWith('video')?'video':'image'):'text';
+    const ext=f?(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,''):'';
+    const path=f?`${u.id}/${id}/${Date.now()}.${ext}`:null;
+    const {error}=await sb.from('posts').insert({id,creator_id:u.id,caption:cap||null,media_type:kind,media_path:path,is_paid:paid,price_cents:paid?price:null});
+    if(error) return toast(error.message);
+    if(f){
+      const up=await sb.storage.from(paid?'paid-media':'public-media').upload(path,f,{contentType:f.type});
+      if(up.error){ await sb.from('posts').delete().eq('id',id); return toast('Upload failed: '+up.error.message); }
+    }
+    await hydrate();
+    document.getElementById('postCap').value=''; document.getElementById('postMedia').value='';
+    closeModal('createModal'); go('home');
+    toast(paid?`Paid drop published 🔒 ${$$(price)} — you keep ${$$(Math.round(price*(1-FEE)))} per unlock`:'Post published ✨');
+  } finally { btn.disabled=false; }
 }
-function bcChatMsg(name,text,gold){
-  const c=document.getElementById('bcChat');
-  const d=document.createElement('div'); d.className='lchat-msg'+(gold?' gold':''); d.innerHTML=`<b>${name}</b> ${text}`;
-  c.appendChild(d); while(c.children.length>7)c.removeChild(c.firstChild);
-}
-function endLive(){
-  if(!liveState)return; liveState.ended=true; clearInterval(liveTimer);
-  if(liveMedia){liveMedia.getTracks().forEach(t=>t.stop());liveMedia=null;}
-  me().live=false;
-  const mins=Math.max(1,Math.round((Date.now()-liveState.start)/60000));
-  document.getElementById('bcStage').classList.add('hidden');
-  const s=document.getElementById('bcSummary'); s.classList.remove('hidden');
-  s.innerHTML=`
-    <h3 style="font-family:'Unbounded';font-size:17px;margin-bottom:6px">Stream ended ✦</h3>
-    <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">${liveState.title}</p>
-    <div class="pay-row"><span>Duration</span><span>${mins} min</span></div>
-    <div class="pay-row"><span>Peak viewers</span><span>${liveState.peak.toLocaleString()}</span></div>
-    <div class="pay-row"><span>Gross (entries + tips)</span><span>${$$(liveState.gross)}</span></div>
-    <div class="pay-row"><span>You keep (85%)</span><span style="color:var(--money);font-weight:700">${$$(Math.round(liveState.gross*(1-FEE)))}</span></div>
-    <button class="primary" onclick="closeBroadcast()">Done</button>`;
-}
-function closeBroadcast(){ document.getElementById('liveBroadcast').classList.remove('open'); liveState=null; renderStories(); renderFeed(); }
 
-/* ═══════════ GO LIVE — viewer ═══════════ */
-let viewTimer=null, viewingCid=null;
-function joinLive(cid){
-  const u=me(), c=user(cid);
-  if(u.id===cid) return toast('Use ＋ → Go live to start your own stream');
-  const price=499;
-  store.liveAccess=store.liveAccess||{};
-  if(u.role==='follower'&&!store.liveAccess[u.id+cid]){
-    document.getElementById('payTitle').textContent='Join '+c.username+' live';
-    document.getElementById('paySub').textContent='Paid live stream — one-time entry. The creator keeps 85%.';
-    document.getElementById('payPrice').textContent=$$(price);
-    document.getElementById('payCreator').textContent=$$(Math.round(price*(1-FEE)));
-    document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-price));
-    document.getElementById('payConfirmBtn').onclick=()=>{
-      if(!spend(price))return closeModal('payModal');
-      credit(cid,price); store.liveAccess[u.id+cid]=true;
-      closeModal('payModal'); openViewer(c);
-      toast('You\'re in 🎟 '+c.username+' earned '+$$(Math.round(price*(1-FEE))));
-    };
-    openModal('payModal');
-  } else openViewer(c);
-}
-function openViewer(c){
-  viewingCid=c.id;
-  document.getElementById('vwName').textContent=c.username;
-  const av=document.getElementById('vwAv'); av.className='av '+c.av;
-  av.textContent=c.em; av.style.cssText='width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:15px';
-  document.getElementById('vwChat').innerHTML='';
-  document.getElementById('liveViewer').classList.add('open');
-  let viewers=1180+Math.floor(Math.random()*90);
-  const names=['zoe_afterdark','mixhead22','tk.wav','sunsetjunkie','vibecheck_ana','lofi_dan'];
-  const lines=['this is 🔥','sound is unreal','LETS GOOO','anyone got the tracklist?','greetings from Tokyo 🗼','again again again'];
-  clearInterval(viewTimer);
-  viewTimer=setInterval(()=>{
-    viewers=Math.max(900,viewers+Math.floor(Math.random()*9)-3);
-    document.getElementById('vwViewers').textContent=viewers.toLocaleString();
-    if(Math.random()<0.8) vwChatMsg(names[Math.floor(Math.random()*names.length)],lines[Math.floor(Math.random()*lines.length)]);
-  },1500);
-}
-function leaveViewer(){ clearInterval(viewTimer); document.getElementById('liveViewer').classList.remove('open'); }
-function vwChatMsg(name,text,gold){
-  const c=document.getElementById('vwChat');
-  const d=document.createElement('div'); d.className='lchat-msg'+(gold?' gold':''); d.innerHTML=`<b>${name}</b> ${text}`;
-  c.appendChild(d); while(c.children.length>7)c.removeChild(c.firstChild);
-}
-function vwSend(){ const i=document.getElementById('vwInput'); if(!i.value.trim())return; vwChatMsg(me().username,i.value); i.value=''; }
-function react(e){
-  const l=document.getElementById('floatLayer');
-  const s=document.createElement('span'); s.className='fl'; s.textContent=e;
-  s.style.left=(10+Math.random()*40)+'px';
-  l.appendChild(s); setTimeout(()=>s.remove(),2600);
-  if(Math.random()<0.5)setTimeout(()=>react(e),180); // little burst
-}
-function vwTip(){
-  if(!spend(200))return;
-  credit(viewingCid,200);
-  vwChatMsg(me().username,'tipped $2.00 💰',true); react('💰');
-  toast('Tipped '+user(viewingCid).username+' $2.00 — they keep $1.70');
-}
+/* Live streaming is not part of this build — the demo broadcaster/viewer was removed
+   (it fabricated viewers and earnings). It needs a real video provider (LiveKit / Mux /
+   Cloudflare Stream) + a server-side live_entry purchase function. See git history. */
 
 /* ═══════════ ME ═══════════ */
 function renderMe(){
   const u=me(), isC=u.role==='creator';
-  const mySubs=Object.keys(store.subs).filter(k=>store.subs[k]&&k.startsWith(u.id)).map(k=>user(k.replace(u.id,'')));
+  const mySubs=Object.keys(store.subs).filter(k=>store.subs[k]&&k.startsWith(u.id)).map(k=>user(k.replace(u.id,''))).filter(Boolean);
   document.getElementById('page-me').innerHTML=`
     <div class="me-head">
       <div class="av ${u.av}">${u.em}</div>
-      <h2>${u.name} ${u.verified?'<span class="verified">✔</span>':''} <span class="role-badge ${isC?'':'f'}">${isC?'✦ CREATOR':'♥ FOLLOWER'}</span></h2>
-      <div class="u">@${u.username}${u.bio?' · '+u.bio:''}</div>
+      <h2>${esc(u.name)} ${u.verified?'<span class="verified">✔</span>':''} <span class="role-badge ${isC?'':'f'}">${isC?'✦ CREATOR':'♥ FOLLOWER'}</span></h2>
+      <div class="u">@${esc(u.username)}${u.bio?' · '+esc(u.bio):''}</div>
       <div class="me-stats">
-        ${isC?`<div><b>${(u.followers/1000).toFixed(1)}k</b><span>Followers</span></div>
+        ${isC?`<div><b>${fmtN(u.followers)}</b><span>Followers</span></div>
                <div><b>${$$(u.earnings)}</b><span>Earnings</span></div>
                <div><b>${$$(u.subPrice)}</b><span>Sub price</span></div>`
              :`<div><b>${$$(u.wallet)}</b><span>Wallet</span></div>
@@ -1032,32 +907,37 @@ function renderMe(){
       </div>
     </div>
     ${!isC&&mySubs.length?`<div class="section-title" style="padding-top:4px">Your subscriptions</div>
-      <div class="list-card">${mySubs.map(c=>`<div class="row"><div class="r-ic ${c.av}">${c.em}</div>${c.username}<span class="sub">${$$(c.subPrice)}/mo · active</span></div>`).join('')}</div>`:''}
+      <div class="list-card">${mySubs.map(c=>`<div class="row"><div class="r-ic ${c.av}">${c.em}</div>${esc(c.username)}<span class="sub">${$$(c.subPrice)}/mo · until ${new Date(store.subEnds[c.id]).toLocaleDateString()}</span></div>`).join('')}</div>`:''}
     <div class="section-title" style="padding-top:4px">Settings</div>
     <div class="list-card">
       ${isC?`<div class="row" onclick="changeSubPrice()"><div class="r-ic">💜</div>Subscription price<span class="sub">${$$(u.subPrice)}/mo</span></div>
-             <div class="row" onclick="toast('Payout details: connect bank in production build')"><div class="r-ic">🏦</div>Payout method<span class="sub">Add bank</span></div>`
-           :`<div class="row" onclick="openTopup()"><div class="r-ic">◈</div>Wallet &amp; top-up<span class="sub">${$$(u.wallet)}</span></div>`}
+             <div class="row" onclick="toast('Bank payouts are not connected yet')"><div class="r-ic">🏦</div>Payout method<span class="sub">Coming soon</span></div>`
+           :`<div class="row" onclick="openTopup()"><div class="r-ic">◈</div>Wallet<span class="sub">${$$(u.wallet)}</span></div>`}
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
-      <div class="row" onclick="toast('Age verification: complete ✅')"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">Verified ✅</span></div>
-      <div class="row" onclick="toast('Report submitted to Trust & Safety')"><div class="r-ic">🛡️</div>Report a problem</div>
+      <div class="row" onclick="toast('${u.ageVerified?'Age verified ✅':'ID verification is launching soon — purchases and publishing unlock once verified'}')"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':'Not verified'}</span></div>
       <div class="row" onclick="logOut()"><div class="r-ic">🚪</div>Log out</div>
     </div>`;
 }
-function changeSubPrice(){
+async function changeSubPrice(){
   const v=prompt('Monthly subscription price (USD, 1.99–99.99):', (me().subPrice/100).toFixed(2));
   if(!v)return; const c=Math.round(parseFloat(v)*100);
   if(isNaN(c)||c<199||c>9999) return toast('Price must be between $1.99 and $99.99');
+  const {error}=await sb.from('profiles').update({sub_price_cents:c}).eq('id',store.session);
+  if(error) return toast(error.message);
   me().subPrice=c; renderMe(); toast('Subscription price updated to '+$$(c));
 }
 
 /* ═══════════ CREATOR PROFILE PAGES + SHAREABLE LINKS ═══════════ */
 let currentProfile=null;
 function openProfile(cid){ currentProfile=cid; go('profile'); }
-function refresh(){
-  if(!document.getElementById('page-profile').classList.contains('hidden')) renderProfile();
-  if(!document.getElementById('page-home').classList.contains('hidden')) renderFeed();
+function rerender(){
+  updateWallet();
+  const vis=['home','explore','raffles','messages','studio','me','profile'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
+  if(vis==='home'){renderStories();renderFeed()} else if(vis==='explore')renderExplore();
+  else if(vis==='raffles')renderRaffles(); else if(vis==='messages'){ if(!document.getElementById('threads-view').classList.contains('hidden'))renderThreads(); }
+  else if(vis==='studio')renderStudio(); else if(vis==='me')renderMe(); else if(vis==='profile')renderProfile();
 }
+const refresh=rerender;
 function shareLink(un){ return location.href.split('#')[0]+'#'+un; }
 function shareProfile(un){
   const l=shareLink(un);
@@ -1066,10 +946,18 @@ function shareProfile(un){
       .catch(()=>prompt('Copy your shareable link:',l));
   } else prompt('Copy your shareable link:',l);
 }
-function msgFromProfile(cid){
-  let t=store.threads.find(x=>x.withU===cid);
-  if(!t){ t={id:'t'+Math.random().toString(36).slice(2,7),withU:cid,msgs:[]}; store.threads.unshift(t); }
+async function msgFromProfile(cid){
+  const {data,error}=await sb.rpc('get_or_create_conversation',{p_other:cid});
+  if(error) return toast(error.message);
+  let t=store.threads.find(x=>x.id===data);
+  if(!t){ t={id:data,withU:cid,msgs:[]}; store.threads.unshift(t); }
   go('messages'); openChat(t.id);
+}
+async function reportProfile(cid){
+  const reason=prompt('What is wrong with this account? (spam, nudity, harassment, underage, illegal, other)');
+  if(!reason||!reason.trim()) return;
+  const {error}=await sb.from('reports').insert({reporter_id:store.session,target_type:'profile',target_id:cid,reason:reason.trim().slice(0,1000)});
+  toast(error?error.message:'Report submitted to Trust & Safety');
 }
 function renderProfile(){
   const c=user(currentProfile); if(!c) return go('home');
@@ -1079,20 +967,20 @@ function renderProfile(){
     <button class="back-btn" onclick="go('home')" style="padding:14px 18px 0">← Home</button>
     <div class="me-head">
       <div class="av ${c.av}">${c.em}</div>
-      <h2>${c.name} ${c.verified?'<span class="verified">✔</span>':''} ${c.role==='creator'?'<span class="role-badge">✦ CREATOR</span>':'<span class="role-badge f">♥ FOLLOWER</span>'}</h2>
-      <div class="u">@${c.username}${c.bio?' · '+c.bio:''}</div>
+      <h2>${esc(c.name)} ${c.verified?'<span class="verified">✔</span>':''} ${c.role==='creator'?'<span class="role-badge">✦ CREATOR</span>':'<span class="role-badge f">♥ FOLLOWER</span>'}</h2>
+      <div class="u">@${esc(c.username)}${c.bio?' · '+esc(c.bio):''}</div>
       <div class="me-stats">
-        <div><b>${c.followers>=1000?(c.followers/1000).toFixed(1)+'k':c.followers}</b><span>Followers</span></div>
+        <div><b>${fmtN(c.followers)}</b><span>Followers</span></div>
         <div><b>${theirPosts.length}</b><span>Drops</span></div>
         ${c.role==='creator'?`<div><b>${$$(c.subPrice)}</b><span>Per month</span></div>`:''}
       </div>
-      ${c.live?`<button class="enter-btn" style="margin:2px 0 10px;background:var(--live)" onclick="joinLive('${c.id}')">● LIVE now — tap to join</button>`:''}
       ${!isMe&&c.role==='creator'?`
       <div style="display:flex;gap:10px;width:100%;padding:2px 4px 4px">
         <button class="primary" style="margin:0" onclick="subscribe('${c.id}')">${subbed?'Subscribed ✓':'Subscribe '+$$(c.subPrice)+'/mo'}</button>
         <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text)" onclick="msgFromProfile('${c.id}')">Message</button>
       </div>`:''}
-      <button class="ghost" style="margin-top:2px" onclick="shareProfile('${c.username}')">🔗 Copy shareable link</button>
+      <button class="ghost" style="margin-top:2px" onclick="shareProfile('${esc(c.username)}')">🔗 Copy shareable link</button>
+      ${!isMe?`<button class="ghost" onclick="reportProfile('${c.id}')">Report this account</button>`:''}
     </div>
     <div class="feed">${theirPosts.length?theirPosts.map(postCard).join('')
       :'<p style="color:var(--muted);text-align:center;padding:24px;font-size:13.5px">No drops yet.</p>'}</div>`;
@@ -1103,16 +991,18 @@ function hashUser(){
   return h?store.users.find(x=>x.username===h):null;
 }
 window.addEventListener('hashchange',()=>{ const c=hashUser(); if(c&&store.session) openProfile(c.id); });
-(function(){
-  const c=hashUser();
-  if(c){
-    document.querySelector('.auth .tag').insertAdjacentHTML('afterend',
-      `<div style="display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:20px">
-        <div class="av ${c.av}" style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:18px">${c.em}</div>
-        <div style="font-size:13px;line-height:1.45"><b>You've been invited to @${c.username}</b><br>
-        <span style="color:var(--muted)">Log in or sign up to view their page${c.role==='creator'?' and subscribe from '+$$(c.subPrice)+'/mo':''}</span></div>
-      </div>`);
-  }
+(async function(){
+  const h=decodeURIComponent(location.hash.slice(1)).toLowerCase();
+  if(!h||!sb||!/^[a-z0-9_.]{3,24}$/.test(h)) return;
+  const {data}=await sb.from('profiles').select(PUB_COLS).eq('username',h).maybeSingle();
+  if(!data||store.session) return;
+  const c=mapUser(data,0), tag=document.querySelector('.auth .tag');
+  if(tag) tag.insertAdjacentHTML('afterend',
+    `<div style="display:flex;gap:10px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:20px">
+      <div class="av ${c.av}" style="width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:18px">${c.em}</div>
+      <div style="font-size:13px;line-height:1.45"><b>You've been invited to @${esc(c.username)}</b><br>
+      <span style="color:var(--muted)">Log in or sign up to view their page${c.role==='creator'?' and subscribe from '+$$(c.subPrice)+'/mo':''}</span></div>
+    </div>`);
 })();
 
 /* ═══════════ UTIL ═══════════ */
