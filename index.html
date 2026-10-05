@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js" defer></script>
 <style>
 :root{
   --bg:#0E0A14; --panel:#171021; --panel-2:#1F1630; --line:#2C2140;
@@ -266,6 +267,9 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 @keyframes flup{0%{transform:translate(-50%,0) scale(.7);opacity:0}12%{opacity:1}100%{transform:translate(calc(-50% + 18px),-320px) scale(1.25);opacity:0}}
 .live-summary{margin:auto;width:min(420px,92%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;color:var(--text)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#payModal,#reportModal,#commentsModal{z-index:130}
+#liveVideoWrap{position:absolute;inset:0;background:#000;display:grid;place-items:center}
+#liveVideoWrap video{width:100%;height:100%;object-fit:cover}
 .abtn{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:4px 6px 0 0}
 .abtn.danger{color:var(--live);border-color:var(--live)} .abtn.ok{color:var(--ok);border-color:var(--ok)}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px}
@@ -409,6 +413,10 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 <div class="overlay" id="createModal" onclick="if(event.target===this)closeModal('createModal')">
   <div class="sheet">
     <h3>Create</h3>
+    <div class="toggle-row">
+      <button id="cmPost" class="on" onclick="setCreateMode('post')">📝 New drop</button>
+      <button id="cmLive" onclick="setCreateMode('live')">🔴 Go live</button>
+    </div>
     <div id="createPostSection">
       <p>Publish to your followers — free, or set a price and keep 85%.</p>
       <div class="toggle-row">
@@ -420,8 +428,38 @@ input,textarea,select{font-family:inherit;color:var(--text)}
       <div class="field"><label>Attach photo or video (optional)</label><input id="postMedia" type="file" accept="image/*,video/*" style="padding:10px"></div>
       <button class="primary" id="publishBtn" onclick="publishPost()">Publish</button>
     </div>
+    <div id="createLiveSection" class="hidden">
+      <p>Broadcast live video. Free for everyone, or charge for entry and keep 85% of every ticket and tip. Chat is recorded and moderated.</p>
+      <div class="field"><label>Stream title</label><input id="liveTitle" maxlength="120" placeholder="Friday rooftop session 🎧"></div>
+      <div class="toggle-row">
+        <button id="leFree" class="on" onclick="setLiveEntry('free')">Free entry</button>
+        <button id="lePaid" onclick="setLiveEntry('paid')">Paid entry 🎟</button>
+      </div>
+      <div class="field hidden" id="livePriceField"><label>Entry price (USD)</label><input id="livePrice" type="number" min="0.99" max="500" step="0.5" value="4.99"></div>
+      <button class="primary" id="startLiveBtn" onclick="startBroadcast()">Start broadcasting</button>
+    </div>
     <button class="ghost" onclick="closeModal('createModal')">Cancel</button>
   </div>
+</div>
+
+<!-- LIVE: broadcaster + viewer -->
+<div class="live-overlay" id="liveOverlay">
+  <div class="live-stage" id="lvStage">
+    <div id="liveVideoWrap"></div>
+    <div class="live-top">
+      <span class="live-pill red">● LIVE <b id="lvTime">00:00</b></span>
+      <span class="live-pill">👁 <b id="lvViewers">0</b></span>
+      <button class="live-end" id="lvEndBtn" onclick="liveLeave()">Leave</button>
+    </div>
+    <div class="live-title-bar"><b id="lvTitle"></b><span id="lvSub"></span></div>
+    <div class="lchat" id="lvChat"></div>
+    <div class="live-bottom">
+      <input id="lvInput" placeholder="Say something…" maxlength="300" onkeydown="if(event.key==='Enter')liveSend()">
+      <button id="lvTipBtn" onclick="liveTip()" title="Tip $2">💰</button>
+      <button id="lvReportBtn" onclick="liveReport()" title="Report">⚑</button>
+    </div>
+  </div>
+  <div id="lvSummary" class="live-summary hidden"></div>
 </div>
 
 <div class="overlay" id="topupModal" onclick="if(event.target===this)closeModal('topupModal')">
@@ -480,7 +518,7 @@ const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
 const PUB_COLS='id,username,display_name,bio,avatar_url,account_type,is_verified,sub_price_cents,created_at';
 
-const store = {users:[],posts:[],raffles:[],raffleResults:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
+const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
@@ -573,6 +611,7 @@ async function hydrate(){
   const drawn=await sb.from('raffles').select('id,title,prize').not('winner_entry_id','is',null).order('closes_at',{ascending:false}).limit(5);
   const dres=await Promise.all((drawn.data||[]).map(d=>sb.rpc('raffle_result',{p_raffle:d.id})));
   store.raffleResults=(drawn.data||[]).map((d,i)=>Object.assign({title:d.title,prize:d.prize},(dres[i].data||[{}])[0]||{})).filter(x=>x.winner_username);
+  await loadLive();
   await loadThreads();
 }
 
@@ -707,11 +746,12 @@ function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt'
 
 /* ═══════════ HOME ═══════════ */
 function renderStories(){
-  const creators=store.users.filter(u=>u.role==='creator');
-  document.getElementById('storiesRow').innerHTML=creators.map((c,i)=>`
-    <div class="story" onclick="openProfile('${c.id}')">
-      <div class="ring"><div class="av ${c.av}">${c.em}</div></div>
-      <span class="name">${esc(c.username)}</span></div>`).join('');
+  const liveOf=cid=>store.live.find(x=>x.creator_id===cid);
+  const creators=store.users.filter(u=>u.role==='creator').sort((a,b)=>(liveOf(b.id)?1:0)-(liveOf(a.id)?1:0));
+  document.getElementById('storiesRow').innerHTML=creators.map((c,i)=>{ const l=liveOf(c.id); return `
+    <div class="story" onclick="${l?`openLive('${l.id}')`:`openProfile('${c.id}')`}">
+      <div class="ring"><div class="av ${c.av}">${c.em}</div>${l?'<span class="live-tag">LIVE</span>':''}</div>
+      <span class="name">${esc(c.username)}</span></div>`; }).join('');
 }
 function canView(p){
   const u=me();
@@ -747,9 +787,15 @@ function postCard(p){
     <div class="card-body"><div class="cap"><b style="cursor:pointer" onclick="openProfile('${p.by}')">${esc(c.username)}</b>${esc(p.cap)}</div></div>
   </article>`;
 }
+function liveBanners(){
+  return store.live.filter(l=>l.creator_id!==store.session).map(l=>{ const c=user(l.creator_id); if(!c) return '';
+    return `<div class="live-banner" onclick="openLive('${l.id}')"><div class="av ${c.av}" style="width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:19px">${c.em}</div>
+      <div style="flex:1;min-width:0"><b style="font-size:14px">${esc(c.username)} is live</b><div style="font-size:12px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.title)} · ${l.entry_price_cents?$$(l.entry_price_cents)+' entry':'Free'} · tap to join</div></div>
+      <span class="live-tag" style="position:static;transform:none">LIVE</span></div>`; }).join('');
+}
 function renderFeed(){
-  document.getElementById('feed').innerHTML=store.posts.length?store.posts.map(postCard).join('')
-    :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No drops yet.<br>Creators will appear here as they publish.</p>';
+  document.getElementById('feed').innerHTML=liveBanners()+(store.posts.length?store.posts.map(postCard).join('')
+    :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No drops yet.<br>Creators will appear here as they publish.</p>');
 }
 async function likePost(id){
   const u=me(), k=u.id+id, p=store.posts.find(x=>x.id===id), was=!!store.likes[k];
@@ -964,7 +1010,6 @@ async function requestPayout(){
 
 /* ═══════════ CREATE (creators) ═══════════ */
 let postType='free';
-function openCreate(){ openModal('createModal'); }
 function setPostType(t){ postType=t;
   document.getElementById('ctFree').classList.toggle('on',t==='free');
   document.getElementById('ctPaid').classList.toggle('on',t==='paid');
@@ -994,9 +1039,184 @@ async function publishPost(){
   } finally { btn.disabled=false; }
 }
 
-/* Live streaming is not part of this build — the demo broadcaster/viewer was removed
-   (it fabricated viewers and earnings). It needs a real video provider (LiveKit / Mux /
-   Cloudflare Stream) + a server-side live_entry purchase function. See git history. */
+/* ═══════════ LIVE STREAMING (LiveKit) ═══════════
+   Video is carried by LiveKit. Our database decides who may broadcast/watch (live_access), the `live-token` edge function
+   mints a short-lived token only after that check, and the LiveKit secret never reaches the browser.
+   Tickets and tips use the normal server-side payment functions. Chat is stored (and moderated) in live_comments. */
+let createMode='post', liveEntry='free';
+function setCreateMode(m){ createMode=m;
+  document.getElementById('cmPost').classList.toggle('on',m==='post'); document.getElementById('cmLive').classList.toggle('on',m==='live');
+  document.getElementById('createPostSection').classList.toggle('hidden',m!=='post'); document.getElementById('createLiveSection').classList.toggle('hidden',m!=='live'); }
+function setLiveEntry(t){ liveEntry=t;
+  document.getElementById('leFree').classList.toggle('on',t==='free'); document.getElementById('lePaid').classList.toggle('on',t==='paid');
+  document.getElementById('livePriceField').classList.toggle('hidden',t==='free'); }
+function openCreate(){ setCreateMode('post'); openModal('createModal'); }
+
+let liveRoom=null, liveState=null, liveTimer=null, liveBeat=null, livePollT=null, liveChannel=null, liveSeen=new Set();
+async function loadLive(){
+  const since=new Date(Date.now()-90e3).toISOString();
+  const {data}=await sb.from('live_streams').select('id,creator_id,title,entry_price_cents,started_at,last_seen_at').eq('status','live').gt('last_seen_at',since);
+  store.live=data||[]; await ensureUsers(store.live.map(x=>x.creator_id));
+}
+setInterval(async()=>{ if(!store.session||document.hidden) return; try{ await loadLive(); }catch(e){}
+  if(!document.getElementById('page-home').classList.contains('hidden')){ renderStories(); renderFeed(); } },20000);
+
+async function liveToken(streamId){
+  const {data,error}=await sb.functions.invoke('live-token',{body:{stream_id:streamId}});
+  if(error){ let msg=error.message; try{ const b=await error.context.json(); msg=b.error==='not_configured'?'NOT_CONFIGURED':(b.error||msg); }catch(e){} throw new Error(msg); }
+  return data;
+}
+const liveFail=e=>toast(e.message==='NOT_CONFIGURED'?'Live streaming is not switched on yet':(e.message||'Something went wrong'));
+
+async function startBroadcast(){
+  const u=me();
+  if(!u.ageVerified) return toast('ID verification is required before you can go live — launching soon');
+  const title=document.getElementById('liveTitle').value.trim(); if(!title) return toast('Give your stream a title');
+  const price=liveEntry==='paid'?Math.round(parseFloat(document.getElementById('livePrice').value||'0')*100):0;
+  if(liveEntry==='paid'&&(isNaN(price)||price<99||price>50000)) return toast('Entry price must be between $0.99 and $500.00');
+  const btn=document.getElementById('startLiveBtn'); btn.disabled=true;
+  try{
+    const {data:id,error}=await sb.rpc('start_live_stream',{p_title:title,p_price_cents:price});
+    if(error) return toast(friendly(error.message));
+    closeModal('createModal');
+    try{ await connectLive(id,'broadcaster',{title,price,creator:u.id}); }
+    catch(e){ await sb.rpc('end_live_stream',{p_stream:id}); liveCleanup(); liveFail(e); }
+  } finally { btn.disabled=false; }
+}
+
+async function openLive(streamId){
+  const s=store.live.find(x=>x.id===streamId); if(!s) return toast('This stream has ended');
+  const u=me(); if(s.creator_id===u.id) return toast('You are the broadcaster of this stream');
+  if(liveState) return;
+  const c=user(s.creator_id);
+  if(s.entry_price_cents>0){
+    const {data}=await sb.from('live_tickets').select('stream_id').eq('stream_id',s.id).eq('user_id',u.id);
+    if(!data||!data.length){
+      document.getElementById('payTitle').textContent='Join '+c.username+' live';
+      document.getElementById('paySub').textContent='Ticket for this live stream. The creator keeps 85%.';
+      document.getElementById('payPrice').textContent=$$(s.entry_price_cents);
+      document.getElementById('payCreator').textContent=$$(Math.round(s.entry_price_cents*(1-FEE)));
+      document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-s.entry_price_cents));
+      document.getElementById('payConfirmBtn').onclick=async()=>{
+        closeModal('payModal'); toast('Processing payment…');
+        if(await rpc('buy_live_ticket',{p_stream:s.id})){ u.wallet=Math.max(0,u.wallet-s.entry_price_cents); updateWallet(); watchLive(s,c); }
+      };
+      return openModal('payModal');
+    }
+  }
+  watchLive(s,c);
+}
+async function watchLive(s,c){
+  toast('Connecting…');
+  try{ await connectLive(s.id,'viewer',{title:s.title,price:s.entry_price_cents,creator:s.creator_id}); }
+  catch(e){ liveCleanup(); liveFail(e); }
+}
+
+async function connectLive(streamId,role,meta){
+  if(!window.LivekitClient) throw new Error('The video library failed to load — check your connection and reload');
+  const t=await liveToken(streamId);
+  const {Room,RoomEvent,Track}=window.LivekitClient;
+  const room=new Room({adaptiveStream:true,dynacast:true});
+  liveRoom=room; liveState={id:streamId,role,start:Date.now(),title:meta.title,price:meta.price,creator:meta.creator,peak:0,ending:false};
+  const wrap=document.getElementById('liveVideoWrap'); wrap.innerHTML='';
+  const attach=tr=>{ if(tr.kind==='video'){ const el=tr.attach(); el.setAttribute('playsinline',''); wrap.appendChild(el); } else if(role==='viewer'){ const el=tr.attach(); el.style.display='none'; wrap.appendChild(el); } };
+  room.on(RoomEvent.TrackSubscribed,tr=>attach(tr));
+  room.on(RoomEvent.TrackUnsubscribed,tr=>tr.detach().forEach(el=>el.remove()));
+  const count=()=>{ if(!liveState) return; const n=room.remoteParticipants.size; liveState.peak=Math.max(liveState.peak,n); document.getElementById('lvViewers').textContent=n; };
+  room.on(RoomEvent.ParticipantConnected,count); room.on(RoomEvent.ParticipantDisconnected,count);
+  room.on(RoomEvent.Disconnected,()=>{ if(liveState&&!liveState.ending) liveEnded('You were disconnected from the stream.'); });
+  // UI
+  document.getElementById('lvTitle').textContent=meta.title;
+  document.getElementById('lvSub').textContent=meta.price?$$(meta.price)+' entry':'Free entry';
+  document.getElementById('lvEndBtn').textContent=role==='broadcaster'?'End':'Leave';
+  document.getElementById('lvTipBtn').classList.toggle('hidden',role==='broadcaster');
+  document.getElementById('lvReportBtn').classList.toggle('hidden',role==='broadcaster');
+  document.getElementById('lvChat').innerHTML=''; document.getElementById('lvSummary').classList.add('hidden'); document.getElementById('lvStage').classList.remove('hidden');
+  document.getElementById('lvViewers').textContent='0'; document.getElementById('lvTime').textContent='00:00';
+  document.getElementById('liveOverlay').classList.add('open');
+  await room.connect(t.url,t.token);
+  if(role==='broadcaster'){
+    await room.localParticipant.setCameraEnabled(true); await room.localParticipant.setMicrophoneEnabled(true);
+    const cam=room.localParticipant.getTrackPublication(Track.Source.Camera); if(cam&&cam.track) attach(cam.track);
+    liveBeat=setInterval(async()=>{ const {error}=await sb.rpc('live_heartbeat',{p_stream:streamId}); if(error&&liveState&&!liveState.ending) liveEnded('Your stream was ended by a moderator.'); },30000);
+  } else {
+    try{ await room.startAudio(); }catch(e){}
+    room.remoteParticipants.forEach(p=>p.trackPublications.forEach(pub=>{ if(pub.isSubscribed&&pub.track) attach(pub.track); }));
+    livePollT=setInterval(async()=>{ const {data}=await sb.from('live_streams').select('status,last_seen_at').eq('id',streamId).single();
+      if(liveState&&!liveState.ending&&(!data||data.status!=='live'||new Date(data.last_seen_at)<new Date(Date.now()-120e3))) liveEnded('This stream has ended.'); },15000);
+  }
+  count();
+  liveTimer=setInterval(()=>{ if(!liveState) return; const el=Date.now()-liveState.start; document.getElementById('lvTime').textContent=String(Math.floor(el/60000)).padStart(2,'0')+':'+String(Math.floor(el/1000%60)).padStart(2,'0'); },1000);
+  liveChatStart(streamId);
+}
+
+/* chat */
+function liveChatAdd(c,gold){
+  if(c.id&&liveSeen.has(c.id)) return; if(c.id) liveSeen.add(c.id);
+  const box=document.getElementById('lvChat'); const a=user(c.user_id);
+  const d=document.createElement('div'); d.className='lchat-msg'+(gold?' gold':'');
+  const b=document.createElement('b'); b.textContent=a?a.username:'user'; d.appendChild(b); d.appendChild(document.createTextNode(c.body));
+  box.appendChild(d); while(box.children.length>7) box.removeChild(box.firstChild);
+}
+async function liveChatStart(streamId){
+  liveSeen=new Set();
+  const {data}=await sb.from('live_comments').select('id,user_id,body,created_at').eq('stream_id',streamId).order('created_at',{ascending:false}).limit(7);
+  if(data&&data.length){ await ensureUsers(data.map(x=>x.user_id)); data.reverse().forEach(c=>liveChatAdd(c)); }
+  liveChannel=sb.channel('live-'+streamId).on('postgres_changes',{event:'INSERT',schema:'public',table:'live_comments',filter:'stream_id=eq.'+streamId},async p=>{
+    await ensureUsers([p.new.user_id]); liveChatAdd(p.new,p.new.body.startsWith('💰')); }).subscribe();
+}
+async function liveSend(){
+  const inp=document.getElementById('lvInput'), body=inp.value.trim(); if(!body||!liveState) return;
+  inp.value='';
+  const {data,error}=await sb.from('live_comments').insert({stream_id:liveState.id,user_id:store.session,body}).select('id,user_id,body').single();
+  if(error){ inp.value=body; return toast(error.message); }
+  liveChatAdd(data);
+}
+async function liveTip(){
+  if(!liveState) return;
+  if(await rpc('tip_creator',{p_creator:liveState.creator,p_amount:200,p_post:liveState.id})){
+    const u=me(); u.wallet=Math.max(0,u.wallet-200); updateWallet();
+    const {data}=await sb.from('live_comments').insert({stream_id:liveState.id,user_id:store.session,body:'💰 tipped $2.00'}).select('id,user_id,body').single();
+    if(data) liveChatAdd(data,true); toast('Tipped $2.00 — they keep $1.70 ✨'); }
+}
+function liveReport(){ if(liveState) openReport('stream',liveState.id); }
+
+/* leaving / ending */
+function liveCleanup(){
+  clearInterval(liveTimer); clearInterval(liveBeat); clearInterval(livePollT); liveTimer=liveBeat=livePollT=null;
+  if(liveChannel){ sb.removeChannel(liveChannel); liveChannel=null; }
+  if(liveRoom){ try{ liveRoom.disconnect(); }catch(e){} liveRoom=null; }
+  document.getElementById('liveVideoWrap').innerHTML='';
+  document.getElementById('liveOverlay').classList.remove('open');
+  liveState=null;
+}
+async function liveLeave(){
+  if(!liveState) return;
+  if(liveState.role==='broadcaster'){
+    if(!confirm('End your live stream?')) return;
+    liveState.ending=true;
+    const {data,error}=await sb.rpc('end_live_stream',{p_stream:liveState.id});
+    const mins=Math.max(1,Math.round((Date.now()-liveState.start)/60000)), peak=liveState.peak;
+    if(liveRoom){ try{ await liveRoom.disconnect(); }catch(e){} liveRoom=null; }
+    clearInterval(liveTimer); clearInterval(liveBeat);
+    document.getElementById('lvStage').classList.add('hidden'); document.getElementById('liveVideoWrap').innerHTML='';
+    const sm=document.getElementById('lvSummary'); sm.classList.remove('hidden');
+    const gross=data?Number(data.ticket_gross_cents):0;
+    sm.innerHTML=`<h3 style="font-family:'Unbounded';font-size:17px;margin-bottom:6px">Stream ended ✦</h3>
+      <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">${esc(liveState.title)}</p>
+      <div class="pay-row"><span>Duration</span><span>${mins} min</span></div>
+      <div class="pay-row"><span>Peak viewers</span><span>${peak}</span></div>
+      <div class="pay-row"><span>Tickets sold</span><span>${data?Number(data.tickets):0}</span></div>
+      <div class="pay-row"><span>Ticket revenue (you keep 85%)</span><span style="color:var(--money);font-weight:700">${$$(Math.round(gross*(1-FEE)))}</span></div>
+      <p style="color:var(--muted);font-size:12px;margin:10px 0">Tips are added to your earnings separately.</p>
+      <button class="primary" onclick="liveClose()">Done</button>`;
+    if(error) toast(error.message);
+  } else { liveClose(); }
+}
+function liveEnded(msg){
+  if(!liveState) return; liveState.ending=true; liveCleanup(); toast(msg); settled();
+}
+async function liveClose(){ liveCleanup(); await loadLive().catch(()=>{}); settled(); }
 
 /* ═══════════ ME ═══════════ */
 function renderMe(){
@@ -1095,6 +1315,7 @@ function renderProfile(){
         <div><b>${theirPosts.length}</b><span>Drops</span></div>
         ${c.role==='creator'?`<div><b>${$$(c.subPrice)}</b><span>Per month</span></div>`:''}
       </div>
+      ${(()=>{ const l=store.live.find(x=>x.creator_id===c.id); return l&&!isMe?`<button class="enter-btn" style="margin:2px 0 10px;background:var(--live)" onclick="openLive('${l.id}')">● LIVE now — tap to join</button>`:''; })()}
       ${!isMe&&c.role==='creator'?`
       <div style="display:flex;gap:10px;width:100%;padding:2px 4px 4px">
         <button class="primary" style="margin:0" onclick="subscribe('${c.id}')">${subbed?(store.subCanceled[c.id]?'Ends '+new Date(store.subEnds[c.id]).toLocaleDateString():'Subscribed ✓'):'Subscribe '+$$(c.subPrice)+'/mo'}</button>
@@ -1138,7 +1359,7 @@ async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}
 const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  const tabs=[['reports','Reports'],['content','Content'],['users','Users']].concat(isAdmin()?[['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  const tabs=[['reports','Reports'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -1147,7 +1368,7 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({reports:admReports,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({reports:admReports,live:admLive,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,audit:admAudit})[adminTab](); }
 
 /* --- reports queue --- */
 async function admReports(){
@@ -1160,9 +1381,9 @@ async function admReports(){
      <div style="font-size:12px;color:var(--muted)">Reported by @${esc(r.reporter||'deleted user')} · target @${esc(r.target_username||'unknown')}</div>
      ${st==='open'?`<div style="margin-top:8px">
        <button class="abtn" onclick="admResolve('${r.id}','dismiss')">Dismiss</button>
-       ${['post','comment','message'].includes(r.target_type)&&!r.already_removed?`<button class="abtn danger" onclick="admResolve('${r.id}','remove_content')">Remove content</button>`:''}
+       ${['post','comment','message','stream'].includes(r.target_type)&&!r.already_removed?`<button class="abtn danger" onclick="admResolve('${r.id}','remove_content')">Remove content</button>`:''}
        ${r.target_user_id?`<button class="abtn danger" onclick="admResolve('${r.id}','ban_user')">Ban user</button>`:''}
-       ${['post','comment','message'].includes(r.target_type)&&!r.already_removed&&r.target_user_id?`<button class="abtn danger" onclick="admResolve('${r.id}','remove_and_ban')">Remove + ban</button>`:''}
+       ${['post','comment','message','stream'].includes(r.target_type)&&!r.already_removed&&r.target_user_id?`<button class="abtn danger" onclick="admResolve('${r.id}','remove_and_ban')">Remove + ban</button>`:''}
        ${r.target_user_id?`<button class="abtn" onclick="admOpenUser('${r.target_user_id}')">View user</button>`:''}</div>`:''}
    </div>`).join(''):admEmpty('Nothing here — the queue is clear ✓')}</div>`;
 }
@@ -1173,6 +1394,22 @@ async function admResolve(id,action){
   if(ban&&note.trim().length<3) return toast('A reason of at least 3 characters is required to ban');
   const {error}=await admCall('admin_resolve_report',{p_report:id,p_action:action,p_note:note.trim()||null});
   if(!error){ toast('Done'); admLoad(); }
+}
+
+/* --- live streams --- */
+async function admLive(){
+  const {data,error}=await admCall('admin_list_live'); if(error) return;
+  admBody().innerHTML=`<div class="admin-pad">${data.length?data.map(l=>`<div class="chart-card">
+    <div style="display:flex;justify-content:space-between"><b>@${esc(l.creator_username)}</b><span style="font-size:12px;color:var(--muted)">live ${ago(l.started_at)}</span></div>
+    <div style="font-size:13px;margin:6px 0;word-break:break-word">${esc(l.title)}</div>
+    <div style="font-size:12px;color:var(--muted)">${l.entry_price_cents?$$(l.entry_price_cents)+' entry · '+Number(l.tickets)+' tickets':'Free entry'}</div>
+    <button class="abtn danger" onclick="admEndLive('${l.id}')">End stream</button>
+    <button class="abtn" onclick="admOpenUser('${l.creator_id}')">View user</button></div>`).join(''):admEmpty('No streams are live right now.')}</div>`;
+}
+async function admEndLive(id){
+  const reason=prompt('Reason for ending this stream (kept in the audit log):'); if(reason===null) return;
+  if(reason.trim().length<3) return toast('A reason is required');
+  const {error}=await admCall('admin_end_live_stream',{p_stream:id,p_reason:reason.trim()}); if(!error){ toast('Stream ended — the broadcaster is disconnected within 30 seconds'); admLoad(); }
 }
 
 /* --- content review --- */
