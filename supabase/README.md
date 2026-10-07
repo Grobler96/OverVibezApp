@@ -91,6 +91,21 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 - **To switch payouts on**: enable Connect in the Stripe dashboard (Settings → Connect, free), add `STRIPE_SECRET_KEY`, and fund the platform balance (top-ups land there; in test mode use card 4000 0000 0000 0077 for instantly-available test funds).
 - The Stripe webhook endpoint must receive: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `identity.verification_session.verified`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`.
 
+## App polish, errors and email (migration 016, `send-emails`)
+- **Installable app (PWA)**: `manifest.webmanifest`, `sw.js` and `icons/`. The service worker keeps the app shell available offline (pages are network-first so a new release always shows up; Supabase/Stripe/LiveKit calls are never cached or touched). "Install the app" appears under Me. Icons, favicon and the share image (`og.png`) are generated from the OV mark; the share-image URL in `index.html` is absolute, so **update the two `grobler96.github.io` image URLs when the custom domain goes live**.
+- **Landing page**: signed-out visitors see a short public page first; invite/giveaway links skip straight to sign-up.
+- **Error monitoring**: browsers report uncaught errors to `log_client_error` (deduplicated, throttled, works signed out). Admins see them under Admin → Errors.
+- **Email notifications**: important notifications (prize won/posted, refund, reversed top-up, appeal result, removal, payout sent) are queued in `email_queue` for members who have email notifications on (Me → Email notifications). The `send-emails` edge function sends them through Resend. It stays dormant (503) until these secrets exist: `RESEND_API_KEY`, `EMAIL_FROM` (an address on a domain verified in Resend) and `CRON_SECRET`.
+- **To turn email sending on**: verify the domain in Resend, add the three secrets, then store the secret in the vault and schedule the sender once a minute:
+  ```sql
+  select vault.create_secret('<the same CRON_SECRET>', 'cron_secret');
+  select cron.schedule('send-emails', '* * * * *', $$
+    select net.http_post(url := 'https://<project-ref>.supabase.co/functions/v1/send-emails',
+      headers := jsonb_build_object('x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')))
+  $$);
+  ```
+  (`pg_cron` and `pg_net` are available; enable them under Database → Extensions first.)
+
 ## Not built yet (needed before launch)
 - Automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console. Admins can still mark a user 18+ verified by hand.
 - Notifications, live recording/replays, and multi-guest streams. Terms/Privacy pages exist as lawyer-review drafts.

@@ -3,7 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OverVibez — Social. Amplified.</title>
+<title>OverVibez — Publish. Earn. Win.</title>
+<meta name="description" content="OverVibez is where creators publish, earn 85% and go live, and followers discover, subscribe and win free prizes. 18+, UK.">
+<meta name="theme-color" content="#0E0A14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="OverVibez">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OverVibez">
+<meta property="og:title" content="OverVibez — Publish. Earn. Win.">
+<meta property="og:description" content="Creators keep 85%. Followers win free prizes. 18+, UK.">
+<meta property="og:image" content="https://grobler96.github.io/OverVibezApp/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OverVibez — Publish. Earn. Win.">
+<meta name="twitter:description" content="Creators keep 85%. Followers win free prizes. 18+, UK.">
+<meta name="twitter:image" content="https://grobler96.github.io/OverVibezApp/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -316,6 +336,22 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   document.getElementById('ageNo').onclick=function(){ document.getElementById('ageMsg').textContent='Sorry — OverVibez is only for people aged 18 and over.'; document.getElementById('ageYes').style.display='none'; document.getElementById('ageNo').style.display='none'; };
 })();
 </script>
+<div id="landing" class="hidden" style="position:fixed;inset:0;z-index:200;overflow:auto;background:var(--bg);color:var(--text)">
+  <div style="max-width:520px;margin:0 auto;padding:28px 20px 40px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:26px"><img src="icons/icon-192.png" alt="" width="40" height="40" style="border-radius:10px"><b style="font-family:'Unbounded',system-ui,sans-serif;font-size:19px">OverVibez</b></div>
+    <h1 style="font-family:'Unbounded',system-ui,sans-serif;font-size:30px;line-height:1.15;margin:0 0 12px">Your people.<br>Your content.<br><span style="background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent">85% yours.</span></h1>
+    <p style="color:var(--muted);font-size:16px;line-height:1.55;margin:0 0 22px">Creators publish, earn and go live. Followers discover, subscribe, tip — and win free prizes. For adults, built in the UK.</p>
+    <button class="primary" onclick="enterAuth('signup')" style="margin:0 0 10px">Create your account</button>
+    <button class="ghost" onclick="enterAuth('login')" style="margin:0 0 26px">I already have an account</button>
+    <div style="display:grid;gap:12px">
+      <div class="chart-card" style="margin:0"><b>✦ For creators</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Post free and paid drops, sell subscriptions, go live with paid tickets, and keep <b style="color:var(--text)">85%</b> of everything you earn. Track it all in your Studio.</p></div>
+      <div class="chart-card" style="margin:0"><b>♥ For followers</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Follow the creators you love, unlock exclusive posts, tip, chat and join live streams — your wallet, your control.</p></div>
+      <div class="chart-card" style="margin:0"><b>🎁 Free prize draws</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Join through a giveaway link and enter every free draw — no purchase necessary. Winners are picked by a method anyone can verify. UK, 18+.</p></div>
+      <div class="chart-card" style="margin:0"><b>🛡️ Adults only, kept safe</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">18+ only with ID checks, block and mute tools, a report button on everything, and a real appeals process.</p></div>
+    </div>
+    <p style="color:var(--muted);font-size:12.5px;text-align:center;margin:26px 0 0;line-height:1.7"><a href="terms.html" style="color:var(--accent-2)">Terms</a> · <a href="privacy.html" style="color:var(--accent-2)">Privacy</a> · <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a></p>
+  </div>
+</div>
 <div class="auth" id="authScreen">
   <div class="logo-big">OverVibez</div>
   <div class="tag">Social · Amplified</div>
@@ -684,7 +720,7 @@ function mapUser(p,followers){
   return {id:p.id,username:p.username,name:p.display_name||p.username,role:p.account_type,
     av:'a'+(1+hue(p.username)%6),em:p.account_type==='creator'?'✦':'🫧',verified:!!p.is_verified,
     subPrice:p.sub_price_cents,followers:p.follower_count!=null?p.follower_count:(followers||0),category:p.category||null,createdAt:p.created_at,earnings:Number(p.earnings_cents||0),
-    wallet:Number(p.wallet_cents||0),ageVerified:!!p.age_verified,bio:p.bio||'',live:false,
+    wallet:Number(p.wallet_cents||0),emailNotif:p.email_notifications!==false,ageVerified:!!p.age_verified,bio:p.bio||'',live:false,
     staffRole:p.staff_role||null,isBanned:!!p.is_banned,banReason:p.ban_reason||'',
     avatarPath:p.avatar_url||null,avatarUrl:p.avatar_url?pubUrl(p.avatar_url):null,coverUrl:p.cover_url?pubUrl(p.cover_url):null};
 }
@@ -775,7 +811,7 @@ async function hydrate(){
 }
 
 /* ═══════════ FEATURE FLAGS + BETA SETTINGS ═══════════ */
-let features={live:false,payments:false,identity:false,payouts:false}, settings={invite_only:true};
+let features={live:false,payments:false,identity:false,payouts:false,email:false}, settings={invite_only:true};
 async function loadFeatures(){
   try{ const {data}=await sb.functions.invoke('features'); if(data&&typeof data.live==='boolean') features=data; }catch(e){}
   const lv=document.getElementById('cmLive'); if(lv) lv.classList.toggle('hidden',!features.live);
@@ -788,14 +824,40 @@ async function loadPublicSettings(){
   if(!sb) return;
   await Promise.all([loadFeatures(),loadPublicSettings()]);
   const qs=new URLSearchParams(location.search), code=qs.get('invite')||qs.get('campaign');
+  try{ const {data:ss}=await sb.auth.getSession(); if(!ss.session&&!code&&!location.hash&&!qs.has('topup')&&!qs.has('verify')&&!qs.has('connect')) document.getElementById('landing').classList.remove('hidden'); }catch(e){}
   if(code){ authTab('signup'); document.getElementById('suInvite').value=code;
     try{ const {data:ci}=await sb.rpc('campaign_info',{p_code:code}); if(ci){ campaignName=ci.name;
       const b=document.getElementById('suCampaign'); b.classList.remove('hidden');
       b.innerHTML='🎁 <b>Free giveaway entries</b><br>Create your account, confirm your email and enter every giveaway for free — '+esc(ci.name)+'. 18+, UK prizes only, no purchase needed.'; } }catch(e){} }
 })();
 
+/* ═══════════ ERROR MONITORING ═══════════ */
+const errSeen=new Set(); let errSent=0;
+function reportError(msg,stack){
+  try{
+    msg=String(msg||'').slice(0,500); if(!sb||!msg||msg==='Script error.'||errSent>=8) return;
+    const k=msg.slice(0,120); if(errSeen.has(k)) return; errSeen.add(k); errSent++;
+    sb.rpc('log_client_error',{p_message:msg,p_stack:String(stack||'').slice(0,2000),p_url:location.pathname+location.hash,p_ua:navigator.userAgent.slice(0,200)}).then(()=>{},()=>{});
+  }catch(e){}
+}
+window.addEventListener('error',e=>reportError(e.message,e.error&&e.error.stack));
+window.addEventListener('unhandledrejection',e=>reportError('Unhandled: '+((e.reason&&e.reason.message)||e.reason),e.reason&&e.reason.stack));
+
+/* ═══════════ INSTALLABLE APP (PWA) ═══════════ */
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; if(store.session&&!document.getElementById('page-me').classList.contains('hidden')) renderMe(); });
+window.addEventListener('appinstalled',()=>{ installEvt=null; toast('OverVibez is installed 🎉'); });
+if('serviceWorker' in navigator&&location.protocol.startsWith('http')) window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+async function installApp(){
+  if(installEvt){ installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt=null; return; }
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)) alert('To install: tap the Share button, then “Add to Home Screen”.');
+  else alert('To install: open your browser menu and choose “Install app” or “Add to Home Screen”.');
+}
+
 /* ═══════════ AUTH ═══════════ */
 let signupRole='creator', recoveryMode=false, campaignName=null, freeShown=false;
+function enterAuth(t){ document.getElementById('landing').classList.add('hidden'); authTab(t); window.scrollTo(0,0); }
 function authTab(t){
   document.getElementById('tabLogin').classList.toggle('on',t==='login');
   document.getElementById('tabSignup').classList.toggle('on',t==='signup');
@@ -884,7 +946,7 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome();
+  document.getElementById('landing').classList.add('hidden'); enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
@@ -1859,6 +1921,8 @@ function renderMe(){
            :`<div class="row" onclick="openTopup()"><div class="r-ic">◈</div>Wallet<span class="sub">${$$(u.wallet)}</span></div>`}
       ${u.staffRole?`<div class="row" onclick="go('admin')"><div class="r-ic">🛡️</div>${u.staffRole==='admin'?'Admin console':'Moderator tools'}<span class="sub">${u.staffRole}</span></div>`:''}
       <div class="row" onclick="openEditProfile()"><div class="r-ic">✏️</div>Edit profile<span class="sub">Name, bio, photos</span></div>
+      ${isStandalone()?'':`<div class="row" onclick="installApp()"><div class="r-ic">📲</div>Install the app<span class="sub">Home screen</span></div>`}
+      <div class="row" onclick="toggleEmailNotif()"><div class="r-ic">✉️</div>Email notifications<span class="sub">${u.emailNotif?'On':'Off'}</span></div>
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
       <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:!features.identity?`toast('ID verification is coming soon — we will tell you when it is ready')`:`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':features.identity?'Verify now →':'Coming soon'}</span></div>
       <div class="row" onclick="openPassword(false)"><div class="r-ic">🔑</div>Change password</div>
@@ -1871,6 +1935,12 @@ function renderMe(){
       <div class="row" onclick="logOut()"><div class="r-ic">🚪</div>Log out</div>
       <div class="row" onclick="deleteMyAccount()" style="color:var(--live)"><div class="r-ic">🗑️</div>Delete my account</div>
     </div>`;
+}
+async function toggleEmailNotif(){
+  const u=me(), on=!u.emailNotif;
+  const {error}=await sb.from('profiles').update({email_notifications:on}).eq('id',u.id);
+  if(error) return toast(error.message);
+  u.emailNotif=on; toast(on?'We will email you about important things (wins, refunds, appeals, payouts)':'Email notifications are off'); renderMe();
 }
 async function changeSubPrice(){
   const v=prompt('Monthly subscription price (GBP, 1.99–99.99):', (me().subPrice/100).toFixed(2));
@@ -2050,7 +2120,7 @@ async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}
 const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['giveaways','Giveaways'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -2059,7 +2129,7 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({reports:admReports,appeals:admAppeals,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({reports:admReports,appeals:admAppeals,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,audit:admAudit})[adminTab](); }
 
 /* --- reports queue --- */
 async function admReports(){
@@ -2302,6 +2372,21 @@ async function admDraw(id){
   if(!confirm('Draw the winner now? This cannot be undone.')) return;
   const {error}=await admCall('admin_draw_raffle',{p_raffle:id}); if(!error){ toast('Winner drawn'); admLoad(); }
 }
+/* --- errors + email queue (admin only) --- */
+async function admErrors(){
+  const [er,es]=await Promise.all([admCall('admin_list_errors'),admCall('admin_email_stats')]); if(er.error) return;
+  const st=es.data||{};
+  admBody().innerHTML=`<div class="admin-pad">
+   <div class="chart-card"><h4>Notification emails</h4>
+     <div style="font-size:13px;color:var(--muted);line-height:1.6">Queued <b style="color:var(--text)">${st.queued||0}</b> · Sent <b style="color:var(--text)">${st.sent||0}</b> · Failed <b style="color:var(--text)">${st.failed||0}</b></div>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px">${features.email?'Email sending is on.':'Emails wait in the queue until a verified Resend domain and the sender are set up (see the README).'}</p></div>
+   <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0"><div class="section-title" style="padding:0">App errors</div>${er.data.length?`<button class="abtn danger" onclick="admClearErrors()">Clear all</button>`:''}</div>
+   ${er.data.length?er.data.map(e=>`<div class="chart-card"><div style="display:flex;justify-content:space-between;gap:8px"><b style="word-break:break-word;font-size:13.5px">${esc(e.message)}</b><span style="font-size:12px;color:var(--muted);white-space:nowrap">×${e.occurrences}</span></div>
+     <div style="font-size:12px;color:var(--muted);margin:4px 0">${ago(e.last_seen_at)} ago · ${esc(e.url||'')}${e.username?' · @'+esc(e.username):''}</div>
+     ${e.stack?`<details><summary style="font-size:12px;color:var(--muted);cursor:pointer">Details</summary><pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--muted);margin:6px 0 0">${esc(e.stack)}\n${esc(e.ua||'')}</pre></details>`:''}</div>`).join(''):admEmpty('No errors reported — nice ✓')}</div>`;
+}
+async function admClearErrors(){ if(!confirm('Clear all recorded errors?')) return; const {error}=await admCall('admin_clear_errors'); if(!error){ toast('Cleared'); admLoad(); } }
+
 /* --- giveaways: campaign links, free raffles, prize delivery (admin only) --- */
 const campaignLink=code=>location.origin+location.pathname+'?campaign='+encodeURIComponent(code);
 async function admGiveaways(){
