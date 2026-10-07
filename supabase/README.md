@@ -70,7 +70,7 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 
 ## Free giveaways (migration 012)
 - **Campaign links** (`?campaign=CODE`) are invite codes with an entry allowance, so they work while the beta is invite-only. Created in Admin → Giveaways; sign-ups and entries are counted per campaign.
-- **Free raffles** (`raffles.is_free`) cost nothing. A member can enter every free raffle, one entry each, via `claim_free_entry()` (the campaign's `entries_per_user` column is no longer used). It requires: joined through a campaign, email confirmed, not banned. Browsers cannot write `raffle_entries`; paid purchases are refused on free raffles.
+- **Free raffles** (`raffles.is_free`) cost nothing. A member can enter every free raffle, one entry each, via `claim_free_entry()` (the campaign's `entries_per_user` column is no longer used). It requires: signed in, email confirmed, not banned — **no campaign link needed** (links only bring new people in). Creating a free raffle notifies every member (`new_giveaway`). Raffles can run from 1 hour to 12 months. Browsers cannot write `raffle_entries`; paid purchases are refused on free raffles.
 - **Winners** are drawn with the same sealed-seed method. They add a UK delivery address (`submit_prize_address`, UK postcode checked, 14-day claim window); admins mark prizes posted. `admin_redraw_raffle` voids a non-responding or fake winner and draws the next number from the same seed.
 - Not enforced by the database: 18+ is self-declared at sign-up (check the winner's ID before posting a prize). Sending sign-up emails at volume needs custom SMTP (e.g. Resend with a verified domain) configured in the Supabase dashboard.
 - Quirk: the SQL console stalls on text containing `delete from` at the start of a statement; the redraw function builds that statement from two strings for that reason.
@@ -90,6 +90,30 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 - **Connect payouts**: `payouts` edge function (`onboard`, `status`, `payout`). A creator sets up a Stripe Express account once; "Withdraw" then debits earnings (`request_payout`), sends a Stripe Transfer (idempotency key = payout id) and records it. If the transfer fails the earnings are put back automatically. Until the Stripe key is set the app falls back to manual payouts in the admin console.
 - **To switch payouts on**: enable Connect in the Stripe dashboard (Settings → Connect, free), add `STRIPE_SECRET_KEY`, and fund the platform balance (top-ups land there; in test mode use card 4000 0000 0000 0077 for instantly-available test funds).
 - The Stripe webhook endpoint must receive: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `identity.verification_session.verified`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`.
+
+## App polish, errors and email (migration 016, `send-emails`)
+- **Installable app (PWA)**: `manifest.webmanifest`, `sw.js` and `icons/`. The service worker keeps the app shell available offline (pages are network-first so a new release always shows up; Supabase/Stripe/LiveKit calls are never cached or touched). "Install the app" appears under Me. Icons, favicon and the share image (`og.png`) are generated from the OV mark; the share-image URL in `index.html` is absolute, so **update the two `grobler96.github.io` image URLs when the custom domain goes live**.
+- **Landing page**: signed-out visitors see a short public page first; invite/giveaway links skip straight to sign-up.
+- **Error monitoring**: browsers report uncaught errors to `log_client_error` (deduplicated, throttled, works signed out). Admins see them under Admin → Errors.
+- **Email notifications**: important notifications (prize won/posted, refund, reversed top-up, appeal result, removal, payout sent) are queued in `email_queue` for members who have email notifications on (Me → Email notifications). The `send-emails` edge function sends them through Resend. It stays dormant (503) until these secrets exist: `RESEND_API_KEY`, `EMAIL_FROM` (an address on a domain verified in Resend) and `CRON_SECRET`.
+- **To turn email sending on**: verify the domain in Resend, add the three secrets, then store the secret in the vault and schedule the sender once a minute:
+  ```sql
+  select vault.create_secret('<the same CRON_SECRET>', 'cron_secret');
+  select cron.schedule('send-emails', '* * * * *', $$
+    select net.http_post(url := 'https://<project-ref>.supabase.co/functions/v1/send-emails',
+      headers := jsonb_build_object('x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')))
+  $$);
+  ```
+  (`pg_cron` and `pg_net` are available; enable them under Database → Extensions first.)
+
+## How a raffle is drawn and announced (migrations 007, 012, 018)
+- **Prize photos**: admins can add a photo when creating a raffle/giveaway, or later via 📷 Add/Change photo (resized to 1280px JPEG, stored in the admin's folder of the public bucket; `admin_set_raffle_image` validates the path). Cards show the photo with a live ⏱ time-left badge; clocks tick in place so photos don't flicker.
+- **Ticket numbers**: every entry gets its own ticket number(s) in the order people enter (`raffle_entries.ticket_start`; 1 entry = 1 ticket, a paid purchase of 5 = 5 consecutive tickets). Entrants see their numbers on the raffle card and in the confirmation (`#0042`).
+- **Live draw (admin)**: Draw winner opens a full-screen stage — big spinning number reels that lock in digit by digit on the winning ticket, then the winner, ticket number and a "Check it yourself" panel — made for screen-recording or a live stream. The draw is two steps so nothing spoils the show: `admin_draw_raffle_live` picks the winner (nothing visible to anyone else, seed still secret), and only when the reveal finishes does `admin_announce_raffle` reveal the seed, notify the winner and everyone else who entered, and publish the result. If the stage is closed early, "Announce winner" appears in the Raffles list. The quick `admin_draw_raffle` still draws and announces in one go.
+- **Anyone can verify** a finished draw (Raffles → Recent winners → Verify, or `raffle_proof`): the browser recomputes SHA-256(seed) = published fingerprint, and `SHA-256(seed:raffle:tickets)` first 15 hex ÷ tickets, remainder + 1 = winning ticket.
+- **Fair draw (commit-and-reveal)**: when a raffle is created the server makes a secret random seed and publishes only its SHA-256 hash (shown on the raffle card). When it closes, an admin presses **Draw winner**: the winning ticket number is `sha256(seed:raffle:ticket-count)` modulo the number of tickets, so the result can't be steered after entries are in. The seed is then revealed and anyone can confirm it matches the published hash ("seed verified ✓" under Recent winners).
+- **Announcing**: the winner gets a notification (and an email once email is set up) and, the next time the app is open — or instantly if it already is — a full-screen **"YOU WON!" pop-up with confetti** that leads straight to the delivery-address form for free prizes. Everyone else who entered gets "the draw for X is done — @winner won". Recent winners also show on the Raffles page.
+- Redraws (no reply / fake winner) are in Admin → Giveaways → Winners.
 
 ## Not built yet (needed before launch)
 - Automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console. Admins can still mark a user 18+ verified by hand.
