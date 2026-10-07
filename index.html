@@ -426,8 +426,8 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 
 <div class="overlay" id="freeModal" onclick="if(event.target===this)closeModal('freeModal')">
   <div class="sheet">
-    <h3>🎁 Your free giveaway entry</h3>
-    <p>Welcome to OverVibez! Pick the prize you want to enter for free. You get one entry, so choose wisely. No purchase necessary — 18+, UK prizes only.</p>
+    <h3>🎁 Free giveaway entries</h3>
+    <p>Welcome to OverVibez! You can enter every giveaway for free — one entry each. Tap Enter on any you like. No purchase necessary — 18+, UK prizes only.</p>
     <div id="freeList"></div>
     <button class="ghost" onclick="closeModal('freeModal')">Maybe later</button>
   </div>
@@ -727,7 +727,7 @@ async function loadPublicSettings(){
   if(code){ authTab('signup'); document.getElementById('suInvite').value=code;
     try{ const {data:ci}=await sb.rpc('campaign_info',{p_code:code}); if(ci){ campaignName=ci.name;
       const b=document.getElementById('suCampaign'); b.classList.remove('hidden');
-      b.innerHTML='🎁 <b>Free giveaway entry</b><br>Create your account, confirm your email and pick a giveaway — '+esc(ci.name)+'. 18+, UK prizes only, no purchase needed.'; } }catch(e){} }
+      b.innerHTML='🎁 <b>Free giveaway entries</b><br>Create your account, confirm your email and enter every giveaway for free — '+esc(ci.name)+'. 18+, UK prizes only, no purchase needed.'; } }catch(e){} }
 })();
 
 /* ═══════════ AUTH ═══════════ */
@@ -768,7 +768,7 @@ async function doSignup(){
   if(error) return err.textContent=/Database error saving new user/i.test(error.message)?'Could not create the account — the invite code may have just been used up, or that username/email is taken.':error.message;
   if(/[?&](invite|campaign)=/.test(location.search)) history.replaceState(null,'',location.pathname+location.hash);
   err.textContent='';
-  if(!data.session){ authTab('login'); document.getElementById('liErr').textContent='Check your email to confirm your account, then log in.'+(campaignName?' Your free giveaway entry is waiting for you 🎁':''); }
+  if(!data.session){ authTab('login'); document.getElementById('liErr').textContent='Check your email to confirm your account, then log in.'+(campaignName?' Your free giveaway entries are waiting for you 🎁':''); }
 }
 async function doLogin(){
   const err=document.getElementById('liErr');
@@ -1232,8 +1232,7 @@ function prizePanel(){
 function freeBtn(r){
   const f=store.freeStatus||{};
   if((f.entered||[]).includes(r.id)) return '<button class="enter-btn" disabled style="opacity:.7">You are entered ✓</button>';
-  if(f.eligible&&f.used<f.allowance) return `<button class="enter-btn" onclick="claimFree('${r.id}')">🎁 Enter free</button>`;
-  if(f.eligible) return '<button class="enter-btn" disabled style="opacity:.6">Free entry used</button>';
+  if(f.eligible) return `<button class="enter-btn" onclick="claimFree('${r.id}')">🎁 Enter free</button>`;
   return '<p style="font-size:12.5px;color:var(--muted);text-align:center">Free giveaway — open to members who join through a giveaway link.</p>';
 }
 function renderRaffles(){
@@ -1254,12 +1253,11 @@ function renderRaffles(){
 }
 async function claimFree(id){
   const r=store.raffles.find(x=>x.id===id); if(!r) return;
-  if(!confirm('Use your free entry on “'+r.title+'”?\n\nYou only get one free entry, so choose the prize you want most.')) return;
   closeModal('freeModal'); toast('Entering…');
-  if(await rpc('claim_free_entry',{p_raffle:id})){ toast('You are in the draw 🎁 Good luck!'); await settled(); }
+  if(await rpc('claim_free_entry',{p_raffle:id})){ toast('You are in the draw for '+r.prize+' 🎁 Good luck!'); await settled(); }
 }
 function showFreeWelcome(){
-  const f=store.freeStatus||{}; if(freeShown||!f.eligible||f.used>=f.allowance) return;
+  const f=store.freeStatus||{}; if(freeShown||!f.eligible) return;
   const open=store.raffles.filter(r=>r.free&&!(f.entered||[]).includes(r.id)); if(!open.length) return;
   freeShown=true;
   document.getElementById('freeList').innerHTML=open.map(r=>`<div class="list-card" style="margin:0 0 10px"><div class="row" style="cursor:default"><div class="r-ic">🎁</div><div style="flex:1;min-width:0"><b>${esc(r.prize)}</b><br><span style="font-size:12px;color:var(--muted)">${esc(r.title)}</span></div><button class="abtn ok" onclick="claimFree('${r.id}')">Enter</button></div></div>`).join('');
@@ -1994,13 +1992,13 @@ async function admGiveaways(){
   const totals=await Promise.all((rs.data||[]).map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
   admBody().innerHTML=`<div class="admin-pad">
    <div class="chart-card"><h4>1. Create a free giveaway</h4>
-     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">One prize per giveaway. Members choose which giveaway to enter, and the winner is drawn fairly (published seed hash, revealed after).</p>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">One prize per giveaway. Every member who joined through a link can enter each giveaway once, and the winner is drawn fairly (published seed hash, revealed after).</p>
      <div class="field"><label>Title</label><input id="fgTitle" maxlength="120" placeholder="Win a mystery box"></div>
      <div class="field"><label>Prize</label><input id="fgPrize" maxlength="120" placeholder="e.g. Branded hoodie"></div>
      <div class="field"><label>Open for (days)</label><input id="fgDays" type="number" min="1" max="90" value="14"></div>
      <button class="primary" onclick="admCreateFree()">Create giveaway</button></div>
    <div class="chart-card"><h4>2. Create a sign-up link</h4>
-     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">New people who join through the link and finish setting up get one free entry. It works even while the beta is invite-only.</p>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">New people who join through the link and confirm their email can enter every free giveaway, one entry each. It works even while the beta is invite-only.</p>
      <div class="field"><label>Campaign name</label><input id="cpName" maxlength="80" placeholder="Autumn giveaway"></div>
      <div class="field"><label>Link code (letters, numbers, dashes)</label><input id="cpCode" maxlength="24" placeholder="AUTUMN" autocapitalize="characters"></div>
      <div class="field"><label>Maximum sign-ups</label><input id="cpMax" type="number" min="1" max="100000" value="500"></div>

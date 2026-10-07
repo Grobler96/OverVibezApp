@@ -228,22 +228,21 @@ $$;
 
 create or replace function public.my_free_entry_status() returns jsonb
 language plpgsql stable security definer set search_path = public as $$
-declare c campaigns%rowtype; v_used int; v_confirmed boolean;
+declare c campaigns%rowtype; v_confirmed boolean;
 begin
   if auth.uid() is null then return jsonb_build_object('eligible', false); end if;
   select c2.* into c from campaigns c2 join invite_redemptions ir on ir.code = c2.code
     where ir.user_id = auth.uid() and c2.active and (c2.ends_at is null or c2.ends_at > now());
   if not found then return jsonb_build_object('eligible', false); end if;
-  select count(*) into v_used from raffle_entries where user_id = auth.uid() and amount_cents = 0;
   select email_confirmed_at is not null into v_confirmed from auth.users where id = auth.uid();
-  return jsonb_build_object('eligible', true, 'campaign', c.name, 'allowance', c.entries_per_user, 'used', v_used,
-    'email_confirmed', coalesce(v_confirmed, false),
+  return jsonb_build_object('eligible', true, 'campaign', c.name, 'email_confirmed', coalesce(v_confirmed, false),
     'entered', coalesce((select jsonb_agg(raffle_id) from raffle_entries where user_id = auth.uid() and amount_cents = 0), '[]'::jsonb));
 end $$;
 
+-- Members may enter EVERY free giveaway, one entry each (the unique index also stops two taps at once).
 create or replace function public.claim_free_entry(p_raffle uuid) returns void
 language plpgsql security definer set search_path = public as $$
-declare c campaigns%rowtype; v_uid uuid := auth.uid(); v_used int; v_confirmed boolean;
+declare c campaigns%rowtype; v_uid uuid := auth.uid(); v_confirmed boolean;
 begin
   if v_uid is null then raise exception 'Not signed in'; end if;
   if exists (select 1 from profiles where id = v_uid and is_banned) then raise exception 'Account suspended'; end if;
@@ -252,9 +251,6 @@ begin
   select c2.* into c from campaigns c2 join invite_redemptions ir on ir.code = c2.code
     where ir.user_id = v_uid and c2.active and (c2.ends_at is null or c2.ends_at > now());
   if not found then raise exception 'Free entries are only available to members who joined through a giveaway link'; end if;
-  perform pg_advisory_xact_lock(hashtext('free_entry:' || v_uid::text));       -- two taps at once cannot both pass the allowance check
-  select count(*) into v_used from raffle_entries where user_id = v_uid and amount_cents = 0;
-  if v_used >= c.entries_per_user then raise exception 'You have already used your free entry'; end if;
   if not exists (select 1 from raffles where id = p_raffle and is_free and closes_at > now() and winner_entry_id is null) then
     raise exception 'This giveaway is closed or not found'; end if;
   begin

@@ -70,7 +70,7 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 
 ## Free giveaways (migration 012)
 - **Campaign links** (`?campaign=CODE`) are invite codes with an entry allowance, so they work while the beta is invite-only. Created in Admin → Giveaways; sign-ups and entries are counted per campaign.
-- **Free raffles** (`raffles.is_free`) cost nothing. A member gets `entries_per_user` (default 1) free entries in total, one per raffle, via `claim_free_entry()`. It requires: joined through a campaign, email confirmed, not banned. Browsers cannot write `raffle_entries`; paid purchases are refused on free raffles.
+- **Free raffles** (`raffles.is_free`) cost nothing. A member can enter every free raffle, one entry each, via `claim_free_entry()` (the campaign's `entries_per_user` column is no longer used). It requires: joined through a campaign, email confirmed, not banned. Browsers cannot write `raffle_entries`; paid purchases are refused on free raffles.
 - **Winners** are drawn with the same sealed-seed method. They add a UK delivery address (`submit_prize_address`, UK postcode checked, 14-day claim window); admins mark prizes posted. `admin_redraw_raffle` voids a non-responding or fake winner and draws the next number from the same seed.
 - Not enforced by the database: 18+ is self-declared at sign-up (check the winner's ID before posting a prize). Sending sign-up emails at volume needs custom SMTP (e.g. Resend with a verified domain) configured in the Supabase dashboard.
 - Quirk: the SQL console stalls on text containing `delete from` at the start of a statement; the redraw function builds that statement from two strings for that reason.
