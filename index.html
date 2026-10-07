@@ -598,6 +598,13 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   </div>
 </div>
 
+<div id="drawStage" class="hidden" style="position:fixed;inset:0;z-index:400;overflow:auto;color:var(--text);background:radial-gradient(circle at 15% 15%,rgba(255,61,138,.28),transparent 55%),radial-gradient(circle at 90% 90%,rgba(139,92,246,.3),transparent 55%),#0E0A14">
+  <canvas id="dsConfetti" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:2"></canvas>
+  <div style="position:absolute;top:12px;right:14px;display:flex;gap:6px;z-index:3"><button id="dsMute" onclick="dsToggleSound()" style="font-size:20px;padding:6px 10px;color:var(--muted)" title="Sound">🔊</button><button onclick="closeDrawStage()" style="font-size:22px;padding:6px 10px;color:var(--muted)" title="Close">✕</button></div>
+  <div id="dsBody" style="max-width:560px;margin:0 auto;padding:44px 18px 40px;text-align:center;position:relative;z-index:1"></div>
+</div>
+<div class="overlay" id="proofModal" onclick="if(event.target===this)closeModal('proofModal')"><div class="sheet"><div id="proofBody"></div><button class="ghost" onclick="closeModal('proofModal')">Close</button></div></div>
+
 <div class="overlay" id="winModal" style="z-index:300;background:rgba(8,5,14,.88)">
   <canvas id="confetti" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
   <div class="sheet" style="text-align:center;position:relative;border:1px solid var(--accent);box-shadow:0 0 60px rgba(255,61,138,.35)">
@@ -720,7 +727,7 @@ const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
 const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at,follower_count,category';
 const CATS=[['music','🎵','Music'],['fitness','💪','Fitness'],['art','🎨','Art'],['food','🍳','Food'],['photography','📷','Photography'],['fashion','👗','Fashion'],['gaming','🎮','Gaming'],['comedy','😂','Comedy'],['lifestyle','✨','Lifestyle'],['other','','Other']];
 
-const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,freeStatus:{eligible:false},prizes:[],blocks:new Map(),payout:{connected:false,details_submitted:false,payouts_enabled:false},debt:0,likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
+const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,freeStatus:{eligible:false},prizes:[],myTickets:{},blocks:new Map(),payout:{connected:false,details_submitted:false,payouts_enabled:false},debt:0,likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
@@ -814,9 +821,10 @@ async function hydrate(){
     return {id:r.id,title:r.title,host:r.host_id&&user(r.host_id)?user(r.host_id).username:'OverVibez',prize:r.prize,
       free:!!r.is_free,price:r.entry_price_cents,entries:Number(t.entries||0),players:Number(t.players||0),
       seed:r.seed_hash.slice(0,6)+'…'+r.seed_hash.slice(-4),ends:new Date(r.closes_at).getTime()}; });
-  const drawn=await sb.from('raffles').select('id,title,prize').not('winner_entry_id','is',null).order('closes_at',{ascending:false}).limit(5);
+  try{ const {data:te}=await sb.from('raffle_entries').select('raffle_id,qty,ticket_start').order('ticket_start').limit(1000); store.myTickets={}; (te||[]).forEach(t=>{ (store.myTickets[t.raffle_id]=store.myTickets[t.raffle_id]||[]).push({start:t.ticket_start,qty:t.qty}); }); }catch(e){ store.myTickets={}; }
+  const drawn=await sb.from('raffles').select('id,title,prize').not('winner_entry_id','is',null).not('announced_at','is',null).order('closes_at',{ascending:false}).limit(5);
   const dres=await Promise.all((drawn.data||[]).map(d=>sb.rpc('raffle_result',{p_raffle:d.id})));
-  store.raffleResults=(drawn.data||[]).map((d,i)=>Object.assign({title:d.title,prize:d.prize},(dres[i].data||[{}])[0]||{})).filter(x=>x.winner_username);
+  store.raffleResults=(drawn.data||[]).map((d,i)=>Object.assign({id:d.id,title:d.title,prize:d.prize},(dres[i].data||[{}])[0]||{})).filter(x=>x.winner_username);
   try{ const [fs,pz]=await Promise.all([sb.rpc('my_free_entry_status'),sb.rpc('my_prizes')]); store.freeStatus=fs.data||{eligible:false}; store.prizes=pz.data||[]; }catch(e){ store.freeStatus={eligible:false}; store.prizes=[]; }
   try{ if(me()&&me().role==='creator'){ const {data:pa}=await sb.rpc('my_payout_account'); if(pa) store.payout=pa; } }catch(e){}
   await loadLive();
@@ -964,7 +972,7 @@ async function startSession(uid){
 }
 function clearSession(){
   store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
+  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -1081,13 +1089,108 @@ async function downloadMoneyCsv(){
   a.href=URL.createObjectURL(blob); a.download='overvibez-transactions.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
 
+/* ═══════════ LIVE DRAW STAGE (admin) + PROOF ═══════════ */
+let dsSound=true, dsAudio=null, dsTimers=[], dsRaffle=null, dsBusy=false;
+function dsBeep(f,ms,vol){
+  if(!dsSound) return;
+  try{ dsAudio=dsAudio||new (window.AudioContext||window.webkitAudioContext)(); const o=dsAudio.createOscillator(), g=dsAudio.createGain();
+    o.type='triangle'; o.frequency.value=f; g.gain.value=vol||.05; o.connect(g); g.connect(dsAudio.destination); o.start(); g.gain.exponentialRampToValueAtTime(.0001,dsAudio.currentTime+ms/1000); o.stop(dsAudio.currentTime+ms/1000+.02); }catch(e){}
+}
+function dsToggleSound(){ dsSound=!dsSound; document.getElementById('dsMute').textContent=dsSound?'🔊':'🔇'; }
+const dsWait=ms=>new Promise(r=>dsTimers.push(setTimeout(r,ms)));
+function closeDrawStage(){
+  if(dsBusy&&!confirm('The draw is running. Close it anyway? (The result is already decided — you can announce it from the Raffles list.)')) return;
+  dsTimers.forEach(clearTimeout); dsTimers=[]; dsBusy=false; stopConfetti('dsConfetti'); document.getElementById('drawStage').classList.add('hidden'); if(adminTab) admLoad();
+}
+async function openDrawStage(id){
+  const {data:r,error}=await sb.from('raffles').select('id,title,prize,seed_hash,closes_at,winner_entry_id,is_free').eq('id',id).single(); if(error) return toast(error.message);
+  if(new Date(r.closes_at)>new Date()) return toast('This raffle has not closed yet');
+  if(r.winner_entry_id) return toast('This raffle has already been drawn — use Announce winner');
+  const {data:tt}=await sb.rpc('raffle_totals',{p_raffle:id}); const t=(tt||[{}])[0]||{};
+  if(!Number(t.entries)) return toast('Nobody entered, so there is nothing to draw');
+  dsRaffle=Object.assign({},r,{tickets:Number(t.entries),players:Number(t.players)});
+  document.getElementById('drawStage').classList.remove('hidden');
+  document.getElementById('dsBody').innerHTML=`
+    <img src="icons/icon-192.png" alt="" width="54" height="54" style="border-radius:14px">
+    <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:12px;letter-spacing:.3em;color:var(--accent);margin:14px 0 6px">LIVE DRAW</div>
+    <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:clamp(26px,8vw,40px);line-height:1.15;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;word-break:break-word">${esc(r.prize)}</div>
+    <div style="color:var(--muted);font-size:15px;margin:8px 0 22px">${esc(r.title)}</div>
+    <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px"><div class="stat" style="flex:1"><b>${dsRaffle.tickets.toLocaleString()}</b><span>Tickets in the draw</span></div><div class="stat" style="flex:1"><b>${dsRaffle.players.toLocaleString()}</b><span>Entrants</span></div></div>
+    <div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:26px">The winning ticket is fixed by a secret number made when this raffle was created. Its fingerprint was published then:<br><code style="word-break:break-all;color:var(--text)">${esc(r.seed_hash)}</code></div>
+    <button class="primary" onclick="startLiveDraw()" style="font-size:18px;padding:18px">🎲 START THE DRAW</button>`;
+}
+async function startLiveDraw(){
+  if(dsBusy||!dsRaffle) return; dsBusy=true; dsBeep(440,120);
+  const body=document.getElementById('dsBody');
+  const {data:res,error}=await sb.rpc('admin_draw_raffle_live',{p_raffle:dsRaffle.id});
+  if(error){ dsBusy=false; body.innerHTML+=`<p style="color:var(--live);margin-top:14px">${esc(error.message)}</p>`; return; }
+  const total=Number(res.total_tickets), ticket=Number(res.winning_ticket), D=Math.max(4,String(total).length), target=String(ticket).padStart(D,'0');
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  body.innerHTML=`<div style="font-family:'Unbounded',system-ui,sans-serif;font-size:12px;letter-spacing:.3em;color:var(--accent);margin:30px 0 8px">DRAWING…</div>
+    <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:clamp(20px,6vw,28px);margin-bottom:30px;word-break:break-word">${esc(res.prize)}</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:12px">Picking one ticket from ${total.toLocaleString()}</div>
+    <div id="dsReels" style="display:flex;gap:clamp(6px,2vw,12px);justify-content:center;margin:0 0 30px">${[...target].map(()=>`<div class="dsReel" style="width:clamp(52px,17vw,84px);height:clamp(78px,25vw,124px);display:grid;place-items:center;border-radius:16px;background:var(--panel);border:2px solid var(--line);font-family:'Unbounded',system-ui,sans-serif;font-weight:700;font-size:clamp(38px,12vw,64px);transition:transform .25s,box-shadow .25s,border-color .25s">0</div>`).join('')}</div>
+    <div id="dsHint" style="color:var(--muted);font-size:13px;min-height:20px">Shuffling every ticket…</div>`;
+  const reels=[...document.querySelectorAll('.dsReel')];
+  if(reduce){ reels.forEach((r,i)=>{ r.textContent=target[i]; r.classList.add('locked'); }); await dsWait(600); }
+  else{
+    const locked=reels.map(()=>false);
+    const spin=setInterval(()=>{ reels.forEach((r,i)=>{ if(!locked[i]) r.textContent=Math.floor(Math.random()*10); }); dsBeep(300+Math.random()*240,40,.025); },70);
+    dsTimers.push(spin);
+    await dsWait(2600);
+    for(let i=0;i<D;i++){
+      document.getElementById('dsHint').textContent=i<D-1?'Locking in…':'And the winning ticket is…';
+      await dsWait(i<D-1?1000:2200);
+      locked[i]=true; const r=reels[i]; r.textContent=target[i]; r.style.borderColor='var(--accent)'; r.style.boxShadow='0 0 28px rgba(255,61,138,.65)'; r.style.transform='scale(1.12)'; dsBeep(520+i*140,260,.08);
+      setTimeout(()=>{ r.style.transform='scale(1)'; },260);
+    }
+    clearInterval(spin); await dsWait(900);
+  }
+  // announce for real (tells the winner and everyone who entered), then show the proof
+  const {error:ae}=await sb.rpc('admin_announce_raffle',{p_raffle:dsRaffle.id});
+  const {data:proofRows}=await sb.rpc('raffle_proof',{p_raffle:dsRaffle.id}); const pr=(proofRows||[])[0];
+  dsBeep(660,200,.09); setTimeout(()=>dsBeep(880,420,.09),180);
+  body.innerHTML=`<div style="font-size:60px;line-height:1">🏆</div>
+    <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:12px;letter-spacing:.3em;color:var(--accent);margin:10px 0 6px">THE WINNER IS</div>
+    <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:clamp(28px,9vw,44px);line-height:1.15;word-break:break-word;margin-bottom:6px">@${esc(res.winner_username)}</div>
+    <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:clamp(20px,6vw,28px);color:var(--accent-2);margin-bottom:6px">Ticket ${fmtTicket(ticket)}</div>
+    <div style="color:var(--muted);font-size:15px;margin-bottom:22px">wins <b style="color:var(--text)">${esc(res.prize)}</b></div>
+    ${ae?`<p style="color:var(--live);font-size:13px">Could not announce: ${esc(ae.message)} — use "Announce winner" in the Raffles list.</p>`:''}
+    <div id="dsProof" class="chart-card" style="text-align:left"><div style="color:var(--muted);font-size:13px">Checking the draw…</div></div>
+    <button class="primary" onclick="closeDrawStage()">Done</button>`;
+  dsBusy=false; if(!reduce) confettiBurst('dsConfetti');
+  if(pr) renderProof(pr,dsRaffle.id,document.getElementById('dsProof'));
+}
+async function sha256Hex(txt){ const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+async function renderProof(pr,raffleId,el){
+  let a=false,b=false,note='';
+  try{
+    a=(await sha256Hex(pr.revealed_seed))===pr.seed_hash;
+    if(Number(pr.redraws)===0){ const h=await sha256Hex(pr.revealed_seed+':'+raffleId+':'+pr.total_tickets); b=(Number(BigInt('0x'+h.slice(0,15))%BigInt(pr.total_tickets))+1)===Number(pr.winning_ticket); }
+    else note='This prize was redrawn once the first winner could not be reached, using the same sealed number — so only the seed check is shown.';
+  }catch(e){ note='Your browser could not run the check.'; }
+  const row=(ok,t)=>`<div style="display:flex;gap:8px;font-size:13px;line-height:1.5;margin:6px 0"><b style="color:${ok?'var(--ok)':'var(--live)'}">${ok?'✓':'✗'}</b><span>${t}</span></div>`;
+  el.innerHTML=`<div style="font-weight:700;margin-bottom:6px">Check it yourself</div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px">Before entries closed we published this fingerprint of a secret number: <code style="word-break:break-all">${esc(pr.seed_hash)}</code>. Now the secret is revealed: <code style="word-break:break-all">${esc(pr.revealed_seed)}</code></div>
+    ${row(a,'The revealed secret matches the fingerprint published earlier (SHA-256), so it was not changed.')}
+    ${Number(pr.redraws)===0?row(b,`SHA-256 of “secret : raffle id : ${Number(pr.total_tickets).toLocaleString()}”, first 15 hex characters, divided by ${Number(pr.total_tickets).toLocaleString()} tickets, remainder + 1 = ticket <b>${fmtTicket(pr.winning_ticket)}</b>.`):''}
+    ${note?`<div style="font-size:12px;color:var(--muted);margin-top:6px">${esc(note)}</div>`:''}`;
+}
+async function openProof(raffleId){
+  document.getElementById('proofBody').innerHTML='<p style="color:var(--muted);text-align:center;padding:20px">Loading…</p>'; openModal('proofModal');
+  const {data}=await sb.rpc('raffle_proof',{p_raffle:raffleId}); const pr=(data||[])[0];
+  if(!pr){ document.getElementById('proofBody').innerHTML='<p style="color:var(--muted);text-align:center;padding:20px">No result to check yet.</p>'; return; }
+  document.getElementById('proofBody').innerHTML=`<h3 style="margin:0 0 4px">${esc(pr.prize)}</h3><p style="color:var(--muted);font-size:13px;margin:0 0 10px">Won by <b style="color:var(--text)">@${esc(pr.winner_username)}</b> with ticket <b style="color:var(--text)">${fmtTicket(pr.winning_ticket)}</b> of ${Number(pr.total_tickets).toLocaleString()}</p><div id="pfBox"></div>`;
+  renderProof(pr,raffleId,document.getElementById('pfBox'));
+}
+
 /* ═══════════ WINNER CELEBRATION ═══════════ */
 let winQueue=[], winShowing=false, winCurrent=null, confettiRaf=null;
 function queueWin(n){ if(!n||winQueue.some(x=>x.id===n.id)||(winCurrent&&winCurrent.id===n.id)) return; winQueue.push(n); if(!winShowing) nextWin(); }
 function nextWin(){
   const n=winQueue.shift(); if(!n){ winShowing=false; winCurrent=null; return; }
   winShowing=true; winCurrent=n; const d=n.data||{};
-  document.getElementById('winPrize').textContent=d.prize||'a prize'; document.getElementById('winTitle').textContent=d.title?'in “'+d.title+'”':'';
+  document.getElementById('winPrize').textContent=d.prize||'a prize'; document.getElementById('winTitle').textContent=(d.title?'in “'+d.title+'”':'')+(d.ticket?' · winning ticket '+fmtTicket(d.ticket):'');
   document.getElementById('winNote').textContent=d.free?'Add your UK delivery address within 14 days so we can send it to you.':'Congratulations!';
   const b=document.getElementById('winBtn'); b.textContent=d.free?'Add my delivery address':'Awesome!';
   b.onclick=()=>{ const id=n.ref_id; closeWin(); if(d.free&&id){ go('raffles'); setTimeout(()=>openPrize(id),300); } };
@@ -1098,16 +1201,16 @@ function closeWin(){
   if(n) sb.rpc('mark_notification_read',{p_id:n.id}).then(()=>refreshBadges(),()=>{});
   winCurrent=null; setTimeout(nextWin,350);
 }
-function stopConfetti(){ if(confettiRaf) cancelAnimationFrame(confettiRaf); confettiRaf=null; const c=document.getElementById('confetti'); if(c){ const x=c.getContext('2d'); x.clearRect(0,0,c.width,c.height); } }
-function confettiBurst(){
+function stopConfetti(id){ if(confettiRaf) cancelAnimationFrame(confettiRaf); confettiRaf=null; const c=document.getElementById(id||'confetti'); if(c){ const x=c.getContext('2d'); x.clearRect(0,0,c.width,c.height); } }
+function confettiBurst(id){
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const c=document.getElementById('confetti'), x=c.getContext('2d'); c.width=innerWidth; c.height=innerHeight;
+  const cid=id||'confetti', c=document.getElementById(cid), x=c.getContext('2d'); c.width=innerWidth; c.height=innerHeight;
   const cols=['#FF3D8A','#8B5CF6','#FFB443','#3DDC97','#FFFFFF'], ps=[];
   for(let i=0;i<170;i++) ps.push({x:c.width/2+(Math.random()-.5)*80,y:c.height*.4,vx:(Math.random()-.5)*14,vy:-Math.random()*15-4,g:.32+Math.random()*.2,s:5+Math.random()*7,r:Math.random()*6.3,vr:(Math.random()-.5)*.4,c:cols[i%cols.length],life:140+Math.random()*80});
   let f=0; (function tick(){
     x.clearRect(0,0,c.width,c.height); f++;
     ps.forEach(p=>{ p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.vx*=.99; p.r+=p.vr; if(p.life-->0&&p.y<c.height+20){ x.save(); x.translate(p.x,p.y); x.rotate(p.r); x.fillStyle=p.c; x.globalAlpha=Math.min(1,p.life/40); x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6); x.restore(); } });
-    if(f<260) confettiRaf=requestAnimationFrame(tick); else stopConfetti();
+    if(f<300) confettiRaf=requestAnimationFrame(tick); else stopConfetti(cid);
   })();
 }
 async function checkWins(){
@@ -1147,7 +1250,7 @@ const notifInfo=n=>{
     case 'won': return ['🏆','You won <b>'+esc(d.prize||'a prize')+'</b> in “'+esc(d.title||'a giveaway')+'”!'+(d.free?' Add your UK delivery address in Raffles.':'')];
     case 'prize_shipped': return ['📦','Your prize is on its way'+(d.tracking?' — tracking '+esc(d.tracking):'')];
     case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')+(['post','comment'].includes(d.kind)?' — tap to appeal':'')];
-    case 'raffle_result': return ['🎲','The draw for <b>'+esc(d.prize||'the raffle')+'</b> is done — <b>@'+esc(d.winner||'someone')+'</b> won'];
+    case 'raffle_result': return ['🎲','The draw for <b>'+esc(d.prize||'the raffle')+'</b> is done — <b>@'+esc(d.winner||'someone')+'</b> won'+(d.ticket?' with ticket '+fmtTicket(d.ticket):'')];
     case 'new_giveaway': return ['🎁','New free giveaway: <b>'+esc(d.prize||'a prize')+'</b> — tap to enter'];
     case 'refunded': return ['↩️',d.role==='payee'?'A sale was refunded — '+$$(d.cents)+' was taken from your earnings'+(d.reason?' ('+esc(d.reason)+')':''):'You were refunded '+$$(d.cents)+' to your wallet'+(d.reason?' ('+esc(d.reason)+')':'')];
     case 'topup_reversed': return ['⚠️','A top-up of '+$$(d.cents)+' was reversed ('+esc(d.reason||'refund')+')'+(d.owed>0?'. You now owe '+$$(d.owed)+', taken from your next top-up':'')];
@@ -1519,9 +1622,14 @@ function prizePanel(){
       :`<b>📦 ${esc(x.prize)}</b><br><span style="font-size:12.5px;color:var(--muted)">Shipped — look out for it in the post!</span>`;
     return `<div class="raffle-card" style="margin-bottom:12px">${msg}</div>`; }).join('');
 }
+const fmtTicket=n=>'#'+String(n).padStart(4,'0');
+function ticketText(raffleId){
+  const t=store.myTickets[raffleId]; if(!t||!t.length) return '';
+  return t.map(x=>x.qty>1?fmtTicket(x.start)+'–'+fmtTicket(x.start+x.qty-1):fmtTicket(x.start)).join(', ');
+}
 function freeBtn(r){
   const f=store.freeStatus||{};
-  if((f.entered||[]).includes(r.id)) return '<button class="enter-btn" disabled style="opacity:.7">You are entered ✓</button>';
+  if((f.entered||[]).includes(r.id)) return `<button class="enter-btn" disabled style="opacity:.85">You are entered ✓${ticketText(r.id)?' · Ticket '+ticketText(r.id):''}</button>`;
   if(f.eligible) return `<button class="enter-btn" onclick="claimFree('${r.id}')">🎁 Enter free</button>`;
   return '<p style="font-size:12.5px;color:var(--muted);text-align:center">Confirm your email address to enter free giveaways.</p>';
 }
@@ -1536,15 +1644,16 @@ function renderRaffles(){
       <div class="cd-unit"><b>${String(m).padStart(2,'0')}</b><span>min</span></div>
       <div class="cd-unit"><b>${String(s).padStart(2,'0')}</b><span>sec</span></div></div>
     <div class="raffle-meta"><span>🎟️ ${r.entries.toLocaleString()} entries</span><span>${r.free?'🎁 Free entry':'💵 '+$$(r.price)+' / entry'}</span><span>👥 ${r.players.toLocaleString()} players</span></div>
+    ${!r.free&&ticketText(r.id)?`<div style="font-size:13px;margin:0 0 8px">🎟️ <b>Your tickets:</b> ${ticketText(r.id)}</div>`:''}
     ${r.free?freeBtn(r):`<button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries — ${$$(r.price)} each</button>`}</div>`;
   }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No raffles running right now.</p>');
   if(store.raffleResults.length) document.getElementById('raffleList').innerHTML+=`<div class="section-title" style="padding-top:8px">Recent winners</div><div class="list-card">${
-    store.raffleResults.map(w=>`<div class="row" style="cursor:default"><div class="r-ic">🏆</div><div style="flex:1;min-width:0"><b>@${esc(w.winner_username)}</b> won ${esc(w.prize)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(w.title)} · ${Number(w.total_tickets)} tickets · ${w.hash_ok?'seed verified ✓':'seed mismatch ⚠'}</span></div></div>`).join('')}</div>`;
+    store.raffleResults.map(w=>`<div class="row" style="cursor:default"><div class="r-ic">🏆</div><div style="flex:1;min-width:0"><b>@${esc(w.winner_username)}</b> won ${esc(w.prize)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(w.title)} · ${Number(w.total_tickets)} tickets · ${w.hash_ok?'seed verified ✓':'seed mismatch ⚠'}</span></div><button class="abtn" onclick="openProof('${w.id}')">Verify</button></div>`).join('')}</div>`;
 }
 async function claimFree(id){
   const r=store.raffles.find(x=>x.id===id); if(!r) return;
   closeModal('freeModal'); toast('Entering…');
-  if(await rpc('claim_free_entry',{p_raffle:id})){ toast('You are in the draw for '+r.prize+' 🎁 Good luck!'); await settled(); }
+  if(await rpc('claim_free_entry',{p_raffle:id})){ await settled(); toast('You are in the draw for '+r.prize+'! 🎁 Your ticket number is '+ticketText(id)); }
 }
 function showFreeWelcome(){
   const f=store.freeStatus||{}; if(freeShown||!f.eligible||!f.campaign) return;      // the welcome sheet is for people who joined through a giveaway link
@@ -1569,11 +1678,11 @@ function openRaffle(id){ activeRaffle=store.raffles.find(r=>r.id===id); qty=5;
   openModal('raffleModal'); }
 function chgQty(d){ qty=Math.min(1000,Math.max(1,qty+d)); document.getElementById('qty').textContent=qty;
   document.getElementById('raffleTotal').textContent=$$(qty*activeRaffle.price); }
-async function confirmRaffle(){
+async function confirmRaffle(){ 
   closeModal('raffleModal'); toast('Processing payment…');
   if(await rpc('buy_raffle_entries',{p_raffle:activeRaffle.id,p_qty:qty})){
     const u=me(); u.wallet=Math.max(0,u.wallet-qty*activeRaffle.price); updateWallet();
-    toast(`${qty} entries confirmed 🎟️ Good luck!`); settled(); }
+    const rid=activeRaffle.id, n=qty; await settled(); toast(`${n} entr${n===1?'y':'ies'} confirmed 🎟️ Your tickets: ${ticketText(rid)}`); }
 }
 
 /* ═══════════ CHAT ═══════════ */
@@ -2396,7 +2505,7 @@ const durField=(id,n,u)=>`<div class="field"><label>Open for</label><div style="
 function durHours(id){ const n=parseInt(document.getElementById(id+'N').value,10), u=document.getElementById(id+'U').value;
   if(isNaN(n)||n<1) return null; const h=n*({hours:1,days:24,weeks:168,months:720}[u]||24); return h>24*366?-1:h; }
 async function admRaffles(){
-  const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,is_free,closes_at,winner_entry_id').order('created_at',{ascending:false}).limit(20);
+  const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,is_free,closes_at,winner_entry_id,announced_at').order('created_at',{ascending:false}).limit(20);
   if(error) return toast(error.message);
   const totals=await Promise.all(rs.map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
   const results=await Promise.all(rs.map(r=>r.winner_entry_id?sb.rpc('raffle_result',{p_raffle:r.id}):Promise.resolve({data:null})));
@@ -2413,7 +2522,8 @@ async function admRaffles(){
      return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${r.is_free?'free':$$(r.entry_price_cents)+'/entry'}</span>
        <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} tickets · ${Number(t.players||0)} players · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
        ${res?`<div style="font-size:13px">🏆 <b>@${esc(res.winner_username)}</b> · seed ${res.hash_ok?'verified ✓':'MISMATCH ⚠'}</div>`
-         :(closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">Draw winner</button>`:'')}</div>`; }).join('')}</div>`;
+         :r.winner_entry_id&&!r.announced_at?`<div style="font-size:12.5px;color:var(--live);margin-bottom:4px">Winner drawn but not announced yet</div><button class="abtn ok" onclick="admAnnounce('${r.id}')">Announce winner</button>`
+         :(closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">🎲 Draw winner live</button>`:'')}</div>`; }).join('')}</div>`;
 }
 async function admCreateRaffle(){
   const hours=durHours('rfDur'); if(hours===null) return toast('Enter how long it stays open'); if(hours===-1) return toast('The longest a raffle can run is 12 months');
@@ -2427,9 +2537,10 @@ async function admCreateRaffle(){
   const {error}=await admCall('admin_create_raffle',{p_title:title,p_prize:prize,p_price_cents:price,p_hours:hours});
   if(!error){ toast('Raffle created — it is now live for users'); admLoad(); }
 }
-async function admDraw(id){
-  if(!confirm('Draw the winner now? This cannot be undone.')) return;
-  const {error}=await admCall('admin_draw_raffle',{p_raffle:id}); if(!error){ toast('Winner drawn'); admLoad(); }
+async function admDraw(id){ openDrawStage(id); }
+async function admAnnounce(id){
+  if(!confirm('Announce the winner now? This tells the winner and everyone who entered.')) return;
+  const {error}=await admCall('admin_announce_raffle',{p_raffle:id}); if(!error){ toast('Winner announced'); admLoad(); }
 }
 /* --- errors + email queue (admin only) --- */
 async function admErrors(){
@@ -2449,7 +2560,7 @@ async function admClearErrors(){ if(!confirm('Clear all recorded errors?')) retu
 /* --- giveaways: campaign links, free raffles, prize delivery (admin only) --- */
 const campaignLink=code=>location.origin+location.pathname+'?campaign='+encodeURIComponent(code);
 async function admGiveaways(){
-  const [cs,pc,rs]=await Promise.all([admCall('admin_list_campaigns'),admCall('admin_list_prize_claims'),sb.from('raffles').select('id,title,prize,closes_at,winner_entry_id').eq('is_free',true).order('created_at',{ascending:false}).limit(20)]);
+  const [cs,pc,rs]=await Promise.all([admCall('admin_list_campaigns'),admCall('admin_list_prize_claims'),sb.from('raffles').select('id,title,prize,closes_at,winner_entry_id,announced_at').eq('is_free',true).order('created_at',{ascending:false}).limit(20)]);
   if(cs.error||pc.error) return;
   const totals=await Promise.all((rs.data||[]).map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
   admBody().innerHTML=`<div class="admin-pad">
@@ -2474,7 +2585,7 @@ async function admGiveaways(){
    ${(rs.data||[]).map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, closed=new Date(r.closes_at)<new Date();
      return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)}</span>
       <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} entries · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
-      ${!r.winner_entry_id&&closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">Draw winner</button>`:''}</div>`; }).join('')||admEmpty('No free giveaways yet.')}
+      ${!r.winner_entry_id&&closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">🎲 Draw winner live</button>`:''}${r.winner_entry_id&&!r.announced_at?`<div style="font-size:12.5px;color:var(--live);margin:4px 0">Winner drawn but not announced yet</div><button class="abtn ok" onclick="admAnnounce('${r.id}')">Announce winner</button>`:''}</div>`; }).join('')||admEmpty('No free giveaways yet.')}
    <div class="section-title" style="padding:12px 0 6px">Winners to post to</div>
    ${pc.data.map(c=>`<div class="chart-card"><b>${esc(c.prize)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(c.title)} · won by @${esc(c.winner)}</span>
      <div style="font-size:12.5px;margin:6px 0;line-height:1.5">${c.full_name?`${esc(c.full_name)}<br>${esc(c.line1)}${c.line2?', '+esc(c.line2):''}<br>${esc(c.city)}, ${esc(c.postcode)}${c.phone?'<br>'+esc(c.phone):''}`:'<span style="color:var(--muted)">No address yet'+(c.claim_by?' — claim by '+new Date(c.claim_by).toLocaleDateString():'')+'</span>'}</div>
