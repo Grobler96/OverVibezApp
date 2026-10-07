@@ -1139,8 +1139,8 @@ function helpContact(){
 /* ═══════════ MONEY HISTORY + RECEIPTS ═══════════ */
 let moneyRows=[], moneyFilter='all', moneyDone=false, receiptText='';
 const EARN_TYPES=['subscription','post_unlock','tip','live_entry'];
-const TX_NAMES={refund:'Refund',subscription:'Subscription',post_unlock:'Post unlock',tip:'Tip',live_entry:'Live ticket',raffle_entry:'Raffle entries',payout:'Payout',wallet_topup:'Added funds'};
-const TX_ICONS={refund:'↩️',subscription:'💜',post_unlock:'🔓',tip:'💰',live_entry:'🎟️',raffle_entry:'🎲',payout:'🏦',wallet_topup:'◈'};
+const TX_NAMES={refund:'Refund',subscription:'Subscription',post_unlock:'Post unlock',tip:'Tip',live_entry:'Live ticket',raffle_entry:'Raffle entries',payout:'Payout',wallet_topup:'Added funds',admin_credit:'Credit from OverVibez'};
+const TX_ICONS={refund:'↩️',subscription:'💜',post_unlock:'🔓',tip:'💰',live_entry:'🎟️',raffle_entry:'🎲',payout:'🏦',wallet_topup:'◈',admin_credit:'🎁'};
 function txInfo(t){
   const me_=store.session, mine=t.payer_id===me_, other=user(mine?t.payee_id:t.payer_id), who=other?'@'+other.username:(mine?'OverVibez':'a member');
   const name=TX_NAMES[t.type]||t.type;
@@ -1150,6 +1150,7 @@ function txInfo(t){
     return {icon:'⚠️',title:'Top-up reversed',sub:'Refund or chargeback',amt:-t.gross_cents,pot:'wallet',kind:'out'};
   }
   if(t.type==='wallet_topup') return {icon:TX_ICONS[t.type],title:'Added funds',sub:'Wallet top-up',amt:+t.gross_cents,pot:'wallet',kind:'in'};
+  if(t.type==='admin_credit') return {icon:TX_ICONS[t.type],title:'Credit from OverVibez',sub:'Added to your wallet by our team',amt:+t.gross_cents,pot:'wallet',kind:'in'};
   if(t.type==='payout') return {icon:TX_ICONS[t.type],title:'Payout requested',sub:'From your earnings',amt:-t.gross_cents,pot:'earnings',kind:'out'};
   if(mine) return {icon:TX_ICONS[t.type]||'•',title:name+(t.type==='raffle_entry'?'':' · '+who),sub:'Paid from wallet',amt:-t.gross_cents,pot:'wallet',kind:'out'};
   return {icon:TX_ICONS[t.type]||'•',title:name+' from '+who,sub:'You keep 85%',amt:+t.net_cents,pot:'earnings',kind:'earned'};
@@ -1184,7 +1185,7 @@ function paintMoney(){
 function openReceipt(i){
   const t=moneyRows[i]; if(!t) return; const x=txInfo(t), when=new Date(t.created_at);
   const lines=[['Date',when.toLocaleString('en-GB')],['Type',TX_NAMES[t.type]||t.type],['Details',x.title],
-    ['Amount charged',$$(t.gross_cents)]].concat(t.type==='payout'||t.type==='wallet_topup'?[]:[['Platform fee (15%)',$$(t.fee_cents)],['Net to creator',$$(t.net_cents)]])
+    ['Amount charged',$$(t.gross_cents)]].concat(t.type==='payout'||t.type==='wallet_topup'||t.type==='admin_credit'?[]:[['Platform fee (15%)',$$(t.fee_cents)],['Net to creator',$$(t.net_cents)]])
     .concat([['Receipt number',t.id.slice(0,8).toUpperCase()]]);
   receiptText='OverVibez receipt\n'+lines.map(l=>l[0]+': '+l[1]).join('\n')+'\nThis is a record of a digital transaction on OverVibez.';
   document.getElementById('receiptBody').innerHTML=`<div class="list-card" style="margin:0 0 10px">${lines.map(l=>`<div class="row" style="cursor:default"><span style="color:var(--muted);font-size:13px">${esc(l[0])}</span><span class="sub" style="color:var(--text)">${esc(String(l[1]))}</span></div>`).join('')}</div>
