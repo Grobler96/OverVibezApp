@@ -2,10 +2,15 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>OverVibez — Publish. Earn. Win.</title>
 <meta name="description" content="OverVibez is where creators publish, earn 85% and go live, and followers discover, subscribe and win free prizes. 18+, UK.">
 <meta name="theme-color" content="#0E0A14">
+<script>
+/* If this browser already holds a login, don't flash the login screen while the app loads. */
+try{ for(var i=0;i<localStorage.length;i++){ var k=localStorage.key(i); if(/^sb-.+-auth-token$/.test(k)&&localStorage.getItem(k)){ document.documentElement.classList.add('booting'); break; } } }catch(e){}
+setTimeout(function(){ document.documentElement.classList.remove('booting'); },10000);
+</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
@@ -318,6 +323,28 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .admin-grid .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:left}
 .admin-grid .stat b{display:block;font-size:20px} .admin-grid .stat span{font-size:11.5px;color:var(--muted)}
 .admin-pad{padding:0 14px}
+
+/* ═══════════ BOOT SPLASH + MOBILE ═══════════ */
+#splash{display:none;position:fixed;inset:0;z-index:300;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#splash .logo-big{font-family:'Unbounded';font-weight:900;font-size:30px;letter-spacing:-1px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;animation:splashPulse 1.2s ease-in-out infinite}
+@keyframes splashPulse{0%,100%{opacity:.55}50%{opacity:1}}
+html.booting #splash{display:flex}
+html.booting #authScreen,html.booting #landing{display:none!important}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
+.topbar{padding-top:calc(14px + env(safe-area-inset-top))}
+.app,.auth,body{min-height:100vh;min-height:100dvh}
+.chat{height:calc(100dvh - 215px)}
+@media (max-width:640px){
+  input,textarea,select{font-size:16px!important}          /* stops iPhone zooming in when a box is tapped */
+  .chat-input input{font-size:16px!important}
+  .nav-btn{padding:6px 10px;min-width:48px}
+  .chip{padding-top:9px;padding-bottom:9px}
+  .abtn{min-height:38px}
+  .modal,.sheet{max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  img,video{max-width:100%}
+}
 </style>
 </head>
 <body>
@@ -356,6 +383,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <p style="color:var(--muted);font-size:12.5px;text-align:center;margin:26px 0 0;line-height:1.7"><a href="terms.html" style="color:var(--accent-2)">Terms</a> · <a href="privacy.html" style="color:var(--accent-2)">Privacy</a> · <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a></p>
   </div>
 </div>
+<div id="splash" aria-hidden="true"><div class="logo-big">OverVibez</div></div>
 <div class="auth" id="authScreen">
   <div class="logo-big">OverVibez</div>
   <div class="tag">Social · Amplified</div>
@@ -971,7 +999,7 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  document.getElementById('landing').classList.add('hidden'); enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
+  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
@@ -984,7 +1012,7 @@ function clearSession(){
 }
 if(sb) sb.auth.onAuthStateChange((ev,session)=>{
   if(ev==='PASSWORD_RECOVERY') recoveryMode=true;
-  setTimeout(()=>{ if(session&&session.user) startSession(session.user.id); else if(store.session) clearSession(); },0);
+  setTimeout(()=>{ if(session&&session.user) startSession(session.user.id); else { document.documentElement.classList.remove('booting'); if(store.session) clearSession(); } },0);
 });
 
 
