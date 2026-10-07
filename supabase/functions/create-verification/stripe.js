@@ -13,12 +13,12 @@ export function formEncode(obj, prefix = '', out = new URLSearchParams()) {
   return out;
 }
 
-export async function stripeFetch(secretKey, path, { method = 'POST', params = {} } = {}) {
+export async function stripeFetch(secretKey, path, { method = 'POST', params = {}, idempotencyKey } = {}) {
   const qs = formEncode(params).toString();
   const isGet = method === 'GET';
   const res = await fetch('https://api.stripe.com' + path + (isGet && qs ? '?' + qs : ''), {
     method,
-    headers: { Authorization: 'Bearer ' + secretKey, ...(isGet ? {} : { 'Content-Type': 'application/x-www-form-urlencoded' }) },
+    headers: { Authorization: 'Bearer ' + secretKey, ...(isGet ? {} : { 'Content-Type': 'application/x-www-form-urlencoded' }), ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}) },
     body: isGet ? undefined : qs,
   });
   const data = await res.json();
