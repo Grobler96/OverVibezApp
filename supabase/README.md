@@ -22,7 +22,7 @@ Apply migrations in order: `001_core_schema.sql`, `002_storage_realtime.sql`, `0
 - Users can change their password, reset it by email, download their data (`export_my_data`) and delete their account (`delete-account`:
   refuses while money is owed either way or if they are the only admin; removes uploaded files; financial records are kept without a name).
 - `features` (public) tells the app which integrations have secrets set, so Go live / Add funds / ID check are hidden or say "coming soon" until then.
-- **Password-reset emails need Supabase's Site URL set** (Authentication → URL Configuration) to `https://grobler96.github.io/OverVibezApp/`.
+- **Password-reset emails need Supabase's Site URL set** (Authentication → URL Configuration) to `https://www.overvibez.com/`.
 
 ## Staff roles (migration 007)
 - `profiles.staff_role` is `moderator` or `admin`. Users cannot set it (no column grant); only an admin can change roles in the app

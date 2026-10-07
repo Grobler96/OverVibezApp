@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
   let cents = 0; try { cents = Number((await req.json()).cents); } catch { /* ignore */ }
   if (!PACKS.includes(cents)) return json({ error: 'Choose one of the listed amounts' }, 400);
 
-  const site = Deno.env.get('SITE_URL') || 'https://grobler96.github.io/OverVibezApp/';
+  const site = Deno.env.get('SITE_URL') || 'https://www.overvibez.com/';
   const currency = (Deno.env.get('STRIPE_CURRENCY') || 'gbp').toLowerCase();
   try {
     const s = await stripeFetch(sk, '/v1/checkout/sessions', { params: {
