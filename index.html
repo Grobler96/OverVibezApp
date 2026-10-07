@@ -380,7 +380,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
       <div class="chart-card" style="margin:0"><b>🎁 Free prize draws</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Every member can enter every free draw — no purchase necessary. Winners are picked by a method anyone can verify. UK, 18+.</p></div>
       <div class="chart-card" style="margin:0"><b>🛡️ Adults only, kept safe</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">18+ only with ID checks, block and mute tools, a report button on everything, and a real appeals process.</p></div>
     </div>
-    <p style="color:var(--muted);font-size:12.5px;text-align:center;margin:26px 0 0;line-height:1.7"><a href="terms.html" style="color:var(--accent-2)">Terms</a> · <a href="privacy.html" style="color:var(--accent-2)">Privacy</a> · <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a></p>
+    <p style="color:var(--muted);font-size:12.5px;text-align:center;margin:26px 0 0;line-height:1.7"><a href="terms.html" style="color:var(--accent-2)">Terms</a> · <a href="privacy.html" style="color:var(--accent-2)">Privacy</a> · <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a> · <a href="refunds.html" style="color:var(--accent-2)">Refunds &amp; disputes</a> · <a href="terms.html#giveaways" style="color:var(--accent-2)">Giveaway rules</a><br><span id="landingContact">Customer support: use Help &amp; contact after you sign up</span></p>
   </div>
 </div>
 <div id="splash" aria-hidden="true"><div class="logo-big">OverVibez</div></div>
@@ -887,6 +887,7 @@ async function loadFeatures(){
 async function loadPublicSettings(){
   try{ const {data}=await sb.rpc('public_settings'); if(data) settings=data; }catch(e){}
   document.getElementById('suInviteWrap').classList.toggle('hidden',!settings.invite_only);
+  const lc=document.getElementById('landingContact'); if(lc&&settings.support_email) lc.innerHTML='Customer support: <a href="mailto:'+esc(settings.support_email)+'" style="color:var(--accent-2)">'+esc(settings.support_email)+'</a>';
 }
 (async function boot(){
   if(!sb) return;
