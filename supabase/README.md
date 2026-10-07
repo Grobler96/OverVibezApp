@@ -120,3 +120,10 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 - Automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console. Admins can still mark a user 18+ verified by hand.
 - Notifications, live recording/replays, and multi-guest streams. Terms/Privacy pages exist as lawyer-review drafts.
 - Auth: decide whether email confirmation stays on (the app handles both).
+
+## How the feed and Explore are ranked (in `index.html`, tested by `node tests/rank.test.js`)
+- **Home → For you** (default): `score = log(2 + likes + 2×comments) × freshness × closeness`. Freshness halves every 36 hours (floor 4%). Closeness: ×3 creators you subscribe to, ×2 creators you follow, up to ×1.5 for creators whose posts you have liked, ×1.2 if live now, ×1.25 for creators who joined in the last 14 days with under 25 followers. A final pass cuts a creator's score by 40% for each post already placed, so nobody fills the screen. Blocked/muted creators are filtered out first.
+- **Newest**: plain newest-first. **Following**: posts from creators you follow/subscribe to plus your own, newest first.
+- The order is computed once and held while you scroll and like things; it re-ranks when posts change, you switch tabs or you reload.
+- **Explore → Trending**: posts by attention velocity `(likes + 2×comments + 1) / (age in hours + 2)^1.4`; creators by the recent velocity of their posts plus a small followers weight.
+- It ranks the latest 200 posts on the device. If the platform grows past a few thousand posts a day, move the same formula into a database function.
