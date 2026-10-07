@@ -29,7 +29,7 @@ What is built is live and tested. What is left is mostly **accounts and paperwor
 - [x] Draft banners removed; processors named (Supabase, Vercel, Stripe, LiveKit, Resend). Still recommended: a solicitor reviews Terms, Privacy and the giveaway rules, and the registered address/company number gets added once available.
 - [ ] Register with the ICO (data protection fee).
 - [x] Raffles are free-entry only (paid raffles are switched off in the database). Get gambling-law advice before ever turning paid raffles back on.
-- [ ] Check Online Safety Act duties for adult content, and your age/identity verification provider.
+- [ ] Check Online Safety Act duties for adult content, and your age/identity verification method (currently manual checks by an admin; Stripe Identity can be switched on in Admin → Age checks).
 - [ ] Put a real support email in Admin → Invites (settings).
 
 ## 6. Domain

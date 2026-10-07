@@ -137,3 +137,8 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 ## Free-only raffles and content rules (migration 024)
 - **No paid raffles**: `paid_raffles` setting is false. `admin_create_raffle` and `buy_raffle_entries` refuse to work, the admin raffle form only offers Free, and the Terms/refund page say every raffle is free to enter (card processors treat paid raffles as gambling). The paid code path is kept but is not exposed in the app.
 - **Content**: Terms (section 8) and the Community Guidelines state that sexually explicit content is not allowed, free or paid. OverVibez describes itself as a creator-monetisation platform for a general 18+ audience, not an adult-content site.
+
+## Manual 18+ checks (migration 025)
+- **Default is by hand and free.** The `id_check` setting is `manual`. A member taps Me → Identity & age verification → **Request a check**. An admin sees it under **Admin → Age checks**, contacts the member by email, looks at their passport/driving licence (ideally on a video call; if a photo is emailed, delete it straight after), then **Approve** or **Reject** with a short note (no ID numbers). Approving sets `age_verified`; the member is notified. Only the result, date and note are stored — never an image of the ID.
+- **Stripe Identity is off but ready.** `can_start_verification()` refuses unless `id_check = 'stripe'`, so nobody can start (and be charged for) a Stripe check. Switch with the button at the top of Age checks (or `admin_set_id_check_mode('manual'|'stripe')`). The Stripe webhook/function code is unchanged.
+- Admins can still use Users → Mark 18+ verified for one-off cases. Requests are limited to 3 per member per day and one pending at a time.
