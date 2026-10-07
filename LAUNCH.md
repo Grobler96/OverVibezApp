@@ -32,8 +32,9 @@ What is built is live and tested. What is left is mostly **accounts and paperwor
 - [ ] Put a real support email in Admin → Invites (settings).
 
 ## 6. Domain
-- [ ] Buy/point a domain at GitHub Pages (Settings → Pages → Custom domain, enforce HTTPS).
-- [ ] Update the absolute `og:image` / `og:url` addresses in `index.html` from `grobler96.github.io` to the new domain.
+- [x] Domain: www.overvibez.com (overvibez.com redirects to it).
+- [ ] Supabase → Auth → URL configuration: Site URL `https://www.overvibez.com/`, and add it (plus `https://overvibez.com/`) to Redirect URLs. Set the function secret `SITE_URL` to `https://www.overvibez.com/` too (Stripe return links and email links use it).
+- [x] Share-image addresses and default site links now point at https://www.overvibez.com/ (the site is served from Vercel there).
 
 ## 7. Day-one checks
 - [ ] Sign up with a fresh email: confirm email arrives, age gate works.

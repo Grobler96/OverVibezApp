@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
   const { error: gate } = await sb.rpc('can_start_verification');
   if (gate) return json({ error: gate.message }, 403);
 
-  const site = Deno.env.get('SITE_URL') || 'https://grobler96.github.io/OverVibezApp/';
+  const site = Deno.env.get('SITE_URL') || 'https://www.overvibez.com/';
   try {
     const s = await stripeFetch(sk, '/v1/identity/verification_sessions', { params: {
       type: 'document', metadata: { user_id: u.user.id }, return_url: site + '?verify=done',

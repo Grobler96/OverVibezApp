@@ -14,6 +14,6 @@ Deno.serve(async (req) => {
   if (!same(req.headers.get('x-cron-secret') ?? '', secret)) return json({ error: 'forbidden' }, 403);
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   try {
-    return json(await sendBatch({ admin, apiKey: key, from, site: Deno.env.get('SITE_URL') || 'https://grobler96.github.io/OverVibezApp/' }));
+    return json(await sendBatch({ admin, apiKey: key, from, site: Deno.env.get('SITE_URL') || 'https://www.overvibez.com/' }));
   } catch (e) { console.error('send failed', (e as Error).message); return json({ error: 'send_failed' }, 500); }
 });

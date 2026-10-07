@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   if (!u?.user) return json({ error: 'Not signed in' }, 401);
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
   const deps = { admin, userClient, user: { id: u.user.id, email: u.user.email }, stripe: (path: string, opts: unknown) => stripeFetch(sk, path, opts as never),
-    site: Deno.env.get('SITE_URL') || 'https://grobler96.github.io/OverVibezApp/', currency: (Deno.env.get('STRIPE_CURRENCY') || 'gbp').toLowerCase() };
+    site: Deno.env.get('SITE_URL') || 'https://www.overvibez.com/', currency: (Deno.env.get('STRIPE_CURRENCY') || 'gbp').toLowerCase() };
 
   let action = ''; try { action = (await req.json()).action; } catch { /* ignore */ }
   try {
