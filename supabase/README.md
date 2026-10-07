@@ -68,6 +68,13 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 - The **Following** feed tab shows your own posts plus creators you follow or subscribe to. Explore has Trending / New / Live / category tabs and name search via `search_people()` (min 2 characters, wildcards escaped, banned users hidden).
 - `notifications` is written only by triggers (follow, subscribe/renew, tip, unlock, ticket, comment, like) and by `start_live_stream` (fan-out to up to 1000 followers), payout-paid and content-removed. Users can read only their own rows; `mark_notifications_read()` marks them read. The app polls every 30s and also listens over Realtime.
 
+## Free giveaways (migration 012)
+- **Campaign links** (`?campaign=CODE`) are invite codes with an entry allowance, so they work while the beta is invite-only. Created in Admin → Giveaways; sign-ups and entries are counted per campaign.
+- **Free raffles** (`raffles.is_free`) cost nothing. A member gets `entries_per_user` (default 1) free entries in total, one per raffle, via `claim_free_entry()`. It requires: joined through a campaign, email confirmed, not banned. Browsers cannot write `raffle_entries`; paid purchases are refused on free raffles.
+- **Winners** are drawn with the same sealed-seed method. They add a UK delivery address (`submit_prize_address`, UK postcode checked, 14-day claim window); admins mark prizes posted. `admin_redraw_raffle` voids a non-responding or fake winner and draws the next number from the same seed.
+- Not enforced by the database: 18+ is self-declared at sign-up (check the winner's ID before posting a prize). Sending sign-up emails at volume needs custom SMTP (e.g. Resend with a verified domain) configured in the Supabase dashboard.
+- Quirk: the SQL console stalls on text containing `delete from` at the start of a statement; the redraw function builds that statement from two strings for that reason.
+
 ## Not built yet (needed before launch)
 - Automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console. Admins can still mark a user 18+ verified by hand.
 - Notifications, live recording/replays, and multi-guest streams. Terms/Privacy pages exist as lawyer-review drafts.
