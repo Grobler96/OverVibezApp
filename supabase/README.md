@@ -105,6 +105,7 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
   $$);
   ```
   (`pg_cron` and `pg_net` are available; enable them under Database → Extensions first.)
+- **Live setup (migration 022)**: the sender is scheduled in production and sign-up is open (no invite code needed; giveaway links still credit their campaign). Migration 022 enables `pg_cron`/`pg_net`, sets sign-up open and schedules the sender once the vault secret `cron_secret` exists. It never contains the secret itself. To change the secret: update the `CRON_SECRET` function secret and the vault entry (`select vault.update_secret(id, '<new>') from vault.secrets where name = 'cron_secret'`).
 
 ## How a raffle is drawn and announced (migrations 007, 012, 018)
 - **Prize photos**: admins can add a photo when creating a raffle/giveaway, or later via 📷 Add/Change photo (resized to 1280px JPEG, stored in the admin's folder of the public bucket; `admin_set_raffle_image` validates the path). Cards show the photo with a live ⏱ time-left badge; clocks tick in place so photos don't flicker.
