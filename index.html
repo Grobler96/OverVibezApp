@@ -352,7 +352,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 <!-- ═══════════ AUTH SCREEN ═══════════ -->
 <div id="ageGate" style="display:none;position:fixed;inset:0;z-index:9999;background:#0E0A14;color:#EFEAF6;align-items:center;justify-content:center;padding:24px;text-align:center">
   <div style="max-width:380px">
-    <div style="font-size:44px;margin-bottom:6px">🔞</div>
+    <div style="font-size:44px;margin-bottom:6px"><b style="font-family:Unbounded,sans-serif;border:2px solid #FF3D8A;border-radius:12px;padding:4px 10px">18+</b></div>
     <h1 style="font-size:26px;margin:0 0 8px;font-family:'Unbounded',system-ui,sans-serif">OverVibez is for adults</h1>
     <p id="ageMsg" style="color:#9E90B8;font-size:15px;line-height:1.55;margin:0 0 22px">You must be 18 or over to enter. By continuing you confirm you are 18+ and agree to our <a href="terms.html" style="color:#8B5CF6">Terms</a> and <a href="privacy.html" style="color:#8B5CF6">Privacy Policy</a>.</p>
     <button id="ageYes" style="width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,#FF3D8A,#8B5CF6);color:#fff;font-weight:700;font-size:16px;border:0;cursor:pointer">I am 18 or over — enter</button>
@@ -380,7 +380,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
       <div class="chart-card" style="margin:0"><b>🎁 Free prize draws</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Every member can enter every free draw — no purchase necessary. Winners are picked by a method anyone can verify. UK, 18+.</p></div>
       <div class="chart-card" style="margin:0"><b>🛡️ Adults only, kept safe</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">18+ only with ID checks, block and mute tools, a report button on everything, and a real appeals process.</p></div>
     </div>
-    <p style="color:var(--muted);font-size:12.5px;text-align:center;margin:26px 0 0;line-height:1.7"><a href="terms.html" style="color:var(--accent-2)">Terms</a> · <a href="privacy.html" style="color:var(--accent-2)">Privacy</a> · <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a></p>
+    <p style="color:var(--muted);font-size:12.5px;text-align:center;margin:26px 0 0;line-height:1.7"><a href="terms.html" style="color:var(--accent-2)">Terms</a> · <a href="privacy.html" style="color:var(--accent-2)">Privacy</a> · <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a> · <a href="refunds.html" style="color:var(--accent-2)">Refunds &amp; disputes</a> · <a href="terms.html#giveaways" style="color:var(--accent-2)">Giveaway rules</a><br><span id="landingContact">Customer support: use Help &amp; contact after you sign up</span></p>
   </div>
 </div>
 <div id="splash" aria-hidden="true"><div class="logo-big">OverVibez</div></div>
@@ -887,6 +887,7 @@ async function loadFeatures(){
 async function loadPublicSettings(){
   try{ const {data}=await sb.rpc('public_settings'); if(data) settings=data; }catch(e){}
   document.getElementById('suInviteWrap').classList.toggle('hidden',!settings.invite_only);
+  const lc=document.getElementById('landingContact'); if(lc&&settings.support_email) lc.innerHTML='Customer support: <a href="mailto:'+esc(settings.support_email)+'" style="color:var(--accent-2)">'+esc(settings.support_email)+'</a>';
 }
 (async function boot(){
   if(!sb) return;
@@ -2696,10 +2697,10 @@ async function admRaffles(){
   const results=await Promise.all(rs.map(r=>r.winner_entry_id?sb.rpc('raffle_result',{p_raffle:r.id}):Promise.resolve({data:null})));
   admBody().innerHTML=`<div class="admin-pad">
    <div class="chart-card"><h4>Create a raffle or free giveaway</h4>
-     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">Paid prize draws are regulated as gambling or sweepstakes in many places. Check the rules for where your users live before running one.</p>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">All raffles on OverVibez are <b>free to enter</b>. Paid entries are switched off because they count as gambling.</p>
      <div class="field"><label>Title</label><input id="rfTitle" maxlength="120" placeholder="Creator Fund Drop"></div>
      <div class="field"><label>Prize</label><input id="rfPrize" maxlength="120" placeholder="£2,500"></div>
-     <div class="field"><label>Entry</label><select id="rfType" onchange="document.getElementById('rfPriceWrap').classList.toggle('hidden',this.value==='free')" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none"><option value="free">Free — every confirmed member can enter, no link needed</option><option value="paid">Paid — members buy entries from their wallet</option></select></div>
+     <div class="field"><label>Entry</label><select id="rfType" onchange="document.getElementById('rfPriceWrap').classList.toggle('hidden',this.value==='free')" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none"><option value="free">Free — every confirmed member can enter, no link needed</option>${settings.paid_raffles?'<option value="paid">Paid — members buy entries from their wallet</option>':''}</select></div>
      <div class="field hidden" id="rfPriceWrap"><label>Entry price (GBP)</label><input id="rfPrice" type="number" min="0.5" step="0.5" value="2.00"></div>
      <div class="field"><label>Prize photo (optional)</label><input id="rfImg" type="file" accept="image/*"></div>
      ${durField('rfDur',7,'days')}

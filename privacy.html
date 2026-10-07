@@ -5,24 +5,22 @@
 body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0E0A14;color:#EFEAF6;margin:0;line-height:1.65}
 main{max-width:720px;margin:0 auto;padding:32px 20px 80px}
 h1{font-size:28px;margin:0 0 6px} h2{font-size:18px;margin:28px 0 6px;color:#FF3D8A}
-a{color:#8B5CF6} .draft{background:#2a1a10;border:1px solid #FFB443;color:#FFB443;border-radius:12px;padding:12px 14px;font-size:14px;margin:16px 0 24px}
+a{color:#8B5CF6}
 .muted{color:#9E90B8;font-size:14px}
 </style></head><body><main>
-<p><a href="./">← Back to OverVibez</a> · <a href="terms.html">Terms</a> · <a href="guidelines.html">Community guidelines</a></p>
+<p><a href="./">← Back to OverVibez</a> · <a href="terms.html">Terms</a> · <a href="refunds.html">Refunds</a> · <a href="guidelines.html">Community guidelines</a></p>
 <h1>Privacy Policy</h1>
-<p class="muted">Last updated: draft — not yet in force</p>
-<div class="draft"><b>DRAFT TEMPLATE — not legal advice.</b> Written by an AI assistant as a starting point. OverVibez handles identity documents, payments and adult content, so privacy law (UK/EU GDPR, CCPA and others) applies. Have a qualified lawyer review it and fill in the bracketed details before launch.</div>
-
+<p class="muted">Last updated: 7 October 2026</p>
 <h2>1. Who is responsible</h2>
-<p>[LEGAL ENTITY NAME], [ADDRESS] is the controller of your data. Contact: [PRIVACY EMAIL].</p>
+<p>OverVibez (United Kingdom) is the controller of your data. Contact: use the Help &amp; contact link in the app<span class="se"></span>.</p>
 
 <h2>2. What we collect</h2>
 <ul>
 <li><b>Account data:</b> email address, username, display name, account type, date of birth (for the 18+ check), password (stored only as a salted hash by our authentication provider).</li>
 <li><b>Content you create:</b> posts, media, comments, messages, reports, profile details.</li>
 <li><b>Activity:</b> likes, follows, unlocks, subscriptions, tips, raffle entries, and your wallet and transaction history.</li>
-<li><b>Verification data:</b> when ID verification is enabled, our verification provider [PROVIDER] processes your government ID and a selfie. We receive only the result (verified or not) and the details needed to confirm your age; we do not keep copies of your ID document. [CONFIRM WITH PROVIDER.]</li>
-<li><b>Payment data:</b> card payments are handled by [PAYMENT PROVIDER]. We do not receive or store full card numbers.</li>
+<li><b>Verification data:</b> when ID verification is enabled, our verification provider, Stripe Identity, processes your government ID and a selfie. We receive only the result (verified or not) and the details needed to confirm your age; we do not keep copies of your ID document.</li>
+<li><b>Payment data:</b> card payments are handled by Stripe. We do not receive or store full card numbers.</li>
 <li><b>Giveaway data:</b> if you win a prize, the delivery name, address and phone number you give us, used only to send the prize.</li>
 <li><b>Safety data:</b> who you block or mute, reports you make, and appeals you send.</li>
 <li><b>Technical data:</b> basic logs such as IP address and device information for security and abuse prevention.</li>
@@ -35,23 +33,28 @@ a{color:#8B5CF6} .draft{background:#2a1a10;border:1px solid #FFB443;color:#FFB44
 <p>Your username, display name, bio, posts you make public and comments are visible to other users. Messages are visible only to the people in the conversation, and to our moderators if a message is reported. Paid content is shown only to people who have paid or subscribed. Wallet balances and earnings are private to you.</p>
 
 <h2>5. Service providers</h2>
-<p>We use [Supabase] (database, authentication and file storage, hosted in [REGION]), [GitHub Pages] (website hosting), [PAYMENT PROVIDER] and [VERIFICATION PROVIDER]. They process data on our behalf under their own terms. [LAWYER: list processors and transfer mechanisms.]</p>
+<p>We use Supabase (database, authentication and file storage, hosted in the UK, London), Vercel (website hosting), Stripe (payments, payouts and ID verification), LiveKit (live video streaming, EU region) and Resend (email). They process data on our behalf under their own terms.</p>
 
 <h2>6. Cookies and local storage</h2>
 <p>We do not use advertising or tracking cookies. Your browser stores a sign-in session and a few settings on your device (for example that you confirmed you are 18+, and which feed tab you last used). These are strictly necessary to run the service and cannot be turned off without breaking it.</p>
 
 <h2>7. Retention</h2>
-<p>We keep account data while your account is open. Financial records are kept as long as the law requires. Moderation records are kept as needed to enforce our rules and protect users. When you delete your account we delete or anonymise your personal data, except where we must keep it. [LAWYER: set periods.]</p>
+<p>We keep account data while your account is open. Financial records are kept as long as the law requires. Moderation records are kept as needed to enforce our rules and protect users. When you delete your account we delete or anonymise your personal data, except where we must keep it.</p>
 
 <h2>8. Your rights</h2>
-<p>Depending on where you live, you may have the right to access, correct, delete or export your data, to object to or restrict some processing, and to complain to your data-protection authority. Contact [PRIVACY EMAIL].</p>
+<p>Depending on where you live, you may have the right to access, correct, delete or export your data, to object to or restrict some processing, and to complain to your data-protection authority. Contact us through the Help &amp; contact link in the app<span class="se"></span>.</p>
 
 <h2>9. Security</h2>
-<p>Access to data is restricted by row-level security rules in our database, paid media is stored privately, and sensitive operations such as payments run on the server. No system is perfectly secure; tell us at [SECURITY EMAIL] if you find a problem.</p>
+<p>Access to data is restricted by row-level security rules in our database, paid media is stored privately, and sensitive operations such as payments run on the server. No system is perfectly secure; tell us through the Help &amp; contact link in the app<span class="se"></span> if you find a problem.</p>
 
 <h2>10. Children</h2>
 <p>OverVibez is for adults only. We do not knowingly collect data from anyone under 18 and will delete it if we find it.</p>
 
 <h2>11. Changes</h2>
 <p>We will update this policy as the service changes and tell you about material changes.</p>
+<script>
+/* Show the support email (set by an admin) once it exists, without needing a login. */
+fetch('https://ectwnzhuebgnvejdpgdk.supabase.co/rest/v1/rpc/public_settings',{method:'POST',headers:{apikey:'sb_publishable_jiM3fKJ42PZ7MFir6gKUoQ_JeleNdaW','Content-Type':'application/json'},body:'{}'})
+ .then(function(r){return r.json();}).then(function(s){ if(!s||!s.support_email) return; document.querySelectorAll('.se').forEach(function(el){ el.innerHTML=' or email <a href="mailto:'+s.support_email+'">'+s.support_email+'</a>'; }); }).catch(function(){});
+</script>
 </main></body></html>
