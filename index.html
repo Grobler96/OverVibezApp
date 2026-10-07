@@ -274,6 +274,20 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .av img,.r-ic img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
 .cover{height:130px;background:var(--panel-2) center/cover no-repeat;margin:0 14px;border-radius:18px}
 #pwModal,#editProfileModal{z-index:130}
+.badge,.nbadge{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--live);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;line-height:1;font-style:normal}
+.nav-btn{position:relative}
+.nav-btn .nbadge{top:0;right:4px}
+.pcard{display:flex;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.pcard:last-child{border:none}
+.pcard .av{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:19px;flex:none}
+.pcard .tx{flex:1;min-width:0;font-size:13.5px;line-height:1.4} .pcard .tx span{color:var(--muted);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbtn{padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:700;background:var(--grad);color:#fff;flex:none}
+.fbtn.on{background:var(--panel-2);color:var(--text);border:1px solid var(--line)}
+.notif{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px;line-height:1.45}
+.notif.unread{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.notif .ni{font-size:20px;flex:none;width:30px;text-align:center}
+.notif small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+.tile.img{background-size:cover;background-position:center}
 .abtn{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:4px 6px 0 0}
 .abtn.danger{color:var(--live);border-color:var(--live)} .abtn.ok{color:var(--ok);border-color:var(--ok)}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px}
@@ -315,6 +329,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
         <span>Discover creators, subscribe, unlock exclusive drops</span>
       </div>
     </div>
+    <div id="suCampaign" class="hidden" style="background:linear-gradient(135deg,rgba(255,61,138,.18),rgba(124,92,255,.18));border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:13.5px;line-height:1.5"></div>
     <div class="field hidden" id="suInviteWrap"><label>Invite code <span style="color:var(--muted)">(the beta is invite-only)</span></label><input id="suInvite" placeholder="VIBE-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off"></div>
     <div class="field"><label>Username</label><input id="suUser" placeholder="lowercase, 3–24 chars" maxlength="24"></div>
     <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="you@example.com"></div>
@@ -334,6 +349,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="actions">
       <span class="role-badge" id="roleBadge">CREATOR</span>
       <button class="wallet-pill" id="walletPill" onclick="openTopup()" title="Wallet"><span class="c">◈</span><span id="walletAmt">$0.00</span></button>
+      <button class="icon-btn" onclick="go('notifs')" id="bellBtn" title="Notifications">🔔<i class="badge hidden" id="bellBadge">0</i></button>
       <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">🌙</button>
     </div>
   </div>
@@ -346,11 +362,14 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 
   <div id="page-explore" class="hidden">
     <div class="section-title">Explore</div>
-    <div class="chiprow">
-      <button class="chip on">Trending</button><button class="chip">Music</button><button class="chip">Fitness</button>
-      <button class="chip">Art</button><button class="chip">Food</button><button class="chip">Photography</button>
-    </div>
-    <div class="explore-grid" id="exploreGrid"></div>
+    <div style="padding:0 14px 6px"><div class="field" style="margin-bottom:8px"><input id="exploreQ" type="search" placeholder="Search creators…" autocomplete="off" oninput="exploreTyped()"></div></div>
+    <div class="chiprow" id="exploreChips"></div>
+    <div id="exploreBody"></div>
+  </div>
+
+  <div id="page-notifs" class="hidden">
+    <div class="section-title">Notifications</div>
+    <div id="notifList"></div>
   </div>
 
   <div id="page-raffles" class="hidden">
@@ -402,6 +421,31 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="pay-row"><span>Wallet after</span><span id="payAfter"></span></div>
     <button class="primary" id="payConfirmBtn">Confirm payment</button>
     <button class="ghost" onclick="closeModal('payModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="freeModal" onclick="if(event.target===this)closeModal('freeModal')">
+  <div class="sheet">
+    <h3>🎁 Free giveaway entries</h3>
+    <p>Welcome to OverVibez! You can enter every giveaway for free — one entry each. Tap Enter on any you like. No purchase necessary — 18+, UK prizes only.</p>
+    <div id="freeList"></div>
+    <button class="ghost" onclick="closeModal('freeModal')">Maybe later</button>
+  </div>
+</div>
+
+<div class="overlay" id="prizeModal" onclick="if(event.target===this)closeModal('prizeModal')">
+  <div class="sheet">
+    <h3>🏆 Delivery address</h3>
+    <p>Prizes are posted to the UK only. We only use this to send your prize.</p>
+    <div class="field"><label>Full name</label><input id="pzName" maxlength="80" autocomplete="name"></div>
+    <div class="field"><label>Address line 1</label><input id="pzL1" maxlength="100" autocomplete="address-line1"></div>
+    <div class="field"><label>Address line 2 (optional)</label><input id="pzL2" maxlength="100" autocomplete="address-line2"></div>
+    <div class="field"><label>Town / city</label><input id="pzCity" maxlength="60" autocomplete="address-level2"></div>
+    <div class="field"><label>Postcode</label><input id="pzPost" maxlength="10" autocomplete="postal-code" autocapitalize="characters"></div>
+    <div class="field"><label>Phone (optional, for the courier)</label><input id="pzPhone" maxlength="25" type="tel" autocomplete="tel"></div>
+    <div class="err" id="pzErr"></div>
+    <button class="primary" onclick="savePrize()">Save address</button>
+    <button class="ghost" onclick="closeModal('prizeModal')">Cancel</button>
   </div>
 </div>
 
@@ -529,6 +573,11 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <h3>Edit profile</h3>
     <div class="field"><label>Display name</label><input id="epName" maxlength="60"></div>
     <div class="field"><label>Bio</label><textarea id="epBio" rows="3" maxlength="500" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
+    <div class="field hidden" id="epCatWrap"><label>Your category (so people can find you in Explore)</label>
+      <select id="epCat" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none">
+        <option value="">— none —</option><option value="music">🎵 Music</option><option value="fitness">💪 Fitness</option><option value="art">🎨 Art</option><option value="food">🍳 Food</option>
+        <option value="photography">📷 Photography</option><option value="fashion">👗 Fashion</option><option value="gaming">🎮 Gaming</option><option value="comedy">😂 Comedy</option>
+        <option value="lifestyle">✨ Lifestyle</option><option value="other">Other</option></select></div>
     <div class="field"><label>Profile picture</label>
       <div style="display:flex;gap:12px;align-items:center"><div class="av a1" id="epAvPrev" style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:24px;flex:none"></div>
       <input id="epAvatar" type="file" accept="image/png,image/jpeg,image/webp" style="padding:8px"></div></div>
@@ -557,9 +606,10 @@ const FEE = 0.15; // platform share — creators keep 85% (enforced server-side 
 const $$ = c => '$' + ((Number(c)||0)/100).toFixed(2);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
-const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at';
+const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at,follower_count,category';
+const CATS=[['music','🎵','Music'],['fitness','💪','Fitness'],['art','🎨','Art'],['food','🍳','Food'],['photography','📷','Photography'],['fashion','👗','Fashion'],['gaming','🎮','Gaming'],['comedy','😂','Comedy'],['lifestyle','✨','Lifestyle'],['other','','Other']];
 
-const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
+const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,freeStatus:{eligible:false},prizes:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
@@ -571,7 +621,7 @@ function ago(iso){ const t=(Date.now()-new Date(iso))/1000;
 function mapUser(p,followers){
   return {id:p.id,username:p.username,name:p.display_name||p.username,role:p.account_type,
     av:'a'+(1+hue(p.username)%6),em:p.account_type==='creator'?'✦':'🫧',verified:!!p.is_verified,
-    subPrice:p.sub_price_cents,followers:followers||0,earnings:Number(p.earnings_cents||0),
+    subPrice:p.sub_price_cents,followers:p.follower_count!=null?p.follower_count:(followers||0),category:p.category||null,createdAt:p.created_at,earnings:Number(p.earnings_cents||0),
     wallet:Number(p.wallet_cents||0),ageVerified:!!p.age_verified,bio:p.bio||'',live:false,
     staffRole:p.staff_role||null,isBanned:!!p.is_banned,banReason:p.ban_reason||'',
     avatarPath:p.avatar_url||null,avatarUrl:p.avatar_url?pubUrl(p.avatar_url):null,coverUrl:p.cover_url?pubUrl(p.cover_url):null};
@@ -617,12 +667,12 @@ async function hydrate(){
     sb.from('post_unlocks').select('post_id').eq('user_id',uid),
     sb.from('subscriptions').select('creator_id,status,current_period_end').eq('subscriber_id',uid),
     sb.from('raffles').select('*').gt('closes_at',new Date().toISOString()).is('winner_entry_id',null).order('closes_at'),
-    sb.from('follows').select('creator_id').limit(10000),
+    sb.from('follows').select('creator_id').eq('follower_id',uid).limit(5000),
     sb.from('transactions').select('reference_id,gross_cents').eq('payee_id',uid).in('type',['post_unlock','tip'])]);
   const bad=[mine,profs,posts,likes,unl,subs,raf,fol,tx].find(r=>r.error); if(bad) throw bad.error;
-  const fc={}; (fol.data||[]).forEach(f=>fc[f.creator_id]=(fc[f.creator_id]||0)+1);
-  store.users=(profs.data||[]).map(p=>mapUser(p,fc[p.id]));
-  const m=mine.data; if(m){ const i=store.users.findIndex(u=>u.id===m.id), mu=mapUser(m,fc[m.id]);
+  store.following=new Set((fol.data||[]).map(f=>f.creator_id));
+  store.users=(profs.data||[]).map(p=>mapUser(p));
+  const m=mine.data; if(m){ const i=store.users.findIndex(u=>u.id===m.id), mu=mapUser(m);
     if(i>=0) store.users[i]=mu; else store.users.push(mu); }
   const h=decodeURIComponent(location.hash.slice(1)).toLowerCase();
   if(h&&!store.users.some(u=>u.username===h)){
@@ -650,11 +700,12 @@ async function hydrate(){
   await ensureUsers((raf.data||[]).map(r=>r.host_id));
   store.raffles=(raf.data||[]).map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{};
     return {id:r.id,title:r.title,host:r.host_id&&user(r.host_id)?user(r.host_id).username:'OverVibez',prize:r.prize,
-      price:r.entry_price_cents,entries:Number(t.entries||0),players:Number(t.players||0),
+      free:!!r.is_free,price:r.entry_price_cents,entries:Number(t.entries||0),players:Number(t.players||0),
       seed:r.seed_hash.slice(0,6)+'…'+r.seed_hash.slice(-4),ends:new Date(r.closes_at).getTime()}; });
   const drawn=await sb.from('raffles').select('id,title,prize').not('winner_entry_id','is',null).order('closes_at',{ascending:false}).limit(5);
   const dres=await Promise.all((drawn.data||[]).map(d=>sb.rpc('raffle_result',{p_raffle:d.id})));
   store.raffleResults=(drawn.data||[]).map((d,i)=>Object.assign({title:d.title,prize:d.prize},(dres[i].data||[{}])[0]||{})).filter(x=>x.winner_username);
+  try{ const [fs,pz]=await Promise.all([sb.rpc('my_free_entry_status'),sb.rpc('my_prizes')]); store.freeStatus=fs.data||{eligible:false}; store.prizes=pz.data||[]; }catch(e){ store.freeStatus={eligible:false}; store.prizes=[]; }
   await loadLive();
   await loadThreads();
 }
@@ -672,12 +723,15 @@ async function loadPublicSettings(){
 (async function boot(){
   if(!sb) return;
   await Promise.all([loadFeatures(),loadPublicSettings()]);
-  const code=new URLSearchParams(location.search).get('invite');
-  if(code){ authTab('signup'); document.getElementById('suInvite').value=code; }
+  const qs=new URLSearchParams(location.search), code=qs.get('invite')||qs.get('campaign');
+  if(code){ authTab('signup'); document.getElementById('suInvite').value=code;
+    try{ const {data:ci}=await sb.rpc('campaign_info',{p_code:code}); if(ci){ campaignName=ci.name;
+      const b=document.getElementById('suCampaign'); b.classList.remove('hidden');
+      b.innerHTML='🎁 <b>Free giveaway entries</b><br>Create your account, confirm your email and enter every giveaway for free — '+esc(ci.name)+'. 18+, UK prizes only, no purchase needed.'; } }catch(e){} }
 })();
 
 /* ═══════════ AUTH ═══════════ */
-let signupRole='creator', recoveryMode=false;
+let signupRole='creator', recoveryMode=false, campaignName=null, freeShown=false;
 function authTab(t){
   document.getElementById('tabLogin').classList.toggle('on',t==='login');
   document.getElementById('tabSignup').classList.toggle('on',t==='signup');
@@ -701,9 +755,8 @@ async function doSignup(){
   if(pw.length<8) return err.textContent='Password must be at least 8 characters.';
   if(!dob) return err.textContent='Date of birth is required.';
   if((Date.now()-new Date(dob).getTime())/3.15576e10<18) return err.textContent='You must be 18 or older to join OverVibez.';
-  let invite='';
+  let invite=document.getElementById('suInvite').value.trim().toUpperCase();
   if(settings.invite_only){
-    invite=document.getElementById('suInvite').value.trim().toUpperCase();
     if(!invite) return err.textContent='You need an invite code — the beta is invite-only.';
     const {data:valid}=await sb.rpc('check_invite',{p_code:invite});
     if(!valid) return err.textContent='That invite code is not valid, or has been used up.';
@@ -713,9 +766,9 @@ async function doSignup(){
   if(taken) return err.textContent='That username is taken.';
   const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,display_name:un,account_type:signupRole,invite_code:invite}}});
   if(error) return err.textContent=/Database error saving new user/i.test(error.message)?'Could not create the account — the invite code may have just been used up, or that username/email is taken.':error.message;
-  if(new URLSearchParams(location.search).has('invite')) history.replaceState(null,'',location.pathname+location.hash);
+  if(/[?&](invite|campaign)=/.test(location.search)) history.replaceState(null,'',location.pathname+location.hash);
   err.textContent='';
-  if(!data.session){ authTab('login'); document.getElementById('liErr').textContent='Check your email to confirm your account, then log in.'; }
+  if(!data.session){ authTab('login'); document.getElementById('liErr').textContent='Check your email to confirm your account, then log in.'+(campaignName?' Your free giveaway entries are waiting for you 🎁':''); }
 }
 async function doLogin(){
   const err=document.getElementById('liErr');
@@ -767,12 +820,12 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures();
+  enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
   store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={};
+  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -782,6 +835,62 @@ if(sb) sb.auth.onAuthStateChange((ev,session)=>{
   if(ev==='PASSWORD_RECOVERY') recoveryMode=true;
   setTimeout(()=>{ if(session&&session.user) startSession(session.user.id); else if(store.session) clearSession(); },0);
 });
+
+/* ═══════════ NOTIFICATIONS + UNREAD BADGES ═══════════ */
+function paintBadges(){
+  const b=document.getElementById('bellBadge'), c=document.getElementById('chatBadge');
+  if(b){ b.textContent=store.unread>99?'99+':store.unread; b.classList.toggle('hidden',!store.unread); }
+  if(c){ c.textContent=store.unreadMsgs>99?'99+':store.unreadMsgs; c.classList.toggle('hidden',!store.unreadMsgs); }
+}
+async function refreshBadges(){
+  if(!store.session) return;
+  try{
+    const [n,m]=await Promise.all([
+      sb.from('notifications').select('id',{count:'exact',head:true}).is('read_at',null),
+      sb.from('messages').select('id',{count:'exact',head:true}).is('read_at',null).neq('sender_id',store.session)]);
+    store.unread=n.count||0; store.unreadMsgs=m.count||0; paintBadges();
+  }catch(e){}
+}
+setInterval(()=>{ if(!document.hidden) refreshBadges(); },30000);
+const notifInfo=n=>{
+  const a=n.actor_id?user(n.actor_id):null, who=a?'<b>@'+esc(a.username)+'</b>':'<b>Someone</b>', d=n.data||{};
+  switch(n.type){
+    case 'new_follower': return ['👤',who+' started following you'];
+    case 'new_subscriber': return ['💜',who+' subscribed to you'+(d.price_cents?' ('+$$(d.price_cents)+'/mo)':'')];
+    case 'subscription_renewed': return ['🔁',who+' renewed their subscription'];
+    case 'tip': return ['💰',who+' tipped you '+$$(d.gross_cents)+' — you keep '+$$(d.net_cents)];
+    case 'unlock': return ['🔓',who+' unlocked your post — you earned '+$$(d.net_cents)];
+    case 'ticket': return ['🎟️',who+' bought a ticket to your live stream — you earned '+$$(d.net_cents)];
+    case 'comment': return ['💬',who+' commented: “'+esc(d.preview||'')+'”'];
+    case 'like': return ['♥',who+' liked your post'];
+    case 'live': return ['🔴',who+' is live: '+esc(d.title||'')];
+    case 'payout_paid': return ['🏦','Your payout of '+$$(d.amount_cents)+' has been sent'];
+    case 'won': return ['🏆','You won <b>'+esc(d.prize||'a prize')+'</b> in “'+esc(d.title||'a giveaway')+'”!'+(d.free?' Add your UK delivery address in Raffles.':'')];
+    case 'prize_shipped': return ['📦','Your prize is on its way'+(d.tracking?' — tracking '+esc(d.tracking):'')];
+    case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')];
+    default: return ['🔔','New activity'];
+  }
+};
+async function renderNotifs(){
+  const el=document.getElementById('notifList');
+  el.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">Loading…</p>';
+  const {data,error}=await sb.from('notifications').select('*').order('created_at',{ascending:false}).limit(50);
+  if(error) return el.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">'+esc(error.message)+'</p>';
+  await ensureUsers(data.map(n=>n.actor_id));
+  store.notifs=data;
+  el.innerHTML=data.length?`<div class="list-card" style="margin:0 14px">${data.map((n,i)=>{ const [ic,txt]=notifInfo(n);
+    return `<div class="notif ${n.read_at?'':'unread'}" onclick="notifOpen(${i})"><div class="ni">${ic}</div><div style="flex:1;min-width:0;word-break:break-word">${txt}<small>${ago(n.created_at)} ago</small></div></div>`; }).join('')}</div>`
+    :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No notifications yet.<br>New followers, tips, comments and more will show up here.</p>';
+  if(data.some(n=>!n.read_at)){ await sb.rpc('mark_notifications_read'); store.unread=0; paintBadges(); }
+}
+function notifOpen(i){
+  const n=store.notifs[i]; if(!n) return;
+  if(n.type==='live'&&n.ref_id) return openLive(n.ref_id);
+  if(n.type==='comment'&&n.ref_id&&store.posts.some(p=>p.id===n.ref_id)) return openComments(n.ref_id);
+  if(n.type==='payout_paid') return go('studio');
+  if(n.type==='won'||n.type==='prize_shipped') return go('raffles');
+  if(n.actor_id&&user(n.actor_id)) return openProfile(n.actor_id);
+}
 
 /* ═══════════ REALTIME CHAT ═══════════ */
 let rt=null;
@@ -795,11 +904,14 @@ function subscribeRealtime(){
     const viewing=activeThread&&activeThread.id===t.id&&!document.getElementById('chat-view').classList.contains('hidden');
     if(viewing){ renderChat(); markRead(t.id); }
     else { if(!document.getElementById('threads-view').classList.contains('hidden')) renderThreads();
-      toast('New message from '+user(t.withU).username); }
+      store.unreadMsgs++; paintBadges(); toast('New message from '+user(t.withU).username); }
+  }).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:'user_id=eq.'+store.session},async p=>{
+    await ensureUsers([p.new.actor_id]); store.unread++; paintBadges(); const [ic,txt]=notifInfo(p.new); toast(ic+' '+txt.replace(/<[^>]+>/g,''));
+    if(!document.getElementById('page-notifs').classList.contains('hidden')) renderNotifs();
   }).subscribe();
 }
 function markRead(convId){
-  sb.from('messages').update({read_at:new Date().toISOString()}).eq('conversation_id',convId).neq('sender_id',store.session).is('read_at',null).then(()=>{});
+  sb.from('messages').update({read_at:new Date().toISOString()}).eq('conversation_id',convId).neq('sender_id',store.session).is('read_at',null).then(()=>refreshBadges());
 }
 
 /* ═══════════ APP SHELL ═══════════ */
@@ -820,32 +932,34 @@ function renderShell(){
   const bb=document.getElementById('banBanner');
   bb.classList.toggle('hidden',!u.isBanned);
   if(u.isBanned) bb.textContent='Your account is suspended'+(u.banReason?': '+u.banReason:'')+'. You can browse but cannot post, comment, message or spend. Contact support to appeal.';
+  paintBadges();
   document.getElementById('bottomNav').innerHTML = isC ? `
     <button class="nav-btn on" data-page="home" onclick="go('home',this)">⌂<span>Home</span></button>
     <button class="nav-btn" data-page="studio" onclick="go('studio',this)">◔<span>Studio</span></button>
     <button class="nav-btn create" onclick="openCreate()">＋</button>
-    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<span>Chats</span></button>
+    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<i class="nbadge hidden" id="chatBadge">0</i><span>Chats</span></button>
     <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>` : `
     <button class="nav-btn on" data-page="home" onclick="go('home',this)">⌂<span>Home</span></button>
     <button class="nav-btn" data-page="explore" onclick="go('explore',this)">✦<span>Explore</span></button>
     <button class="nav-btn" data-page="raffles" onclick="go('raffles',this)">🎟<span>Raffles</span></button>
-    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<span>Chats</span></button>
+    <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<i class="nbadge hidden" id="chatBadge">0</i><span>Chats</span></button>
     <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>`;
 }
 function go(page,btn){
-  ['home','explore','raffles','messages','studio','me','profile','admin'].forEach(p=>{
+  ['home','explore','raffles','messages','studio','me','profile','admin','notifs'].forEach(p=>{
     const el=document.getElementById('page-'+p); if(el) el.classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
   if(btn) btn.classList.add('on');
   if(page==='home'){renderStories();renderFeed()}
-  if(page==='explore')renderExplore();
+  if(page==='explore')renderExplore(true);
   if(page==='raffles')renderRaffles();
   if(page==='messages')renderThreads();
   if(page==='studio')renderStudio();
   if(page==='me')renderMe();
   if(page==='profile')renderProfile();
   if(page==='admin')renderAdmin();
+  if(page==='notifs')renderNotifs();
   window.scrollTo({top:0});
 }
 function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt').textContent=$$(u.wallet); }
@@ -899,9 +1013,16 @@ function liveBanners(){
       <div style="flex:1;min-width:0"><b style="font-size:14px">${esc(c.username)} is live</b><div style="font-size:12px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.title)} · ${l.entry_price_cents?$$(l.entry_price_cents)+' entry':'Free'} · tap to join</div></div>
       <span class="live-tag" style="position:static;transform:none">LIVE</span></div>`; }).join('');
 }
+function feedTab(){ try{ return localStorage.getItem('ov_feed')==='following'?'following':'all'; }catch(e){ return 'all'; } }
+function setFeedTab(t){ try{ localStorage.setItem('ov_feed',t); }catch(e){} renderFeed(); }
 function renderFeed(){
-  document.getElementById('feed').innerHTML=liveBanners()+(store.posts.length?store.posts.map(postCard).join('')
-    :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No drops yet.<br>Creators will appear here as they publish.</p>');
+  const u=me(), tab=feedTab();
+  const posts=tab==='following'?store.posts.filter(p=>p.by===u.id||store.following.has(p.by)||store.subs[u.id+p.by]):store.posts;
+  const tabs=`<div class="chiprow" style="padding-top:2px"><button class="chip ${tab==='all'?'on':''}" onclick="setFeedTab('all')">Everyone</button><button class="chip ${tab==='following'?'on':''}" onclick="setFeedTab('following')">Following</button></div>`;
+  const empty=tab==='following'
+    ?'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">Nothing here yet.<br>Follow creators to see their posts in this feed.<br><button class="abtn ok" style="margin-top:10px" onclick="go(\'explore\')">Find creators</button></p>'
+    :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No drops yet.<br>Creators will appear here as they publish.</p>';
+  document.getElementById('feed').innerHTML=tabs+liveBanners()+(posts.length?posts.map(postCard).join(''):empty);
 }
 async function likePost(id){
   const u=me(), k=u.id+id, p=store.posts.find(x=>x.id===id), was=!!store.likes[k];
@@ -994,6 +1115,14 @@ function subscribe(cid){
   };
   openModal('payModal');
 }
+async function toggleFollow(cid){
+  const u=me(), c=user(cid); if(!c||cid===u.id) return;
+  const was=store.following.has(cid);
+  if(was) store.following.delete(cid); else store.following.add(cid);
+  c.followers=Math.max(0,c.followers+(was?-1:1)); rerender();
+  const {error}=was?await sb.from('follows').delete().eq('follower_id',u.id).eq('creator_id',cid):await sb.from('follows').insert({follower_id:u.id,creator_id:cid});
+  if(error){ if(was) store.following.add(cid); else store.following.delete(cid); c.followers=Math.max(0,c.followers+(was?1:-1)); rerender(); toast(error.message); }
+}
 async function cancelSub(cid){
   if(await rpc('cancel_subscription',{p_creator:cid})){
     store.subCanceled[cid]=true; rerender();
@@ -1040,30 +1169,107 @@ function handleStripeReturn(){
 }
 
 /* ═══════════ EXPLORE ═══════════ */
-function renderExplore(){
-  const el=document.getElementById('exploreGrid');
-  if(!store.posts.length){ el.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px 20px;grid-column:1/-1;font-size:13.5px">Nothing to explore yet.</p>'; return; }
-  el.innerHTML=store.posts.slice(0,12).map((p,i)=>{ const c=user(p.by); if(!c) return '';
-    return `<div class="tile ${i%7===0?'big':''} ${c.av}" onclick="openProfile('${p.by}')">${p.scene}${p.paid?`<span class="t-lock">🔒 ${$$(p.price)}</span>`:''}</div>`; }).join('');
+let exploreTab='trending', exploreTimer=null;
+function exploreTyped(){ clearTimeout(exploreTimer); exploreTimer=setTimeout(()=>renderExplore(),350); }
+function setExploreTab(t){ exploreTab=t; document.getElementById('exploreQ').value=''; renderExplore(); }
+function personCard(c){
+  const mine=c.id===store.session;
+  return `<div class="pcard" onclick="openProfile('${c.id}')"><div class="av ${c.av}">${avInner(c)}</div>
+    <div class="tx"><b>${esc(c.name)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>@${esc(c.username)}${c.category?' · '+esc((CATS.find(x=>x[0]===c.category)||[0,'',c.category])[2]):''} · ${fmtN(c.followers)} followers</span>${c.bio?`<span>${esc(c.bio)}</span>`:''}</div>
+    ${!mine&&c.role==='creator'?`<button class="fbtn ${store.following.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleFollow('${c.id}')">${store.following.has(c.id)?'Following':'Follow'}</button>`:''}</div>`;
+}
+function tileHtml(p,i){
+  const c=user(p.by); if(!c) return '';
+  const img=!p.paid&&p.mediaUrl&&p.mediaKind==='image';
+  return `<div class="tile ${i%7===0?'big':''} ${img?'img':c.av}" ${img?`style="background-image:url('${esc(p.mediaUrl)}')"`:''} onclick="openProfile('${p.by}')">${img?'':p.scene}${p.paid?`<span class="t-lock">🔒 ${$$(p.price)}</span>`:''}</div>`;
+}
+async function renderExplore(reset){
+  if(reset){ document.getElementById('exploreQ').value=''; }
+  const chips=[['trending','🔥 Trending'],['new','🆕 New'],['live','🔴 Live']].concat(CATS.map(c=>[c[0],(c[1]?c[1]+' ':'')+c[2]]));
+  document.getElementById('exploreChips').innerHTML=chips.map(([k,l])=>`<button class="chip ${exploreTab===k?'on':''}" onclick="setExploreTab('${k}')">${l}</button>`).join('');
+  const body=document.getElementById('exploreBody'), q=document.getElementById('exploreQ').value.trim();
+  const empty=t=>`<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">${t}</p>`;
+  if(q.length>=2){
+    const {data,error}=await sb.rpc('search_people',{p_q:q}); if(document.getElementById('exploreQ').value.trim()!==q) return;
+    if(error) return toast(error.message);
+    (data||[]).forEach(p=>{ if(!user(p.id)) store.users.push(mapUser(p)); });
+    const ppl=(data||[]).map(p=>user(p.id));
+    const cap=store.posts.filter(p=>p.cap.toLowerCase().includes(q.toLowerCase())).slice(0,9);
+    body.innerHTML=(ppl.length?`<div class="section-title" style="padding-top:4px">People</div><div class="list-card">${ppl.map(personCard).join('')}</div>`:'')
+      +(cap.length?`<div class="section-title" style="padding-top:4px">Posts</div><div class="explore-grid">${cap.map(tileHtml).join('')}</div>`:'')
+      +(!ppl.length&&!cap.length?empty('No results for “'+esc(q)+'”.'):'');
+    return;
+  }
+  const creators=store.users.filter(u=>u.role==='creator'&&u.id!==store.session);
+  if(exploreTab==='live'){
+    body.innerHTML=store.live.length?`<div class="list-card">${store.live.map(l=>{ const c=user(l.creator_id); return c?`<div class="pcard" onclick="openLive('${l.id}')"><div class="av ${c.av}">${avInner(c)}</div>
+      <div class="tx"><b>${esc(c.username)} is live</b><span>${esc(l.title)} · ${l.entry_price_cents?$$(l.entry_price_cents)+' entry':'Free'}</span></div><span class="live-tag" style="position:static;transform:none">LIVE</span></div>`:''; }).join('')}</div>`:empty('Nobody is live right now.');
+  } else if(exploreTab==='new'){
+    const list=creators.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,15);
+    body.innerHTML=list.length?`<div class="list-card">${list.map(personCard).join('')}</div>`:empty('No creators yet.');
+  } else if(exploreTab==='trending'){
+    const top=creators.slice().sort((a,b)=>b.followers-a.followers).slice(0,5);
+    const posts=store.posts.slice().sort((a,b)=>b.likes-a.likes).slice(0,12);
+    body.innerHTML=(top.length?`<div class="section-title" style="padding-top:4px">Top creators</div><div class="list-card">${top.map(personCard).join('')}</div>`:'')
+      +(posts.length?`<div class="section-title" style="padding-top:4px">Trending posts</div><div class="explore-grid">${posts.map(tileHtml).join('')}</div>`:empty('Nothing to explore yet.'));
+  } else {
+    const list=creators.filter(c=>c.category===exploreTab), posts=store.posts.filter(p=>{ const c=user(p.by); return c&&c.category===exploreTab; }).slice(0,12);
+    body.innerHTML=(list.length?`<div class="list-card">${list.map(personCard).join('')}</div>`:'')+(posts.length?`<div class="section-title" style="padding-top:4px">Posts</div><div class="explore-grid">${posts.map(tileHtml).join('')}</div>`:'')
+      +(!list.length&&!posts.length?empty('No creators in this category yet.'):'');
+  }
 }
 
 /* ═══════════ RAFFLES ═══════════ */
 let activeRaffle=null,qty=5;
+function prizePanel(){
+  return (store.prizes||[]).map(x=>{
+    const by=x.claim_by?new Date(x.claim_by).toLocaleDateString():'';
+    const msg=x.status==='needs address'?`<b>🏆 You won ${esc(x.prize)}!</b><br><span style="font-size:12.5px;color:var(--muted)">Add your UK delivery address${by?' by '+by:''} so we can send it.</span><br><button class="abtn ok" style="margin-top:8px" onclick="openPrize('${x.raffle_id}')">Add delivery address</button>`
+      :x.status==='pending'?`<b>🏆 ${esc(x.prize)}</b><br><span style="font-size:12.5px;color:var(--muted)">Address received — we will post it soon. <a href="#" onclick="openPrize('${x.raffle_id}');return false" style="color:var(--accent-2)">Edit address</a></span>`
+      :`<b>📦 ${esc(x.prize)}</b><br><span style="font-size:12.5px;color:var(--muted)">Shipped — look out for it in the post!</span>`;
+    return `<div class="raffle-card" style="margin-bottom:12px">${msg}</div>`; }).join('');
+}
+function freeBtn(r){
+  const f=store.freeStatus||{};
+  if((f.entered||[]).includes(r.id)) return '<button class="enter-btn" disabled style="opacity:.7">You are entered ✓</button>';
+  if(f.eligible) return `<button class="enter-btn" onclick="claimFree('${r.id}')">🎁 Enter free</button>`;
+  return '<p style="font-size:12.5px;color:var(--muted);text-align:center">Free giveaway — open to members who join through a giveaway link.</p>';
+}
 function renderRaffles(){
-  document.getElementById('raffleList').innerHTML=store.raffles.length?store.raffles.map(r=>{
+  document.getElementById('raffleList').innerHTML=prizePanel()+(store.raffles.length?store.raffles.map(r=>{
     const left=Math.max(0,r.ends-Date.now()), d=Math.floor(left/864e5), h=Math.floor(left%864e5/36e5), m=Math.floor(left%36e5/6e4), s=Math.floor(left%6e4/1e3);
     return `<div class="raffle-card">
-    <div class="raffle-top"><div><h3>${esc(r.title)}</h3><span style="font-size:12px;color:var(--muted)">hosted by ${esc(r.host)}</span></div><span class="prize">${esc(r.prize)}</span></div>
+    <div class="raffle-top"><div><h3>${esc(r.title)}</h3><span style="font-size:12px;color:var(--muted)">hosted by ${esc(r.host)}${r.free?' · FREE giveaway':''}</span></div><span class="prize">${esc(r.prize)}</span></div>
     <div class="countdown">
       <div class="cd-unit"><b>${String(d).padStart(2,'0')}</b><span>days</span></div>
       <div class="cd-unit"><b>${String(h).padStart(2,'0')}</b><span>hrs</span></div>
       <div class="cd-unit"><b>${String(m).padStart(2,'0')}</b><span>min</span></div>
       <div class="cd-unit"><b>${String(s).padStart(2,'0')}</b><span>sec</span></div></div>
-    <div class="raffle-meta"><span>🎟️ ${r.entries.toLocaleString()} entries</span><span>💵 ${$$(r.price)} / entry</span><span>👥 ${r.players.toLocaleString()} players</span></div>
-    <button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries — ${$$(r.price)} each</button></div>`;
-  }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No raffles running right now.</p>';
+    <div class="raffle-meta"><span>🎟️ ${r.entries.toLocaleString()} entries</span><span>${r.free?'🎁 Free entry':'💵 '+$$(r.price)+' / entry'}</span><span>👥 ${r.players.toLocaleString()} players</span></div>
+    ${r.free?freeBtn(r):`<button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries — ${$$(r.price)} each</button>`}</div>`;
+  }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No raffles running right now.</p>');
   if(store.raffleResults.length) document.getElementById('raffleList').innerHTML+=`<div class="section-title" style="padding-top:8px">Recent winners</div><div class="list-card">${
     store.raffleResults.map(w=>`<div class="row" style="cursor:default"><div class="r-ic">🏆</div><div style="flex:1;min-width:0"><b>@${esc(w.winner_username)}</b> won ${esc(w.prize)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(w.title)} · ${Number(w.total_tickets)} tickets · ${w.hash_ok?'seed verified ✓':'seed mismatch ⚠'}</span></div></div>`).join('')}</div>`;
+}
+async function claimFree(id){
+  const r=store.raffles.find(x=>x.id===id); if(!r) return;
+  closeModal('freeModal'); toast('Entering…');
+  if(await rpc('claim_free_entry',{p_raffle:id})){ toast('You are in the draw for '+r.prize+' 🎁 Good luck!'); await settled(); }
+}
+function showFreeWelcome(){
+  const f=store.freeStatus||{}; if(freeShown||!f.eligible) return;
+  const open=store.raffles.filter(r=>r.free&&!(f.entered||[]).includes(r.id)); if(!open.length) return;
+  freeShown=true;
+  document.getElementById('freeList').innerHTML=open.map(r=>`<div class="list-card" style="margin:0 0 10px"><div class="row" style="cursor:default"><div class="r-ic">🎁</div><div style="flex:1;min-width:0"><b>${esc(r.prize)}</b><br><span style="font-size:12px;color:var(--muted)">${esc(r.title)}</span></div><button class="abtn ok" onclick="claimFree('${r.id}')">Enter</button></div></div>`).join('');
+  openModal('freeModal');
+}
+let prizeRaffle=null;
+function openPrize(id){ prizeRaffle=id; ['pzName','pzL1','pzL2','pzCity','pzPost','pzPhone'].forEach(k=>document.getElementById(k).value=''); document.getElementById('pzErr').textContent=''; openModal('prizeModal'); }
+async function savePrize(){
+  const v=k=>document.getElementById(k).value, err=document.getElementById('pzErr'); err.textContent='';
+  const {error}=await sb.rpc('submit_prize_address',{p_raffle:prizeRaffle,p_name:v('pzName'),p_line1:v('pzL1'),p_line2:v('pzL2'),p_city:v('pzCity'),p_postcode:v('pzPost'),p_phone:v('pzPhone')||null});
+  if(error) return err.textContent=friendly(error.message);
+  closeModal('prizeModal'); toast('Address saved 📦'); await settled();
 }
 setInterval(()=>{ if(!document.getElementById('page-raffles').classList.contains('hidden')&&store.session) renderRaffles(); },1000);
 function openRaffle(id){ activeRaffle=store.raffles.find(r=>r.id===id); qty=5;
@@ -1417,6 +1623,7 @@ function openEditProfile(){
   const u=me();
   document.getElementById('epName').value=u.name; document.getElementById('epBio').value=u.bio||'';
   document.getElementById('epAvatar').value=''; document.getElementById('epCover').value='';
+  document.getElementById('epCatWrap').classList.toggle('hidden',u.role!=='creator'); document.getElementById('epCat').value=u.category||'';
   const av=document.getElementById('epAvPrev'); av.className='av '+u.av; av.innerHTML=avInner(u);
   document.getElementById('epCoverPrev').style.backgroundImage=u.coverUrl?`url('${u.coverUrl}')`:'none';
   openModal('editProfileModal');
@@ -1434,6 +1641,7 @@ async function saveProfile(){
   btn.disabled=true; toast('Saving…');
   try{
     const patch={display_name:name,bio:bio||null}, old=[];
+    if(u.role==='creator') patch.category=document.getElementById('epCat').value||null;
     const up=async(file,w,h,kind)=>{
       const blob=await imgToBlob(file,w,h), path=`${u.id}/${kind}-${Date.now()}.jpg`;
       const {error}=await sb.storage.from('public-media').upload(path,blob,{contentType:'image/jpeg'}); if(error) throw new Error(error.message);
@@ -1466,10 +1674,10 @@ let currentProfile=null;
 function openProfile(cid){ currentProfile=cid; go('profile'); }
 function rerender(){
   updateWallet();
-  const vis=['home','explore','raffles','messages','studio','me','profile','admin'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
+  const vis=['home','explore','raffles','messages','studio','me','profile','admin','notifs'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
   if(vis==='home'){renderStories();renderFeed()} else if(vis==='explore')renderExplore();
   else if(vis==='raffles')renderRaffles(); else if(vis==='messages'){ if(!document.getElementById('threads-view').classList.contains('hidden'))renderThreads(); }
-  else if(vis==='studio')renderStudio(); else if(vis==='me')renderMe(); else if(vis==='profile')renderProfile();
+  else if(vis==='studio')renderStudio(); else if(vis==='notifs'){} else if(vis==='me')renderMe(); else if(vis==='profile')renderProfile();
 }
 const refresh=rerender;
 function shareLink(un){ return location.href.split('#')[0]+'#'+un; }
@@ -1522,6 +1730,7 @@ function renderProfile(){
       ${(()=>{ const l=store.live.find(x=>x.creator_id===c.id); return l&&!isMe?`<button class="enter-btn" style="margin:2px 0 10px;background:var(--live)" onclick="openLive('${l.id}')">● LIVE now — tap to join</button>`:''; })()}
       ${!isMe&&c.role==='creator'?`
       <div style="display:flex;gap:10px;width:100%;padding:2px 4px 4px">
+        <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text);flex:none;padding:0 16px" onclick="toggleFollow('${c.id}')">${store.following.has(c.id)?'Following ✓':'Follow'}</button>
         <button class="primary" style="margin:0" onclick="subscribe('${c.id}')">${subbed?(store.subCanceled[c.id]?'Ends '+new Date(store.subEnds[c.id]).toLocaleDateString():'Subscribed ✓'):'Subscribe '+$$(c.subPrice)+'/mo'}</button>
         <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text)" onclick="msgFromProfile('${c.id}')">Message</button>
       </div>`:''}
@@ -1563,7 +1772,7 @@ async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}
 const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  const tabs=[['reports','Reports'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  const tabs=[['reports','Reports'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['giveaways','Giveaways'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -1572,7 +1781,7 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({reports:admReports,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({reports:admReports,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,audit:admAudit})[adminTab](); }
 
 /* --- reports queue --- */
 async function admReports(){
@@ -1747,7 +1956,7 @@ async function admPaid(id){
   const {error}=await admCall('admin_mark_payout_paid',{p_id:id}); if(!error){ toast('Marked paid'); admLoad(); }
 }
 async function admRaffles(){
-  const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,closes_at,winner_entry_id').order('created_at',{ascending:false}).limit(20);
+  const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,is_free,closes_at,winner_entry_id').order('created_at',{ascending:false}).limit(20);
   if(error) return toast(error.message);
   const totals=await Promise.all(rs.map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
   const results=await Promise.all(rs.map(r=>r.winner_entry_id?sb.rpc('raffle_result',{p_raffle:r.id}):Promise.resolve({data:null})));
@@ -1760,7 +1969,7 @@ async function admRaffles(){
      <div class="field"><label>Open for (hours)</label><input id="rfHours" type="number" min="1" max="1440" value="72"></div>
      <button class="primary" onclick="admCreateRaffle()">Create raffle</button></div>
    ${rs.map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, res=(results[i].data||[])[0], closed=new Date(r.closes_at)<new Date();
-     return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${$$(r.entry_price_cents)}/entry</span>
+     return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${r.is_free?'free':$$(r.entry_price_cents)+'/entry'}</span>
        <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} tickets · ${Number(t.players||0)} players · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
        ${res?`<div style="font-size:13px">🏆 <b>@${esc(res.winner_username)}</b> · seed ${res.hash_ok?'verified ✓':'MISMATCH ⚠'}</div>`
          :(closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">Draw winner</button>`:'')}</div>`; }).join('')}</div>`;
@@ -1774,6 +1983,59 @@ async function admCreateRaffle(){
 async function admDraw(id){
   if(!confirm('Draw the winner now? This cannot be undone.')) return;
   const {error}=await admCall('admin_draw_raffle',{p_raffle:id}); if(!error){ toast('Winner drawn'); admLoad(); }
+}
+/* --- giveaways: campaign links, free raffles, prize delivery (admin only) --- */
+const campaignLink=code=>location.origin+location.pathname+'?campaign='+encodeURIComponent(code);
+async function admGiveaways(){
+  const [cs,pc,rs]=await Promise.all([admCall('admin_list_campaigns'),admCall('admin_list_prize_claims'),sb.from('raffles').select('id,title,prize,closes_at,winner_entry_id').eq('is_free',true).order('created_at',{ascending:false}).limit(20)]);
+  if(cs.error||pc.error) return;
+  const totals=await Promise.all((rs.data||[]).map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
+  admBody().innerHTML=`<div class="admin-pad">
+   <div class="chart-card"><h4>1. Create a free giveaway</h4>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">One prize per giveaway. Every member who joined through a link can enter each giveaway once, and the winner is drawn fairly (published seed hash, revealed after).</p>
+     <div class="field"><label>Title</label><input id="fgTitle" maxlength="120" placeholder="Win a mystery box"></div>
+     <div class="field"><label>Prize</label><input id="fgPrize" maxlength="120" placeholder="e.g. Branded hoodie"></div>
+     <div class="field"><label>Open for (days)</label><input id="fgDays" type="number" min="1" max="90" value="14"></div>
+     <button class="primary" onclick="admCreateFree()">Create giveaway</button></div>
+   <div class="chart-card"><h4>2. Create a sign-up link</h4>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">New people who join through the link and confirm their email can enter every free giveaway, one entry each. It works even while the beta is invite-only.</p>
+     <div class="field"><label>Campaign name</label><input id="cpName" maxlength="80" placeholder="Autumn giveaway"></div>
+     <div class="field"><label>Link code (letters, numbers, dashes)</label><input id="cpCode" maxlength="24" placeholder="AUTUMN" autocapitalize="characters"></div>
+     <div class="field"><label>Maximum sign-ups</label><input id="cpMax" type="number" min="1" max="100000" value="500"></div>
+     <div class="field"><label>Ends after (days, blank = never)</label><input id="cpDays" type="number" min="1" max="365" placeholder="never"></div>
+     <button class="primary" onclick="admCreateCampaign()">Create link</button></div>
+   ${cs.data.map(c=>`<div class="chart-card" ${!c.active?'style="opacity:.6"':''}>
+     <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(c.name)}</b><span style="font-size:12px;color:var(--muted)">${Number(c.signups)}/${c.max_signups} joined · ${Number(c.entries_claimed)} entered</span></div>
+     <div style="font-family:monospace;font-size:12px;color:var(--muted);margin:4px 0;word-break:break-all">${esc(campaignLink(c.code))}</div>
+     <button class="abtn ok" onclick="copyText(campaignLink('${esc(c.code)}'))">Copy link</button><button class="abtn ${c.active?'danger':''}" onclick="admCampaignActive('${c.id}',${!c.active})">${c.active?'Pause':'Resume'}</button></div>`).join('')}
+   <div class="section-title" style="padding:12px 0 6px">Free giveaways</div>
+   ${(rs.data||[]).map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, closed=new Date(r.closes_at)<new Date();
+     return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)}</span>
+      <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} entries · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
+      ${!r.winner_entry_id&&closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">Draw winner</button>`:''}</div>`; }).join('')||admEmpty('No free giveaways yet.')}
+   <div class="section-title" style="padding:12px 0 6px">Winners to post to</div>
+   ${pc.data.map(c=>`<div class="chart-card"><b>${esc(c.prize)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(c.title)} · won by @${esc(c.winner)}</span>
+     <div style="font-size:12.5px;margin:6px 0;line-height:1.5">${c.full_name?`${esc(c.full_name)}<br>${esc(c.line1)}${c.line2?', '+esc(c.line2):''}<br>${esc(c.city)}, ${esc(c.postcode)}${c.phone?'<br>'+esc(c.phone):''}`:'<span style="color:var(--muted)">No address yet'+(c.claim_by?' — claim by '+new Date(c.claim_by).toLocaleDateString():'')+'</span>'}</div>
+     <div style="font-size:12px;color:var(--muted)">Status: ${esc(c.status)}${c.tracking?' · '+esc(c.tracking):''}</div>
+     ${c.status==='pending'?`<button class="abtn ok" onclick="admShipPrize('${c.raffle_id}')">Mark as posted</button>`:''}
+     ${c.status!=='shipped'?`<button class="abtn danger" onclick="admRedraw('${c.raffle_id}')">Redraw (no reply / fake)</button>`:''}</div>`).join('')||admEmpty('No winners yet.')}
+  </div>`;
+}
+async function admCreateFree(){
+  const days=parseInt(document.getElementById('fgDays').value,10); if(isNaN(days)) return toast('Enter how many days it stays open');
+  const {error}=await admCall('admin_create_free_raffle',{p_title:document.getElementById('fgTitle').value,p_prize:document.getElementById('fgPrize').value,p_hours:days*24});
+  if(!error){ toast('Giveaway created — it is live now'); admLoad(); }
+}
+async function admCreateCampaign(){
+  const max=parseInt(document.getElementById('cpMax').value,10), d=document.getElementById('cpDays').value;
+  const {error}=await admCall('admin_create_campaign',{p_name:document.getElementById('cpName').value,p_code:document.getElementById('cpCode').value,p_max_signups:max,p_entries:1,p_days:d?parseInt(d,10):null});
+  if(!error){ toast('Link created — copy it below'); admLoad(); }
+}
+async function admCampaignActive(id,on){ const {error}=await admCall('admin_set_campaign_active',{p_id:id,p_on:on}); if(!error){ toast(on?'Campaign resumed':'Campaign paused'); admLoad(); } }
+async function admShipPrize(id){ const t=prompt('Tracking number (optional):',''); if(t===null) return; const {error}=await admCall('admin_mark_prize_shipped',{p_raffle:id,p_tracking:t.trim()||null}); if(!error){ toast('Marked as posted — the winner has been told'); admLoad(); } }
+async function admRedraw(id){
+  const why=prompt('Redraw the winner? Say why (e.g. "no reply in 14 days"):',''); if(!why) return;
+  const {error}=await admCall('admin_redraw_raffle',{p_raffle:id,p_reason:why}); if(!error){ toast('New winner drawn and notified'); admLoad(); }
 }
 async function admAudit(){
   const {data,error}=await admCall('admin_list_actions',{p_limit:100}); if(error) return;
