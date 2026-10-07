@@ -1,0 +1,18 @@
+<!DOCTYPE html><html lang="en"><head><title>Thank you</title><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap"><link rel="stylesheet" href="style.css"></head><body>
+<main>
+  <h1>Thank you!</h1>
+  <div class="card" id="receipt"><p class="muted">Checking your payment…</p></div>
+  <a class="btn" href="storefront.html">Back to the storefront</a>
+</main>
+<script src="app.js"></script>
+<script>
+  nav('storefront.html');
+  // Read the result from Stripe (via our server) instead of trusting the URL alone.
+  const id = new URLSearchParams(location.search).get('session_id');
+  const box = document.getElementById('receipt');
+  if (!id) box.textContent = 'No payment found.';
+  else api('/api/checkout/' + encodeURIComponent(id)).then((s) => {
+    box.replaceChildren(el('b', {}, s.paymentStatus === 'paid' ? 'Payment received' : 'Payment ' + s.paymentStatus),
+      el('div', { class: 'price' }, money(s.amountTotal, s.currency)));
+  }).catch((err) => { box.textContent = err.message; });
+</script></body></html>

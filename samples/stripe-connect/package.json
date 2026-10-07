@@ -1,0 +1,14 @@
+{
+  "name": "overvibez-stripe-connect-sample",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sample Stripe Connect integration: onboard connected accounts, create products, sell through a storefront with destination charges.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "dotenv": "^18.0.6",
+    "express": "^5.2.1",
+    "stripe": "^23.0.0"
+  }
+}

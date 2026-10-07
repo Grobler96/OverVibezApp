@@ -1,0 +1,64 @@
+<!DOCTYPE html><html lang="en"><head><title>Products</title><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap"><link rel="stylesheet" href="style.css"></head><body>
+<main>
+  <h1>Products</h1>
+  <p class="lead">Products live on your platform account. Each one is linked to the connected account that earns from it.</p>
+  <div class="card">
+    <h2>Create a product</h2>
+    <form id="productForm">
+      <label for="accountId">Seller (connected account)</label><select id="accountId" required></select>
+      <label for="name">Product name</label><input id="name" required maxlength="120" placeholder="Digital print">
+      <label for="description">Description (optional)</label><textarea id="description" rows="2" maxlength="500"></textarea>
+      <label for="price">Price</label><input id="price" type="number" min="1" step="0.01" required placeholder="4.99">
+      <label for="currency">Currency (three letters)</label><input id="currency" maxlength="3" value="gbp">
+      <button id="saveBtn" type="submit">Create product</button>
+      <div class="msg" id="productMsg"></div>
+    </form>
+  </div>
+  <h2 style="margin-top:22px">Your products</h2>
+  <div id="products" class="grid"></div>
+</main>
+<script src="app.js"></script>
+<script>
+  nav('products.html');
+  let accountNames = {};
+
+  // Fill the seller drop-down from the live account list; pre-select the account saved in this browser.
+  async function loadAccounts() {
+    const sel = document.getElementById('accountId');
+    const { accounts } = await api('/api/accounts');
+    accountNames = Object.fromEntries(accounts.map((a) => [a.id, a.displayName || a.id]));
+    sel.replaceChildren(...accounts.map((a) => el('option', { value: a.id }, (a.displayName || a.id) + (a.readyToReceivePayments ? '' : ' (not onboarded yet)'))));
+    if (mine.get()) sel.value = mine.get();
+    if (!accounts.length) sel.replaceChildren(el('option', { value: '' }, 'Create a connected account first'));
+  }
+
+  async function loadProducts() {
+    const box = document.getElementById('products');
+    const { products } = await api('/api/products');
+    box.replaceChildren(...(products.length ? products.map((p) => el('div', { class: 'card' },
+      el('b', {}, p.name), el('div', { class: 'muted' }, p.description || ''),
+      el('div', { class: 'price' }, money(p.unitAmount, p.currency)),
+      el('div', { class: 'muted' }, 'Sold by ' + (accountNames[p.accountId] || p.accountId || 'unknown')))) : [el('p', { class: 'muted' }, 'No products yet.')]));
+  }
+
+  document.getElementById('productForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('productMsg'), btn = document.getElementById('saveBtn');
+    btn.disabled = true; say(msg, 'Saving…');
+    try {
+      await api('/api/products', {
+        accountId: document.getElementById('accountId').value,
+        name: document.getElementById('name').value,
+        description: document.getElementById('description').value,
+        // The form takes 4.99; Stripe wants whole pence/cents (499). Round to avoid 4.99*100 = 498.99999.
+        priceInCents: Math.round(parseFloat(document.getElementById('price').value) * 100),
+        currency: document.getElementById('currency').value,
+      });
+      say(msg, 'Product created.', 'good'); e.target.reset(); document.getElementById('currency').value = 'gbp';
+      await loadAccounts(); await loadProducts();
+    } catch (err) { say(msg, err.message, 'err'); }
+    btn.disabled = false;
+  });
+
+  loadAccounts().then(loadProducts).catch((err) => say(document.getElementById('productMsg'), err.message, 'err'));
+</script></body></html>
