@@ -813,7 +813,7 @@ async function hydrate(){
   const [mine,profs,posts,likes,unl,subs,raf,fol,tx]=await Promise.all([
     sb.rpc('get_my_profile'),
     sb.from('profiles').select(PUB_COLS).limit(500),
-    sb.from('posts').select('*').order('created_at',{ascending:false}).limit(100),
+    sb.from('posts').select('*').order('created_at',{ascending:false}).limit(200),
     sb.from('likes').select('post_id').eq('user_id',uid),
     sb.from('post_unlocks').select('post_id').eq('user_id',uid),
     sb.from('subscriptions').select('creator_id,status,current_period_end').eq('subscriber_id',uid),
@@ -837,7 +837,7 @@ async function hydrate(){
     store.subs[uid+x.creator_id]=true; store.subEnds[x.creator_id]=x.current_period_end; if(x.status==='canceled') store.subCanceled[x.creator_id]=true; }});
   const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
   store.posts=(posts.data||[]).map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
-    paid:p.is_paid,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),
+    paid:p.is_paid,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),at:p.created_at,
     edited:!!p.edited_at,mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
   // media URLs: free media is public; paid media needs a signed URL, issued only if storage RLS agrees
   const paidPaths=[];
@@ -1437,12 +1437,65 @@ function liveBanners(){
       <div style="flex:1;min-width:0"><b style="font-size:14px">${esc(c.username)} is live</b><div style="font-size:12px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.title)} · ${l.entry_price_cents?$$(l.entry_price_cents)+' entry':'Free'} · tap to join</div></div>
       <span class="live-tag" style="position:static;transform:none">LIVE</span></div>`; }).join('');
 }
-function feedTab(){ try{ return localStorage.getItem('ov_feed')==='following'?'following':'all'; }catch(e){ return 'all'; } }
+/*RANK-START*/
+/* Feed ranking. Plain, explainable maths — no black box:
+   score = engagement x freshness x closeness, then a spread-out pass so one creator can't fill the screen.
+   - engagement: log(2 + likes + 2 x comments), so a viral post helps but can't bury everything else
+   - freshness: halves every 36 hours (never below 4%), so new posts get seen and old hits fade
+   - closeness: x3 creators you subscribe to, x2 creators you follow, up to x1.5 for creators whose posts you have liked,
+                x1.2 if they are live now, x1.25 boost for creators who joined in the last 14 days and have under 25 followers */
+const RANK={halfLifeH:36,floor:.04,spread:.6};
+function ageHours(at,now){ return Math.max(0,((now||Date.now())-new Date(at).getTime())/36e5); }
+function rankFeed(posts,ctx){
+  const now=ctx.now||Date.now(), placed=new Map(), out=[];
+  const pool=posts.map(p=>{
+    const fresh=Math.max(RANK.floor,Math.pow(.5,ageHours(p.at,now)/RANK.halfLifeH));
+    let aff=ctx.subscribed.has(p.by)?3:ctx.following.has(p.by)?2:1;
+    const lk=ctx.liked.get(p.by)||0; if(lk) aff*=1+Math.min(.5,.15*lk);
+    if(ctx.live.has(p.by)) aff*=1.2;
+    const u=ctx.users.get(p.by);
+    if(u&&u.createdAt&&(now-new Date(u.createdAt).getTime())/864e5<14&&(u.followers||0)<25) aff*=1.25;
+    return {p,score:Math.log(2+(p.likes||0)+2*(p.comments||0))*fresh*aff};
+  });
+  while(pool.length){
+    let bi=0,bs=-1;
+    for(let i=0;i<pool.length;i++){ const sc=pool[i].score*Math.pow(RANK.spread,placed.get(pool[i].p.by)||0); if(sc>bs){ bs=sc; bi=i; } }
+    const x=pool.splice(bi,1)[0]; placed.set(x.p.by,(placed.get(x.p.by)||0)+1); out.push(x.p);
+  }
+  return out;
+}
+/* Trending = how fast a post is gaining attention, not just its total likes (older posts decay). */
+function trendScore(p,now){ return ((p.likes||0)+2*(p.comments||0)+1)/Math.pow(ageHours(p.at,now)+2,1.4); }
+function trendingPosts(posts,now,n){ return posts.slice().sort((a,b)=>trendScore(b,now)-trendScore(a,now)).slice(0,n); }
+function trendingCreators(creators,posts,now,n){
+  const s=new Map(); posts.forEach(p=>s.set(p.by,(s.get(p.by)||0)+trendScore(p,now)));
+  const sc=c=>(s.get(c.id)||0)+.02*(c.followers||0);
+  return creators.slice().sort((a,b)=>sc(b)-sc(a)).slice(0,n);
+}
+/*RANK-END*/
+function feedCtx(){
+  const u=me(), liked=new Map();
+  store.posts.forEach(p=>{ if(store.likes[u.id+p.id]) liked.set(p.by,(liked.get(p.by)||0)+1); });
+  return {now:Date.now(),following:store.following,liked,live:new Set(store.live.map(l=>l.creator_id)),
+    subscribed:new Set(store.users.filter(c=>store.subs[u.id+c.id]).map(c=>c.id)),users:new Map(store.users.map(c=>[c.id,c]))};
+}
+let feedCache={key:'',ids:[]};
+function orderedPosts(tab){
+  const u=me(), mineOrFollowed=p=>p.by===u.id||store.following.has(p.by)||store.subs[u.id+p.by];
+  if(tab==='new') return store.posts;
+  if(tab==='following') return store.posts.filter(mineOrFollowed);
+  // keep the order steady while you scroll and like things; it re-ranks when posts change, the tab changes or you reload
+  const key=tab+'|'+store.posts.length+'|'+(store.posts[0]?store.posts[0].id:'')+'|'+store.blocks.size+'|'+store.following.size;
+  if(feedCache.key!==key){ feedCache={key,ids:rankFeed(store.posts,feedCtx()).map(p=>p.id)}; }
+  const byId=new Map(store.posts.map(p=>[p.id,p]));
+  return feedCache.ids.map(id=>byId.get(id)).filter(Boolean);
+}
+function feedTab(){ try{ const t=localStorage.getItem('ov_feed'); return t==='following'||t==='new'?t:'foryou'; }catch(e){ return 'foryou'; } }
 function setFeedTab(t){ try{ localStorage.setItem('ov_feed',t); }catch(e){} renderFeed(); }
 function renderFeed(){
   const u=me(), tab=feedTab();
-  const posts=tab==='following'?store.posts.filter(p=>p.by===u.id||store.following.has(p.by)||store.subs[u.id+p.by]):store.posts;
-  const tabs=`<div class="chiprow" style="padding-top:2px"><button class="chip ${tab==='all'?'on':''}" onclick="setFeedTab('all')">Everyone</button><button class="chip ${tab==='following'?'on':''}" onclick="setFeedTab('following')">Following</button></div>`;
+  const posts=orderedPosts(tab);
+  const tabs=`<div class="chiprow" style="padding-top:2px"><button class="chip ${tab==='foryou'?'on':''}" onclick="setFeedTab('foryou')">For you</button><button class="chip ${tab==='new'?'on':''}" onclick="setFeedTab('new')">Newest</button><button class="chip ${tab==='following'?'on':''}" onclick="setFeedTab('following')">Following</button></div>`;
   const empty=tab==='following'
     ?'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">Nothing here yet.<br>Follow creators to see their posts in this feed.<br><button class="abtn ok" style="margin-top:10px" onclick="go(\'explore\')">Find creators</button></p>'
     :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No drops yet.<br>Creators will appear here as they publish.</p>';
@@ -1634,8 +1687,8 @@ async function renderExplore(reset){
     const list=creators.slice().sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,15);
     body.innerHTML=list.length?`<div class="list-card">${list.map(personCard).join('')}</div>`:empty('No creators yet.');
   } else if(exploreTab==='trending'){
-    const top=creators.slice().sort((a,b)=>b.followers-a.followers).slice(0,5);
-    const posts=store.posts.slice().sort((a,b)=>b.likes-a.likes).slice(0,12);
+    const now=Date.now(), top=trendingCreators(creators,store.posts,now,5);
+    const posts=trendingPosts(store.posts,now,12);
     body.innerHTML=(top.length?`<div class="section-title" style="padding-top:4px">Top creators</div><div class="list-card">${top.map(personCard).join('')}</div>`:'')
       +(posts.length?`<div class="section-title" style="padding-top:4px">Trending posts</div><div class="explore-grid">${posts.map(tileHtml).join('')}</div>`:empty('Nothing to explore yet.'));
   } else {
