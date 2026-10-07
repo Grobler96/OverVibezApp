@@ -26,7 +26,7 @@ What is built is live and tested. What is left is mostly **accounts and paperwor
 - [ ] Create a LiveKit Cloud project; set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` as secrets.
 
 ## 5. Legal and compliance (needs a solicitor)
-- [ ] Have Terms, Privacy and Guidelines reviewed; fill the bracketed company details.
+- [x] Draft banners removed; processors named (Supabase, Vercel, Stripe, LiveKit, Resend). Still recommended: a solicitor reviews Terms, Privacy and the giveaway rules, and the registered address/company number gets added once available.
 - [ ] Register with the ICO (data protection fee).
 - [x] Raffles are free-entry only (paid raffles are switched off in the database). Get gambling-law advice before ever turning paid raffles back on.
 - [ ] Check Online Safety Act duties for adult content, and your age/identity verification provider.
