@@ -346,7 +346,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div style="display:grid;gap:12px">
       <div class="chart-card" style="margin:0"><b>✦ For creators</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Post free and paid drops, sell subscriptions, go live with paid tickets, and keep <b style="color:var(--text)">85%</b> of everything you earn. Track it all in your Studio.</p></div>
       <div class="chart-card" style="margin:0"><b>♥ For followers</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Follow the creators you love, unlock exclusive posts, tip, chat and join live streams — your wallet, your control.</p></div>
-      <div class="chart-card" style="margin:0"><b>🎁 Free prize draws</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Join through a giveaway link and enter every free draw — no purchase necessary. Winners are picked by a method anyone can verify. UK, 18+.</p></div>
+      <div class="chart-card" style="margin:0"><b>🎁 Free prize draws</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Every member can enter every free draw — no purchase necessary. Winners are picked by a method anyone can verify. UK, 18+.</p></div>
       <div class="chart-card" style="margin:0"><b>🛡️ Adults only, kept safe</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">18+ only with ID checks, block and mute tools, a report button on everything, and a real appeals process.</p></div>
     </div>
     <p style="color:var(--muted);font-size:12.5px;text-align:center;margin:26px 0 0;line-height:1.7"><a href="terms.html" style="color:var(--accent-2)">Terms</a> · <a href="privacy.html" style="color:var(--accent-2)">Privacy</a> · <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a></p>
@@ -1100,6 +1100,7 @@ const notifInfo=n=>{
     case 'won': return ['🏆','You won <b>'+esc(d.prize||'a prize')+'</b> in “'+esc(d.title||'a giveaway')+'”!'+(d.free?' Add your UK delivery address in Raffles.':'')];
     case 'prize_shipped': return ['📦','Your prize is on its way'+(d.tracking?' — tracking '+esc(d.tracking):'')];
     case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')+(['post','comment'].includes(d.kind)?' — tap to appeal':'')];
+    case 'new_giveaway': return ['🎁','New free giveaway: <b>'+esc(d.prize||'a prize')+'</b> — tap to enter'];
     case 'refunded': return ['↩️',d.role==='payee'?'A sale was refunded — '+$$(d.cents)+' was taken from your earnings'+(d.reason?' ('+esc(d.reason)+')':''):'You were refunded '+$$(d.cents)+' to your wallet'+(d.reason?' ('+esc(d.reason)+')':'')];
     case 'topup_reversed': return ['⚠️','A top-up of '+$$(d.cents)+' was reversed ('+esc(d.reason||'refund')+')'+(d.owed>0?'. You now owe '+$$(d.owed)+', taken from your next top-up':'')];
     case 'topup_restored': return ['✅','Good news — '+$$(d.cents)+' was put back in your wallet'];
@@ -1126,7 +1127,7 @@ function notifOpen(i){
   if(n.type==='comment'&&n.ref_id&&store.posts.some(p=>p.id===n.ref_id)) return openComments(n.ref_id);
   if(n.type==='payout_paid') return go('studio');
   if(n.type==='removed'&&n.ref_id&&n.data&&['post','comment'].includes(n.data.kind)) return openAppeal(n.data.kind,n.ref_id);
-  if(n.type==='won'||n.type==='prize_shipped') return go('raffles');
+  if(n.type==='won'||n.type==='prize_shipped'||n.type==='new_giveaway') return go('raffles');
   if(n.actor_id&&user(n.actor_id)) return openProfile(n.actor_id);
 }
 
@@ -1474,7 +1475,7 @@ function freeBtn(r){
   const f=store.freeStatus||{};
   if((f.entered||[]).includes(r.id)) return '<button class="enter-btn" disabled style="opacity:.7">You are entered ✓</button>';
   if(f.eligible) return `<button class="enter-btn" onclick="claimFree('${r.id}')">🎁 Enter free</button>`;
-  return '<p style="font-size:12.5px;color:var(--muted);text-align:center">Free giveaway — open to members who join through a giveaway link.</p>';
+  return '<p style="font-size:12.5px;color:var(--muted);text-align:center">Confirm your email address to enter free giveaways.</p>';
 }
 function renderRaffles(){
   document.getElementById('raffleList').innerHTML=prizePanel()+(store.raffles.length?store.raffles.map(r=>{
@@ -1498,7 +1499,7 @@ async function claimFree(id){
   if(await rpc('claim_free_entry',{p_raffle:id})){ toast('You are in the draw for '+r.prize+' 🎁 Good luck!'); await settled(); }
 }
 function showFreeWelcome(){
-  const f=store.freeStatus||{}; if(freeShown||!f.eligible) return;
+  const f=store.freeStatus||{}; if(freeShown||!f.eligible||!f.campaign) return;      // the welcome sheet is for people who joined through a giveaway link
   const open=store.raffles.filter(r=>r.free&&!(f.entered||[]).includes(r.id)); if(!open.length) return;
   freeShown=true;
   document.getElementById('freeList').innerHTML=open.map(r=>`<div class="list-card" style="margin:0 0 10px"><div class="row" style="cursor:default"><div class="r-ic">🎁</div><div style="flex:1;min-width:0"><b>${esc(r.prize)}</b><br><span style="font-size:12px;color:var(--muted)">${esc(r.title)}</span></div><button class="abtn ok" onclick="claimFree('${r.id}')">Enter</button></div></div>`).join('');
@@ -2343,19 +2344,23 @@ async function admPaid(id){
   if(!confirm('Confirm you have sent this payout?')) return;
   const {error}=await admCall('admin_mark_payout_paid',{p_id:id}); if(!error){ toast('Marked paid'); admLoad(); }
 }
+const durField=(id,n,u)=>`<div class="field"><label>Open for</label><div style="display:flex;gap:8px"><input id="${id}N" type="number" min="1" max="999" value="${n}" style="flex:1"><select id="${id}U" style="flex:1;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none">${[['hours','Hours'],['days','Days'],['weeks','Weeks'],['months','Months']].map(([v,l])=>`<option value="${v}" ${v===u?'selected':''}>${l}</option>`).join('')}</select></div></div>`;
+function durHours(id){ const n=parseInt(document.getElementById(id+'N').value,10), u=document.getElementById(id+'U').value;
+  if(isNaN(n)||n<1) return null; const h=n*({hours:1,days:24,weeks:168,months:720}[u]||24); return h>24*366?-1:h; }
 async function admRaffles(){
   const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,is_free,closes_at,winner_entry_id').order('created_at',{ascending:false}).limit(20);
   if(error) return toast(error.message);
   const totals=await Promise.all(rs.map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
   const results=await Promise.all(rs.map(r=>r.winner_entry_id?sb.rpc('raffle_result',{p_raffle:r.id}):Promise.resolve({data:null})));
   admBody().innerHTML=`<div class="admin-pad">
-   <div class="chart-card"><h4>Create a raffle</h4>
+   <div class="chart-card"><h4>Create a raffle or free giveaway</h4>
      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">Paid prize draws are regulated as gambling or sweepstakes in many places. Check the rules for where your users live before running one.</p>
      <div class="field"><label>Title</label><input id="rfTitle" maxlength="120" placeholder="Creator Fund Drop"></div>
      <div class="field"><label>Prize</label><input id="rfPrize" maxlength="120" placeholder="£2,500"></div>
-     <div class="field"><label>Entry price (GBP)</label><input id="rfPrice" type="number" min="0.5" step="0.5" value="2.00"></div>
-     <div class="field"><label>Open for (hours)</label><input id="rfHours" type="number" min="1" max="1440" value="72"></div>
-     <button class="primary" onclick="admCreateRaffle()">Create raffle</button></div>
+     <div class="field"><label>Entry</label><select id="rfType" onchange="document.getElementById('rfPriceWrap').classList.toggle('hidden',this.value==='free')" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none"><option value="free">Free — every confirmed member can enter, no link needed</option><option value="paid">Paid — members buy entries from their wallet</option></select></div>
+     <div class="field hidden" id="rfPriceWrap"><label>Entry price (GBP)</label><input id="rfPrice" type="number" min="0.5" step="0.5" value="2.00"></div>
+     ${durField('rfDur',7,'days')}
+     <button class="primary" onclick="admCreateRaffle()">Create</button></div>
    ${rs.map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, res=(results[i].data||[])[0], closed=new Date(r.closes_at)<new Date();
      return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${r.is_free?'free':$$(r.entry_price_cents)+'/entry'}</span>
        <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} tickets · ${Number(t.players||0)} players · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
@@ -2363,9 +2368,15 @@ async function admRaffles(){
          :(closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">Draw winner</button>`:'')}</div>`; }).join('')}</div>`;
 }
 async function admCreateRaffle(){
-  const price=Math.round(parseFloat(document.getElementById('rfPrice').value)*100), hours=parseInt(document.getElementById('rfHours').value,10);
-  if(isNaN(price)||isNaN(hours)) return toast('Enter a price and duration');
-  const {error}=await admCall('admin_create_raffle',{p_title:document.getElementById('rfTitle').value,p_prize:document.getElementById('rfPrize').value,p_price_cents:price,p_hours:hours});
+  const hours=durHours('rfDur'); if(hours===null) return toast('Enter how long it stays open'); if(hours===-1) return toast('The longest a raffle can run is 12 months');
+  const title=document.getElementById('rfTitle').value, prize=document.getElementById('rfPrize').value;
+  if(document.getElementById('rfType').value==='free'){
+    const {error}=await admCall('admin_create_free_raffle',{p_title:title,p_prize:prize,p_hours:hours});
+    if(!error){ toast('Free giveaway created — every member has been told'); admLoad(); } return;
+  }
+  const price=Math.round(parseFloat(document.getElementById('rfPrice').value)*100);
+  if(isNaN(price)) return toast('Enter an entry price');
+  const {error}=await admCall('admin_create_raffle',{p_title:title,p_prize:prize,p_price_cents:price,p_hours:hours});
   if(!error){ toast('Raffle created — it is now live for users'); admLoad(); }
 }
 async function admDraw(id){
@@ -2395,13 +2406,13 @@ async function admGiveaways(){
   const totals=await Promise.all((rs.data||[]).map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
   admBody().innerHTML=`<div class="admin-pad">
    <div class="chart-card"><h4>1. Create a free giveaway</h4>
-     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">One prize per giveaway. Every member who joined through a link can enter each giveaway once, and the winner is drawn fairly (published seed hash, revealed after).</p>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">One prize per giveaway. Every confirmed member can enter each giveaway once (no link needed), they are notified when you post a new one, and the winner is drawn fairly (published seed hash, revealed after).</p>
      <div class="field"><label>Title</label><input id="fgTitle" maxlength="120" placeholder="Win a mystery box"></div>
      <div class="field"><label>Prize</label><input id="fgPrize" maxlength="120" placeholder="e.g. Branded hoodie"></div>
-     <div class="field"><label>Open for (days)</label><input id="fgDays" type="number" min="1" max="90" value="14"></div>
+     ${durField('fgDur',14,'days')}
      <button class="primary" onclick="admCreateFree()">Create giveaway</button></div>
    <div class="chart-card"><h4>2. Create a sign-up link</h4>
-     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">New people who join through the link and confirm their email can enter every free giveaway, one entry each. It works even while the beta is invite-only.</p>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">For bringing NEW people in: the link lets them sign up (even while sign-up is by invitation) and shows a free-giveaway welcome. Existing members don't need a link — they can enter any free giveaway from the Raffles page.</p>
      <div class="field"><label>Campaign name</label><input id="cpName" maxlength="80" placeholder="Autumn giveaway"></div>
      <div class="field"><label>Link code (letters, numbers, dashes)</label><input id="cpCode" maxlength="24" placeholder="AUTUMN" autocapitalize="characters"></div>
      <div class="field"><label>Maximum sign-ups</label><input id="cpMax" type="number" min="1" max="100000" value="500"></div>
@@ -2425,9 +2436,9 @@ async function admGiveaways(){
   </div>`;
 }
 async function admCreateFree(){
-  const days=parseInt(document.getElementById('fgDays').value,10); if(isNaN(days)) return toast('Enter how many days it stays open');
-  const {error}=await admCall('admin_create_free_raffle',{p_title:document.getElementById('fgTitle').value,p_prize:document.getElementById('fgPrize').value,p_hours:days*24});
-  if(!error){ toast('Giveaway created — it is live now'); admLoad(); }
+  const hours=durHours('fgDur'); if(hours===null) return toast('Enter how long it stays open'); if(hours===-1) return toast('The longest a giveaway can run is 12 months');
+  const {error}=await admCall('admin_create_free_raffle',{p_title:document.getElementById('fgTitle').value,p_prize:document.getElementById('fgPrize').value,p_hours:hours});
+  if(!error){ toast('Giveaway created — every member has been told'); admLoad(); }
 }
 async function admCreateCampaign(){
   const max=parseInt(document.getElementById('cpMax').value,10), d=document.getElementById('cpDays').value;
