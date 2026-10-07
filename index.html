@@ -718,6 +718,21 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   </div>
 </div>
 
+<div class="overlay" id="mfaModal" onclick="if(event.target===this&&mfaState.mode!=='login')closeModal('mfaModal')">
+  <div class="sheet">
+    <h3 id="mfaTitle">Two-step login</h3>
+    <p id="mfaSub" style="line-height:1.5"></p>
+    <div id="mfaQr" style="display:none;text-align:center;margin:6px 0 12px">
+      <img id="mfaQrImg" alt="QR code" style="width:180px;height:180px;background:#fff;padding:8px;border-radius:12px">
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Can't scan? Enter this key in your app:<br><code id="mfaSecret" style="word-break:break-all;user-select:all"></code></div>
+    </div>
+    <div class="field"><label>6-digit code</label><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456" onkeydown="if(event.key==='Enter')submitMfa()"></div>
+    <div class="err" id="mfaErr"></div>
+    <button class="primary" id="mfaBtn" onclick="submitMfa()">Continue</button>
+    <button class="ghost" id="mfaCancel" onclick="cancelMfa()">Cancel</button>
+  </div>
+</div>
+
 <div class="overlay" id="editProfileModal" onclick="if(event.target===this)closeModal('editProfileModal')">
   <div class="sheet" style="max-height:90vh;overflow-y:auto">
     <h3>Edit profile</h3>
@@ -994,16 +1009,72 @@ async function savePassword(){
   } finally { btn.disabled=false; }
 }
 async function logOut(){ if(sb) await sb.auth.signOut(); }
+/* ═══════════ TWO-STEP LOGIN (authenticator app) ═══════════ */
+let mfaState={mode:null,factorId:null,uid:null};
+const mfaErr=t=>{ document.getElementById('mfaErr').textContent=t||''; };
+async function mfaNeeded(){
+  try{ const {data}=await sb.auth.mfa.getAuthenticatorAssuranceLevel(); return !!(data&&data.nextLevel==='aal2'&&data.currentLevel!=='aal2'); }catch(e){ return false; }
+}
+async function showMfaChallenge(uid){
+  const {data}=await sb.auth.mfa.listFactors(); const f=((data&&data.totp)||[]).find(x=>x.status==='verified');
+  if(!f){ return false; }
+  mfaState={mode:'login',factorId:f.id,uid};
+  document.getElementById('mfaTitle').textContent='Enter your code';
+  document.getElementById('mfaSub').textContent='Open your authenticator app and type the 6-digit code for OverVibez.';
+  document.getElementById('mfaQr').style.display='none'; document.getElementById('mfaCode').value=''; mfaErr('');
+  document.getElementById('mfaBtn').textContent='Log in'; document.getElementById('mfaCancel').textContent='Cancel and log out';
+  document.documentElement.classList.remove('booting'); openModal('mfaModal'); setTimeout(()=>document.getElementById('mfaCode').focus(),100);
+  return true;
+}
+async function cancelMfa(){ const m=mfaState.mode; closeModal('mfaModal'); if(m==='login'){ mfaState={mode:null}; await logOut(); } else if(m==='setup'&&mfaState.factorId){ try{ await sb.auth.mfa.unenroll({factorId:mfaState.factorId}); }catch(e){} } mfaState={mode:null}; }
+async function loadSecurity(){ try{ const {data}=await sb.rpc('my_security'); store.sec=data||{}; }catch(e){ store.sec={}; } }
+async function openTwoStep(){
+  const {data,error}=await sb.auth.mfa.listFactors(); if(error) return toast(error.message);
+  const f=((data&&data.totp)||[]).find(x=>x.status==='verified');
+  document.getElementById('mfaCode').value=''; mfaErr('');
+  if(f){
+    mfaState={mode:'off',factorId:f.id};
+    document.getElementById('mfaTitle').textContent='Two-step login is on ✅';
+    document.getElementById('mfaSub').textContent='To turn it off, enter a current code from your authenticator app. We recommend keeping it on.';
+    document.getElementById('mfaQr').style.display='none'; document.getElementById('mfaBtn').textContent='Turn off'; document.getElementById('mfaCancel').textContent='Keep it on';
+    return openModal('mfaModal');
+  }
+  for(const x of ((data&&data.all)||[]).filter(x=>x.status!=='verified')){ try{ await sb.auth.mfa.unenroll({factorId:x.id}); }catch(e){} }
+  const {data:en,error:e2}=await sb.auth.mfa.enroll({factorType:'totp',issuer:'OverVibez',friendlyName:'Authenticator '+Date.now()});
+  if(e2) return toast(e2.message);
+  mfaState={mode:'setup',factorId:en.id};
+  document.getElementById('mfaTitle').textContent='Set up two-step login';
+  document.getElementById('mfaSub').textContent='1. Install an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Authy…).  2. Scan this code.  3. Type the 6-digit code it shows.';
+  document.getElementById('mfaQrImg').src=en.totp.qr_code; document.getElementById('mfaSecret').textContent=en.totp.secret; document.getElementById('mfaQr').style.display='block';
+  document.getElementById('mfaBtn').textContent='Turn on'; document.getElementById('mfaCancel').textContent='Cancel';
+  openModal('mfaModal');
+}
+async function submitMfa(){
+  const code=document.getElementById('mfaCode').value.replace(/\s/g,''); if(!/^\d{6}$/.test(code)) return mfaErr('Enter the 6-digit code from your app.');
+  const btn=document.getElementById('mfaBtn'); btn.disabled=true; mfaErr('');
+  try{
+    const {error}=await sb.auth.mfa.challengeAndVerify({factorId:mfaState.factorId,code});
+    if(error) return mfaErr(/invalid|expired/i.test(error.message)?'That code is not right — wait for a new one and try again.':error.message);
+    const m=mfaState.mode, uid=mfaState.uid; closeModal('mfaModal');
+    if(m==='login'){ mfaState={mode:null}; startSession(uid); }
+    else if(m==='setup'){ mfaState={mode:null}; await loadSecurity(); toast('Two-step login is on ✓'); if(typeof renderMe==='function'&&document.getElementById('page-me')) refresh(); }
+    else if(m==='off'){
+      const {error:e2}=await sb.auth.mfa.unenroll({factorId:mfaState.factorId}); if(e2) return toast(e2.message);
+      mfaState={mode:null}; await loadSecurity(); toast('Two-step login is off'); refresh();
+    }
+  } finally { btn.disabled=false; }
+}
 async function startSession(uid){
   if(store.session===uid) return;
+  if(await mfaNeeded()){ if(await showMfaChallenge(uid)) return; }
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
+  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); loadSecurity().then(()=>{ if(store.session) refresh(); }); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
-  store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
+  store.session=null; store.sec=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
   store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
@@ -2187,6 +2258,7 @@ function renderMe(){
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
       <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:!features.identity?`toast('ID verification is coming soon — we will tell you when it is ready')`:`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':features.identity?'Verify now →':'Coming soon'}</span></div>
       <div class="row" onclick="openPassword(false)"><div class="r-ic">🔑</div>Change password</div>
+      <div class="row" onclick="openTwoStep()"><div class="r-ic">🛡️</div>Two-step login<span class="sub">${store.sec&&store.sec.mfa_enabled?'On ✅':u.staffRole?'Set up now →':'Off'}</span></div>
       <div class="row" onclick="go('money')"><div class="r-ic">🧾</div>Money &amp; receipts<span class="sub">History, CSV</span></div>
       <div class="row" onclick="openBlocked()"><div class="r-ic">⛔</div>Blocked &amp; muted<span class="sub">${store.blocks.size||''}</span></div>
       <div class="row" onclick="helpContact()"><div class="r-ic">💬</div>Help &amp; contact</div>
@@ -2385,6 +2457,7 @@ function renderAdmin(){
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
+    ${store.sec&&!store.sec.mfa_enabled?`<div class="chart-card" style="border-color:var(--accent)"><b>🛡️ Turn on two-step login</b><p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:4px 0 8px">Staff accounts can move money and ban people. Protect yours with an authenticator app.${store.sec.require_staff_mfa?' <b>Required — until you do, staff tools are locked.</b>':''}</p><button class="abtn ok" onclick="openTwoStep()">Set up</button></div>`:''}
     <div class="chiprow">${tabs.map(([k,l])=>`<button class="chip ${adminTab===k?'on':''}" onclick="admTab('${k}')">${l}</button>`).join('')}</div>
     <div id="adminBody"></div>`;
   admLoad();
@@ -2545,12 +2618,16 @@ async function admRole(id){
 /* --- invites (admin only) --- */
 const inviteLink=c=>location.origin+location.pathname+'?invite='+encodeURIComponent(c);
 async function admInvites(){
-  const [st,li]=await Promise.all([sb.rpc('public_settings'),admCall('admin_list_invites')]); if(li.error) return;
+  const [st,li,sec]=await Promise.all([sb.rpc('public_settings'),admCall('admin_list_invites'),sb.rpc('my_security')]); if(li.error) return;
+  const reqMfa=!!(sec.data&&sec.data.require_staff_mfa);
   const on=st.data&&st.data.invite_only; settings.invite_only=on; settings.support_email=st.data&&st.data.support_email||null;
   admBody().innerHTML=`<div class="admin-pad">
     <div class="chart-card"><div style="display:flex;justify-content:space-between;align-items:center"><div><b>Invitation-only sign-up: ${on?'ON':'OFF'}</b>
       <div style="font-size:12px;color:var(--muted);margin-top:3px">${on?'Nobody can sign up without a valid code.':'Anyone can sign up.'}</div></div>
       <button class="abtn ${on?'danger':'ok'}" onclick="admInviteOnly(${!on})">${on?'Open to everyone':'Require invites'}</button></div></div>
+    <div class="chart-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>Staff two-step login: ${reqMfa?'REQUIRED':'optional'}</b>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">${reqMfa?'Staff without it cannot use staff tools.':'Staff who turn it on are protected; others can still log in with a password only.'}</div></div>
+      <button class="abtn ${reqMfa?'':'ok'}" onclick="admRequireMfa(${!reqMfa})">${reqMfa?'Make optional':'Require for staff'}</button></div></div>
     <div class="chart-card"><h4>Support email</h4>
       <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px">Shown to members under Help &amp; contact. ${settings.support_email?'Currently <b>'+esc(settings.support_email)+'</b>.':'Not set yet.'}</p>
       <div class="field"><input id="supEmail" type="email" maxlength="120" placeholder="support@yourdomain.com" value="${esc(settings.support_email||'')}"></div>
@@ -2567,6 +2644,11 @@ async function admInvites(){
     </div>`).join(''):admEmpty('No invite codes yet — create one above.')}</div>`;
 }
 function copyText(t){ (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Copied ✓')).catch(()=>prompt('Copy this:',t)); }
+async function admRequireMfa(on){
+  if(on&&!store.sec.mfa_enabled) return toast('Set up your own two-step login first (Me → Two-step login), then require it');
+  if(on&&!confirm('Require two-step login for all staff? Any moderator or admin without it will be locked out of staff tools until they set it up.')) return;
+  const {error}=await admCall('admin_set_require_staff_mfa',{p_on:on}); if(!error){ toast(on?'Two-step is now required for staff':'Two-step is now optional'); await loadSecurity(); admLoad(); }
+}
 async function admInviteOnly(on){
   if(!on&&!confirm('Open sign-up to everyone? Anyone with the link will be able to create an account.')) return;
   const {error}=await admCall('admin_set_invite_only',{p_on:on}); if(!error){ toast(on?'Invite-only is ON':'Sign-up is now open'); admLoad(); }

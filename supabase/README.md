@@ -127,3 +127,9 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 - The order is computed once and held while you scroll and like things; it re-ranks when posts change, you switch tabs or you reload.
 - **Explore → Trending**: posts by attention velocity `(likes + 2×comments + 1) / (age in hours + 2)^1.4`; creators by the recent velocity of their posts plus a small followers weight.
 - It ranks the latest 200 posts on the device. If the platform grows past a few thousand posts a day, move the same formula into a database function.
+
+## Two-step login and staff access (migration 023)
+- **Anyone** can turn on two-step login (authenticator app / TOTP) from Me → Two-step login. It uses Supabase Auth MFA; at login the app asks for the 6-digit code before the app opens. Refreshing the page keeps the verified session.
+- **Staff**: `is_staff()` / `is_admin()` also require `_mfa_ok()`: if the person has two-step on, their session must be code-verified (`aal2`), so a stolen password alone can't use staff powers. Admin → Invites → "Staff two-step login" can make it **required** for all staff (staff without it are locked out of staff tools until they set it up). Turn that on once every admin/moderator has enrolled.
+- **Granting roles**: an admin opens Admin → Users → the person → staff role (`moderator` or `admin`). You can't change your own role. Changes are logged under Admin → Audit.
+- **Lost authenticator**: remove the factor in the dashboard (Authentication → Users → the user → remove MFA factor) or with SQL `delete from auth.mfa_factors where user_id = '<id>'` (use the same split-string trick as elsewhere if the console stalls), then they log in with a password and set it up again.
