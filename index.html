@@ -384,6 +384,12 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div id="exploreBody"></div>
   </div>
 
+  <div id="page-money" class="hidden">
+    <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
+    <div class="section-title">Money &amp; receipts</div>
+    <div id="moneyBody"></div>
+  </div>
+
   <div id="page-notifs" class="hidden">
     <div class="section-title">Notifications</div>
     <div id="notifList"></div>
@@ -556,6 +562,26 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   </div>
 </div>
 
+<div class="overlay" id="editPostModal" onclick="if(event.target===this)closeModal('editPostModal')">
+  <div class="sheet">
+    <h3>Edit post</h3>
+    <div class="field"><label>Caption</label><textarea id="epCaption" rows="4" maxlength="2200" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
+    <div class="field" id="epPriceWrap"><label>Price (USD) — can only change until someone unlocks it</label><input id="epPrice" type="number" min="0.99" max="499.99" step="0.01"></div>
+    <div class="err" id="epPostErr"></div>
+    <button class="primary" onclick="saveEditPost()">Save changes</button>
+    <button class="ghost" onclick="closeModal('editPostModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="receiptModal" onclick="if(event.target===this)closeModal('receiptModal')">
+  <div class="sheet">
+    <h3>Receipt</h3>
+    <div id="receiptBody"></div>
+    <button class="primary" onclick="copyText(receiptText)">Copy receipt</button>
+    <button class="ghost" onclick="closeModal('receiptModal')">Close</button>
+  </div>
+</div>
+
 <div class="overlay" id="appealModal" onclick="if(event.target===this)closeModal('appealModal')">
   <div class="sheet">
     <h3 id="appealTitle">Appeal</h3>
@@ -724,7 +750,7 @@ async function hydrate(){
   const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
   store.posts=(posts.data||[]).map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
     paid:p.is_paid,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),
-    mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
+    edited:!!p.edited_at,mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
   // media URLs: free media is public; paid media needs a signed URL, issued only if storage RLS agrees
   const paidPaths=[];
   store.posts.forEach(p=>{ if(!p.mediaPath) return;
@@ -913,6 +939,66 @@ function helpContact(){
   else toast('Use the ⚑ report button on anything that worries you, or check back soon for our contact address');
 }
 
+
+/* ═══════════ MONEY HISTORY + RECEIPTS ═══════════ */
+let moneyRows=[], moneyFilter='all', moneyDone=false, receiptText='';
+const EARN_TYPES=['subscription','post_unlock','tip','live_entry'];
+const TX_NAMES={subscription:'Subscription',post_unlock:'Post unlock',tip:'Tip',live_entry:'Live ticket',raffle_entry:'Raffle entries',payout:'Payout',wallet_topup:'Added funds'};
+const TX_ICONS={subscription:'💜',post_unlock:'🔓',tip:'💰',live_entry:'🎟️',raffle_entry:'🎲',payout:'🏦',wallet_topup:'◈'};
+function txInfo(t){
+  const me_=store.session, mine=t.payer_id===me_, other=user(mine?t.payee_id:t.payer_id), who=other?'@'+other.username:(mine?'OverVibez':'a member');
+  const name=TX_NAMES[t.type]||t.type;
+  if(t.type==='wallet_topup') return {icon:TX_ICONS[t.type],title:'Added funds',sub:'Wallet top-up',amt:+t.gross_cents,pot:'wallet',kind:'in'};
+  if(t.type==='payout') return {icon:TX_ICONS[t.type],title:'Payout requested',sub:'From your earnings',amt:-t.gross_cents,pot:'earnings',kind:'out'};
+  if(mine) return {icon:TX_ICONS[t.type]||'•',title:name+(t.type==='raffle_entry'?'':' · '+who),sub:'Paid from wallet',amt:-t.gross_cents,pot:'wallet',kind:'out'};
+  return {icon:TX_ICONS[t.type]||'•',title:name+' from '+who,sub:'You keep 85%',amt:+t.net_cents,pot:'earnings',kind:'earned'};
+}
+const moneySign=c=>(c<0?'−':'+')+$$(Math.abs(c));
+async function renderMoney(reset){
+  if(reset){ moneyRows=[]; moneyDone=false; moneyFilter='all'; }
+  const body=document.getElementById('moneyBody'); const u=me();
+  if(reset) body.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">Loading…</p>';
+  if(!moneyDone&&(reset||moneyRows.length===0)) await moreMoney(true);
+  paintMoney();
+}
+async function moreMoney(first){
+  const uid=store.session; let q=sb.from('transactions').select('*').or('payer_id.eq.'+uid+',payee_id.eq.'+uid).order('created_at',{ascending:false}).limit(50);
+  if(!first&&moneyRows.length) q=q.lt('created_at',moneyRows[moneyRows.length-1].created_at);
+  const {data,error}=await q; if(error) return toast(error.message);
+  await ensureUsers((data||[]).flatMap(t=>[t.payer_id,t.payee_id]));
+  moneyRows=moneyRows.concat(data||[]); if((data||[]).length<50) moneyDone=true;
+}
+function paintMoney(){
+  const body=document.getElementById('moneyBody'), u=me(), isC=u.role==='creator';
+  const rows=moneyRows.map((t,i)=>({t,i,x:txInfo(t)})).filter(r=>moneyFilter==='all'||(moneyFilter==='in'?r.x.kind==='in'||r.x.kind==='earned':r.x.kind==='out'));
+  body.innerHTML=`<div class="stat-row" style="margin:0 14px 10px"><div class="stat"><b>${$$(u.wallet)}</b><span>Wallet</span></div>${isC?`<div class="stat"><b>${$$(u.earnings)}</b><span>Earnings</span></div>`:''}</div>
+    <div class="chiprow">${[['all','All'],['in','Money in'],['out','Money out']].map(([k,l])=>`<button class="chip ${moneyFilter===k?'on':''}" onclick="moneyFilter='${k}';paintMoney()">${l}</button>`).join('')}</div>
+    ${rows.length?`<div class="list-card" style="margin:0 14px">${rows.map(r=>`<div class="row" onclick="openReceipt(${r.i})"><div class="r-ic">${r.x.icon}</div>
+      <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(r.x.title)}</b><br><span style="font-size:11.5px;color:var(--muted)">${new Date(r.t.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${r.x.sub}</span></div>
+      <b style="color:${r.x.amt<0?'var(--text)':'var(--ok)'}">${moneySign(r.x.amt)}</b></div>`).join('')}</div>`
+      :'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">Nothing here yet.</p>'}
+    <div style="padding:14px">${moneyDone?'':'<button class="ghost" onclick="moreMoney().then(paintMoney)">Load more</button>'}<button class="ghost" onclick="downloadMoneyCsv()">⬇ Download CSV</button></div>`;
+}
+function openReceipt(i){
+  const t=moneyRows[i]; if(!t) return; const x=txInfo(t), when=new Date(t.created_at);
+  const lines=[['Date',when.toLocaleString('en-GB')],['Type',TX_NAMES[t.type]||t.type],['Details',x.title],
+    ['Amount charged',$$(t.gross_cents)]].concat(t.type==='payout'||t.type==='wallet_topup'?[]:[['Platform fee (15%)',$$(t.fee_cents)],['Net to creator',$$(t.net_cents)]])
+    .concat([['Receipt number',t.id.slice(0,8).toUpperCase()]]);
+  receiptText='OverVibez receipt\n'+lines.map(l=>l[0]+': '+l[1]).join('\n')+'\nThis is a record of a digital transaction on OverVibez.';
+  document.getElementById('receiptBody').innerHTML=`<div class="list-card" style="margin:0 0 10px">${lines.map(l=>`<div class="row" style="cursor:default"><span style="color:var(--muted);font-size:13px">${esc(l[0])}</span><span class="sub" style="color:var(--text)">${esc(String(l[1]))}</span></div>`).join('')}</div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.5">A record of a digital transaction on OverVibez. Keep it for your own accounts.</p>`;
+  openModal('receiptModal');
+}
+const csvCell=v=>{ let s=String(v==null?'':v); if(/^[=+\-@\t\r]/.test(s)) s="'"+s; return '"'+s.replace(/"/g,'""')+'"'; };
+async function downloadMoneyCsv(){
+  toast('Preparing…'); let guard=0; while(!moneyDone&&guard++<20) await moreMoney();
+  const head=['Date','Type','Details','Direction','Gross','Fee','Net','Receipt number'];
+  const lines=[head.map(csvCell).join(',')].concat(moneyRows.map(t=>{ const x=txInfo(t);
+    return [new Date(t.created_at).toISOString(),TX_NAMES[t.type]||t.type,x.title,x.kind==='out'?'out':'in',(t.gross_cents/100).toFixed(2),(t.fee_cents/100).toFixed(2),(t.net_cents/100).toFixed(2),t.id.slice(0,8).toUpperCase()].map(csvCell).join(','); }));
+  const blob=new Blob([lines.join('\n')],{type:'text/csv'}), a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='overvibez-transactions.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+
 /* ═══════════ NOTIFICATIONS + UNREAD BADGES ═══════════ */
 function paintBadges(){
   const b=document.getElementById('bellBadge'), c=document.getElementById('chatBadge');
@@ -1025,7 +1111,7 @@ function renderShell(){
     <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>`;
 }
 function go(page,btn){
-  ['home','explore','raffles','messages','studio','me','profile','admin','notifs'].forEach(p=>{
+  ['home','explore','raffles','messages','studio','me','profile','admin','notifs','money'].forEach(p=>{
     const el=document.getElementById('page-'+p); if(el) el.classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
@@ -1039,6 +1125,7 @@ function go(page,btn){
   if(page==='profile')renderProfile();
   if(page==='admin')renderAdmin();
   if(page==='notifs')renderNotifs();
+  if(page==='money')renderMoney(true);
   window.scrollTo({top:0});
 }
 function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt').textContent=$$(u.wallet); }
@@ -1062,7 +1149,7 @@ function postCard(p){
   return `<article class="card">
     <div class="card-head">
       <div class="av ${c.av}" style="cursor:pointer" onclick="openProfile('${p.by}')">${avInner(c)}</div>
-      <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}</span></div>
+      <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}${p.edited?' · edited':''}</span></div>
       ${mine?'<span class="own-tag">Your post</span>':
         `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?(store.subCanceled[p.by]?'Ends '+new Date(store.subEnds[p.by]).toLocaleDateString():'Subscribed'):'Subscribe '+$$(c.subPrice)}</button>`}
     </div>
@@ -1399,6 +1486,7 @@ async function sendMsg(){
 }
 
 /* ═══════════ STUDIO (creators) ═══════════ */
+let studioAn={days:30,data:null,at:0};
 function renderStudio(){
   const u=me();
   if(u.role!=='creator'){ document.getElementById('studioBody').innerHTML='<p style="color:var(--muted);padding:10px 4px">Studio is for Vibe Creator accounts.</p>'; return; }
@@ -1415,14 +1503,81 @@ function renderStudio(){
       <div class="stat"><b>${$$(u.subPrice)}</b><span>Sub price</span></div>
       <div class="stat"><b>${myPosts.length}</b><span>Drops</span></div>
     </div>
+    <div id="anBox"></div>
     <div class="chart-card"><h4>Your content</h4>
       ${myPosts.length?myPosts.map(p=>`
         <div class="content-row"><div class="sc ${u.av}">${p.scene}</div>
-          <div class="ti"><b>${esc(p.cap)||'(media)'}</b><span>${p.paid?'🔒 Paid · '+$$(p.price):'Free'} · ${p.likes.toLocaleString()} likes</span></div>
+          <div class="ti"><b>${esc(p.cap)||'(media)'}</b><span>${p.paid?'🔒 Paid · '+$$(p.price):'Free'} · ${p.likes.toLocaleString()} likes${p.edited?' · edited':''}</span>
+            <span><button class="abtn" onclick="openEditPost('${p.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${p.id}')">Delete</button></span></div>
           <span class="earn">${$$(Math.round(p.earned*(1-FEE)))}</span></div>`).join('')
         :'<p style="color:var(--muted);font-size:13px">No drops yet — hit ＋ to publish your first post.</p>'}
     </div>
-    <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(u.earnings)}</button>`;
+    <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(u.earnings)}</button>
+    <button class="ghost" style="margin-top:10px" onclick="go('money')">💳 Money &amp; receipts</button>`;
+  paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
+}
+async function loadAnalytics(days){
+  if(days) studioAn.days=days;
+  const {data,error}=await sb.rpc('creator_analytics',{p_days:studioAn.days});
+  if(error) return; studioAn.data=data; studioAn.at=Date.now(); paintAnalytics();
+}
+const dayLabel=(d,o)=>new Date(d+'T12:00:00').toLocaleDateString('en-GB',o||{day:'numeric',month:'short'});
+const TYPE_LABEL={subscription:'Subscriptions',post_unlock:'Post unlocks',tip:'Tips',live_entry:'Live tickets'};
+function paintAnalytics(){
+  const box=document.getElementById('anBox'); if(!box) return;
+  const d=studioAn.data;
+  const chips=[7,30,90].map(n=>`<button class="chip ${studioAn.days===n?'on':''}" onclick="loadAnalytics(${n})">${n} days</button>`).join('');
+  if(!d){ box.innerHTML=`<div class="chart-card"><h4>Earnings</h4><div class="chiprow" style="padding:0 0 8px">${chips}</div><p style="color:var(--muted);font-size:13px">Loading…</p></div>`; return; }
+  const ser=d.series, total=ser.reduce((a,x)=>a+Number(x.net),0), fol=ser.reduce((a,x)=>a+Number(x.followers),0);
+  const sales=Object.values(d.by_type).reduce((a,x)=>a+Number(x.count),0), max=Math.max(1,...ser.map(x=>Number(x.net)));
+  const W=320,H=120,pad=4,bw=(W-pad*2)/ser.length, gap=Math.min(2,bw*.25);
+  const bars=ser.map((x,i)=>{ const h=Math.round(Number(x.net)/max*(H-8)), bx=pad+i*bw+gap/2, w=Math.max(1,bw-gap);
+    return `<rect x="${bx.toFixed(1)}" y="${H-h}" width="${w.toFixed(1)}" height="${h}" rx="${Math.min(4,w/2).toFixed(1)}" fill="var(--accent-2)" opacity="${h?1:0}"><title>${dayLabel(x.d)}: ${$$(Number(x.net))}</title></rect>
+      <rect x="${(pad+i*bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H}" fill="transparent" onmouseenter="anHover(${i})" onclick="anHover(${i})"/>`; }).join('');
+  const typeRows=Object.keys(TYPE_LABEL).filter(k=>d.by_type[k]).map(k=>{ const t=d.by_type[k], pct=total?Math.round(Number(t.net)/total*100):0;
+    return `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${TYPE_LABEL[k]} <span style="color:var(--muted)">· ${t.count}</span></span><b>${$$(Number(t.net))}</b></div>
+      <div style="height:6px;border-radius:3px;background:var(--panel-2);margin-top:4px"><div style="height:6px;border-radius:3px;background:var(--accent-2);width:${pct}%"></div></div></div>`; }).join('');
+  box.innerHTML=`<div class="chart-card"><h4>Earnings</h4>
+    <div class="chiprow" style="padding:0 0 10px">${chips}</div>
+    <div class="stat-row" style="margin:0 0 8px"><div class="stat"><b>${$$(total)}</b><span>You earned</span></div><div class="stat"><b>${sales}</b><span>Sales</span></div><div class="stat"><b>${fol}</b><span>New followers</span></div></div>
+    <div id="anReadout" style="font-size:12.5px;color:var(--muted);min-height:18px;margin:4px 0">Tap a bar to see that day</div>
+    <svg viewBox="0 0 ${W} ${H+16}" width="100%" role="img" aria-label="Daily earnings for the last ${d.days} days, ${$$(total)} in total" style="display:block;overflow:visible">
+      <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--line)"/>${bars}
+      <text x="${pad}" y="${H+13}" font-size="9" fill="var(--muted)">${dayLabel(ser[0].d)}</text>
+      <text x="${W-pad}" y="${H+13}" font-size="9" fill="var(--muted)" text-anchor="end">${dayLabel(ser[ser.length-1].d)}</text></svg>
+    ${typeRows?`<div style="margin-top:14px">${typeRows}</div>`:'<p style="color:var(--muted);font-size:13px;margin-top:10px">No earnings in this period yet.</p>'}
+    ${d.top_posts.length?`<h4 style="margin:14px 0 4px;font-size:13px">Top posts</h4>${d.top_posts.map(t=>`<div style="display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:5px 0"><span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.caption)}</span><b>${$$(Number(t.net))}</b></div>`).join('')}`:''}
+    <details style="margin-top:10px"><summary style="font-size:12.5px;color:var(--muted);cursor:pointer">View as table</summary>
+      <table style="width:100%;font-size:12.5px;margin-top:6px"><tr style="color:var(--muted);text-align:left"><th>Day</th><th>Earned</th><th>New followers</th></tr>
+      ${ser.filter(x=>Number(x.net)||Number(x.followers)).map(x=>`<tr><td>${dayLabel(x.d,{weekday:'short',day:'numeric',month:'short'})}</td><td>${$$(Number(x.net))}</td><td>${x.followers}</td></tr>`).join('')||'<tr><td colspan="3" style="color:var(--muted)">Nothing yet</td></tr>'}</table></details>
+  </div>`;
+}
+function anHover(i){ const x=studioAn.data&&studioAn.data.series[i], el=document.getElementById('anReadout'); if(!x||!el) return;
+  el.innerHTML=`<b style="color:var(--text)">${dayLabel(x.d,{weekday:'short',day:'numeric',month:'short'})}</b> · ${$$(Number(x.net))} earned · ${x.followers} new follower${x.followers==1?'':'s'}`; }
+
+/* --- edit / delete my posts --- */
+let editPostId=null;
+function openEditPost(id){
+  const p=store.posts.find(x=>x.id===id); if(!p) return; editPostId=id;
+  document.getElementById('epCaption').value=p.cap; document.getElementById('epPrice').value=(p.price/100).toFixed(2);
+  document.getElementById('epPriceWrap').classList.toggle('hidden',!p.paid); document.getElementById('epPostErr').textContent='';
+  openModal('editPostModal');
+}
+async function saveEditPost(){
+  const p=store.posts.find(x=>x.id===editPostId); if(!p) return; const err=document.getElementById('epPostErr'); err.textContent='';
+  const cap=document.getElementById('epCaption').value;
+  let price=null; if(p.paid){ const v=Math.round(parseFloat(document.getElementById('epPrice').value)*100); if(isNaN(v)) return err.textContent='Enter a price'; price=v; }
+  const {error}=await sb.rpc('edit_post',{p_post:editPostId,p_caption:cap,p_price_cents:price});
+  if(error) return err.textContent=friendly(error.message);
+  closeModal('editPostModal'); toast('Post updated'); await settled();
+}
+async function deletePost(id){
+  const p=store.posts.find(x=>x.id===id); if(!p) return;
+  if(!confirm('Delete this post?\n\nIf nobody has paid for it, it is erased for good. If people have already unlocked it, it is hidden from everyone and kept in our records.')) return;
+  const {data,error}=await sb.rpc('delete_post',{p_post:id});
+  if(error) return toast(friendly(error.message));
+  if(data&&data.mode==='deleted'&&data.media_path){ try{ await sb.storage.from(data.paid?'paid-media':'public-media').remove([data.media_path]); }catch(e){} }
+  toast(data&&data.mode==='hidden'?'Post hidden — people who paid for it are not affected':'Post deleted'); await settled();
 }
 async function requestPayout(){
   const u=me();
@@ -1452,7 +1607,7 @@ async function publishPost(){
     if(error) return toast(error.message);
     if(f){
       const up=await sb.storage.from(paid?'paid-media':'public-media').upload(path,f,{contentType:f.type});
-      if(up.error){ await sb.from('posts').delete().eq('id',id); return toast('Upload failed: '+up.error.message); }
+      if(up.error){ await sb.rpc('delete_post',{p_post:id}); return toast('Upload failed: '+up.error.message); }
     }
     await hydrate();
     document.getElementById('postCap').value=''; document.getElementById('postMedia').value='';
@@ -1671,6 +1826,7 @@ function renderMe(){
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
       <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:!features.identity?`toast('ID verification is coming soon — we will tell you when it is ready')`:`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':features.identity?'Verify now →':'Coming soon'}</span></div>
       <div class="row" onclick="openPassword(false)"><div class="r-ic">🔑</div>Change password</div>
+      <div class="row" onclick="go('money')"><div class="r-ic">🧾</div>Money &amp; receipts<span class="sub">History, CSV</span></div>
       <div class="row" onclick="openBlocked()"><div class="r-ic">⛔</div>Blocked &amp; muted<span class="sub">${store.blocks.size||''}</span></div>
       <div class="row" onclick="helpContact()"><div class="r-ic">💬</div>Help &amp; contact</div>
       <div class="row" onclick="window.open('guidelines.html','_blank')"><div class="r-ic">📜</div>Community guidelines</div>
@@ -1758,7 +1914,7 @@ let currentProfile=null;
 function openProfile(cid){ currentProfile=cid; go('profile'); }
 function rerender(){
   updateWallet();
-  const vis=['home','explore','raffles','messages','studio','me','profile','admin','notifs'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
+  const vis=['home','explore','raffles','messages','studio','me','profile','admin','notifs','money'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
   if(vis==='home'){renderStories();renderFeed()} else if(vis==='explore')renderExplore();
   else if(vis==='raffles')renderRaffles(); else if(vis==='messages'){ if(!document.getElementById('threads-view').classList.contains('hidden'))renderThreads(); }
   else if(vis==='studio')renderStudio(); else if(vis==='notifs'){} else if(vis==='me')renderMe(); else if(vis==='profile')renderProfile();
