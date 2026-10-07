@@ -1,0 +1,42 @@
+<!DOCTYPE html><html lang="en"><head><title>Storefront</title><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap"><link rel="stylesheet" href="style.css"></head><body>
+<main>
+  <h1>Storefront</h1>
+  <p class="lead" id="feeNote">Pay securely with Stripe Checkout. In test mode use card <code>4242 4242 4242 4242</code>, any future date and any CVC.</p>
+  <div class="msg" id="shopMsg"></div>
+  <h2>Sellers</h2>
+  <div id="sellers" class="grid"></div>
+  <h2 style="margin-top:22px">Products</h2>
+  <div id="products" class="grid"></div>
+</main>
+<script src="app.js"></script>
+<script>
+  nav('storefront.html');
+  const msg = document.getElementById('shopMsg');
+
+  // Send the customer to Stripe-hosted Checkout. The server builds the session and the destination charge.
+  async function buy(productId, button) {
+    button.disabled = true; say(msg, 'Taking you to checkout…');
+    try { const r = await api('/api/checkout', { productId, quantity: 1 }); location.href = r.url; }
+    catch (err) { say(msg, err.message, 'err'); button.disabled = false; }
+  }
+
+  async function load() {
+    const [{ accounts }, { products }, cfg] = await Promise.all([api('/api/accounts'), api('/api/products'), api('/api/config')]);
+    document.getElementById('feeNote').append(' The platform keeps ' + cfg.applicationFeePercent + '% of each sale; the rest goes to the seller.');
+    const names = Object.fromEntries(accounts.map((a) => [a.id, a]));
+
+    document.getElementById('sellers').replaceChildren(...(accounts.length ? accounts.map((a) => el('div', { class: 'card' },
+      el('b', {}, a.displayName || a.id),
+      el('span', { class: 'pill ' + (a.readyToReceivePayments ? 'ok' : 'warn') }, a.readyToReceivePayments ? 'Open for sales' : 'Not onboarded yet'))) : [el('p', { class: 'muted' }, 'No sellers yet.')]));
+
+    document.getElementById('products').replaceChildren(...(products.length ? products.map((p) => {
+      const seller = names[p.accountId], canBuy = seller && seller.readyToReceivePayments;
+      const btn = el('button', { onclick: (e) => buy(p.id, e.target) }, 'Buy');
+      if (!canBuy) { btn.disabled = true; btn.textContent = 'Seller not ready'; }
+      return el('div', { class: 'card' }, el('b', {}, p.name), el('div', { class: 'muted' }, p.description || ''),
+        el('div', { class: 'price' }, money(p.unitAmount, p.currency)),
+        el('div', { class: 'muted' }, 'Sold by ' + (seller ? (seller.displayName || seller.id) : 'unknown')), btn);
+    }) : [el('p', { class: 'muted' }, 'No products yet — create one first.')]));
+  }
+  load().catch((err) => say(msg, err.message, 'err'));
+</script></body></html>

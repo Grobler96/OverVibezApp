@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="en"><head><title>Connected accounts</title><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Outfit:wght@300;400;500;600&display=swap"><link rel="stylesheet" href="style.css"></head><body>
+<main>
+  <h1>Connected accounts</h1>
+  <p class="lead">A connected account is a seller who gets paid through your platform. The status below is read live from Stripe.</p>
+
+  <div class="card">
+    <h2>1. Create a connected account</h2>
+    <form id="createForm">
+      <label for="displayName">Business or seller name</label><input id="displayName" required maxlength="100" placeholder="Jane's Studio">
+      <label for="email">Contact email</label><input id="email" type="email" required placeholder="jane@example.com">
+      <label for="country">Country (two letters)</label><input id="country" maxlength="2" value="gb">
+      <button id="createBtn" type="submit">Create account</button>
+      <div class="msg" id="createMsg"></div>
+    </form>
+  </div>
+
+  <h2 style="margin-top:22px">2. Onboard and check status</h2>
+  <div id="accounts"><p class="muted">Loading…</p></div>
+  <div class="msg" id="listMsg"></div>
+</main>
+<script src="app.js"></script>
+<script>
+  nav('onboard.html');
+  const params = new URLSearchParams(location.search);
+
+  // Create the account on our server (which calls Stripe), then remember it in this browser.
+  document.getElementById('createForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('createMsg'), btn = document.getElementById('createBtn');
+    btn.disabled = true; say(msg, 'Creating…');
+    try {
+      const r = await api('/api/accounts', {
+        displayName: document.getElementById('displayName').value,
+        email: document.getElementById('email').value,
+        country: document.getElementById('country').value,
+      });
+      mine.set(r.accountId);
+      say(msg, 'Account created. Click "Onboard to collect payments" below.', 'good');
+      e.target.reset(); document.getElementById('country').value = 'gb';
+      load();
+    } catch (err) { say(msg, err.message, 'err'); }
+    btn.disabled = false;
+  });
+
+  // Ask the server for a fresh single-use onboarding link, then go to Stripe's hosted page.
+  async function onboard(accountId, button) {
+    button.disabled = true;
+    try { const r = await api('/api/accounts/' + encodeURIComponent(accountId) + '/onboard', {}); location.href = r.url; }
+    catch (err) { say(document.getElementById('listMsg'), err.message, 'err'); button.disabled = false; }
+  }
+
+  // Draw one card per connected account, with a status pill and the right button.
+  async function load() {
+    const box = document.getElementById('accounts');
+    try {
+      const { accounts } = await api('/api/accounts');
+      box.replaceChildren();
+      if (!accounts.length) box.append(el('p', { class: 'muted' }, 'No connected accounts yet — create one above.'));
+      for (const a of accounts) {
+        const ready = a.readyToReceivePayments;
+        const label = ready ? 'Ready to receive payments' : a.onboardingComplete ? 'Waiting for Stripe to activate transfers' : 'Onboarding not finished';
+        const btn = el('button', { class: ready ? 'ghost' : '', onclick: (ev) => onboard(a.id, ev.target) }, ready ? 'Update details' : 'Onboard to collect payments');
+        box.append(el('div', { class: 'card' },
+          el('div', { class: 'row' }, el('b', {}, a.displayName || a.id), el('span', { class: 'pill ' + (ready ? 'ok' : 'warn') }, label)),
+          el('div', { class: 'muted' }, (a.contactEmail || '') + ' · ' + a.id + (a.id === mine.get() ? ' · yours in this browser' : '')),
+          el('div', { class: 'muted' }, 'Transfers: ' + a.transfersStatus + ' · Requirements: ' + a.requirementsStatus),
+          btn));
+      }
+    } catch (err) { box.replaceChildren(); say(document.getElementById('listMsg'), err.message, 'err'); }
+  }
+
+  // If Stripe's link expired, it sends the user back with ?refresh=<id>. Immediately make a new link.
+  if (params.get('refresh')) {
+    api('/api/accounts/' + encodeURIComponent(params.get('refresh')) + '/onboard', {}).then((r) => { location.href = r.url; })
+      .catch((err) => say(document.getElementById('listMsg'), err.message, 'err'));
+  }
+  // Coming back from onboarding (?accountId=...) simply reloads the live status.
+  if (params.get('accountId')) mine.set(params.get('accountId'));
+  load();
+</script></body></html>
