@@ -718,6 +718,14 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   </div>
 </div>
 
+<div class="overlay" id="ageModal" onclick="if(event.target===this)closeModal('ageModal')">
+  <div class="sheet">
+    <h3>Prove you're 18+</h3>
+    <div id="ageBody"></div>
+    <button class="ghost" onclick="closeModal('ageModal')">Close</button>
+  </div>
+</div>
+
 <div class="overlay" id="mfaModal" onclick="if(event.target===this&&mfaState.mode!=='login')closeModal('mfaModal')">
   <div class="sheet">
     <h3 id="mfaTitle">Two-step login</h3>
@@ -879,7 +887,7 @@ async function hydrate(){
 }
 
 /* ═══════════ FEATURE FLAGS + BETA SETTINGS ═══════════ */
-let features={live:false,payments:false,identity:false,payouts:false,email:false}, settings={invite_only:true};
+let features={live:false,payments:false,identity:false,payouts:false,email:false}, settings={invite_only:true,id_check:'manual'};
 async function loadFeatures(){
   try{ const {data}=await sb.functions.invoke('features'); if(data&&typeof data.live==='boolean') features=data; }catch(e){}
   const lv=document.getElementById('cmLive'); if(lv) lv.classList.toggle('hidden',!features.live);
@@ -1361,6 +1369,8 @@ const notifInfo=n=>{
     case 'topup_reversed': return ['⚠️','A top-up of '+$$(d.cents)+' was reversed ('+esc(d.reason||'refund')+')'+(d.owed>0?'. You now owe '+$$(d.owed)+', taken from your next top-up':'')];
     case 'topup_restored': return ['✅','Good news — '+$$(d.cents)+' was put back in your wallet'];
     case 'debt_repaid': return ['🧾',$$(d.cents)+' of your latest payment cleared what you owed'];
+    case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
+    case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Me'];
     case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b> — it has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
     default: return ['🔔','New activity'];
   }
@@ -1702,6 +1712,29 @@ async function startTopup(cents){
   closeModal('topupModal'); toast('Opening secure checkout…');
   try{ const d=await stripeCall('create-topup',{cents}); location.href=d.url; }
   catch(e){ payFail(e,'Adding funds'); }
+}
+/* ═══════════ MANUAL 18+ CHECK ═══════════
+   By default OverVibez checks IDs by hand (admin → Age checks). The member only sends a request here; the ID itself is
+   looked at outside the app and no image of it is stored. Stripe Identity can be switched on later by an admin. */
+async function openAgeRequest(){
+  const body=document.getElementById('ageBody'); body.innerHTML='<p style="color:var(--muted)">Loading…</p>'; openModal('ageModal');
+  const {data}=await sb.rpc('my_age_request'); const r=data||{};
+  const mail=settings.support_email?`<a href="mailto:${esc(settings.support_email)}">${esc(settings.support_email)}</a>`:'our support team';
+  if(r.status==='pending'){
+    body.innerHTML=`<p style="line-height:1.55">✅ Your request is with us. We will contact you by email to check your ID — usually within a couple of days. You will get a notification here when it is done.</p>`; return;
+  }
+  body.innerHTML=(r.status==='rejected'?`<p style="color:var(--live);line-height:1.5">Your last request was not approved${r.note?': '+esc(r.note):''}. You can ask again.</p>`:'')+
+    `<p style="line-height:1.55;font-size:14px">OverVibez is for adults, so we check ID by hand before you can post, go live or add money.<br><br>
+     Tap <b>Request a check</b>. We will email the address on your account to arrange a quick <b>video call</b> where you show a passport or driving licence — or you can email a photo to ${mail}, and we delete it as soon as it is checked.<br><br>
+     <b>We never store your ID in the app</b> — only that you were verified and when.</p>
+     <div class="field"><label>Anything we should know? (optional, e.g. best time for a call)</label><input id="ageNote" maxlength="300"></div>
+     <div class="err" id="ageErr"></div><button class="primary" id="ageBtn" onclick="sendAgeRequest()">Request a check</button>`;
+}
+async function sendAgeRequest(){
+  const btn=document.getElementById('ageBtn'), err=document.getElementById('ageErr'); btn.disabled=true; err.textContent='';
+  const {error}=await sb.rpc('request_age_check',{p_note:document.getElementById('ageNote').value});
+  if(error){ err.textContent=error.message; btn.disabled=false; return; }
+  toast('Request sent ✓'); openAgeRequest();
 }
 async function startVerification(){
   toast('Opening secure ID check…');
@@ -2257,7 +2290,7 @@ function renderMe(){
       ${isStandalone()?'':`<div class="row" onclick="installApp()"><div class="r-ic">📲</div>Install the app<span class="sub">Home screen</span></div>`}
       <div class="row" onclick="toggleEmailNotif()"><div class="r-ic">✉️</div>Email notifications<span class="sub">${u.emailNotif?'On':'Off'}</span></div>
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
-      <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:!features.identity?`toast('ID verification is coming soon — we will tell you when it is ready')`:`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':features.identity?'Verify now →':'Coming soon'}</span></div>
+      <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:(settings.id_check==='stripe'&&features.identity)?`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`:`openAgeRequest()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':(settings.id_check==='stripe'&&features.identity)?'Verify now →':'Request a check →'}</span></div>
       <div class="row" onclick="openPassword(false)"><div class="r-ic">🔑</div>Change password</div>
       <div class="row" onclick="openTwoStep()"><div class="r-ic">🛡️</div>Two-step login<span class="sub">${store.sec&&store.sec.mfa_enabled?'On ✅':u.staffRole?'Set up now →':'Off'}</span></div>
       <div class="row" onclick="go('money')"><div class="r-ic">🧾</div>Money &amp; receipts<span class="sub">History, CSV</span></div>
@@ -2454,7 +2487,7 @@ async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}
 const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['age','Age checks'],['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -2464,7 +2497,34 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({reports:admReports,appeals:admAppeals,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,audit:admAudit})[adminTab](); }
+
+/* --- manual 18+ checks --- */
+async function admAge(){
+  const st=adminSub.age||'pending', {data,error}=await admCall('admin_list_age_requests',{p_status:st}); if(error) return;
+  const stripeOn=settings.id_check==='stripe';
+  admBody().innerHTML=`<div class="admin-pad">
+    <div class="chart-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>ID checks: ${stripeOn?'Stripe Identity (paid per check)':'by hand (free)'}</b>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">${stripeOn?'Members verify through Stripe. Stripe charges per check.':'Members request a check; you look at their ID yourself, then approve below. Nothing is charged.'}</div></div>
+      <button class="abtn ${stripeOn?'ok':''}" onclick="admIdMode('${stripeOn?'manual':'stripe'}')">${stripeOn?'Switch to by hand':'Switch to Stripe'}</button></div></div>
+    <div class="chart-card" style="font-size:12.5px;color:var(--muted);line-height:1.55"><b style="color:var(--text)">How to check</b><br>Email or message the member, then look at a passport or driving licence — ideally on a short video call, so nothing is stored. If they email a photo, check it and delete it straight away. Approve only if the photo matches them and they are 18 or over. The note you write is kept as the record — do not put ID numbers in it.</div>
+    <div class="chiprow">${['pending','approved','rejected'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.age='${x}';admLoad()">${x}</button>`).join('')}</div>
+    ${data.length?data.map(r=>`<div class="chart-card">
+      <div style="display:flex;justify-content:space-between;gap:8px"><b>@${esc(r.username)}</b><span style="font-size:12px;color:var(--muted)">${ago(r.created_at)} ago</span></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:4px 0">${esc(r.account_type)} · ${r.email?`<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>`:'no email'}</div>
+      ${r.note?`<div style="font-size:13px;margin:6px 0;word-break:break-word">“${esc(r.note)}”</div>`:''}
+      ${st==='pending'?`<button class="abtn ok" onclick="admAgeReview('${r.id}',true)">Approve — over 18</button><button class="abtn danger" onclick="admAgeReview('${r.id}',false)">Reject</button>`
+        :`<div style="font-size:12.5px;color:var(--muted)">${esc(r.review_note||'')}${r.reviewed_at?' · '+ago(r.reviewed_at)+' ago':''}</div>`}
+      <button class="abtn" onclick="admOpenUser('${r.user_id}')">View user</button></div>`).join(''):admEmpty(st==='pending'?'No requests waiting ✓':'Nothing here yet.')}</div>`;
+}
+async function admAgeReview(id,approve){
+  const note=prompt(approve?'What did you check? e.g. "driving licence seen on video call, over 18" (no ID numbers)':'Why was it not approved? The member will see this.'); if(note===null) return;
+  const {error}=await admCall('admin_review_age_request',{p_id:id,p_approve:approve,p_note:note}); if(!error){ toast(approve?'Approved ✓':'Rejected'); admLoad(); }
+}
+async function admIdMode(mode){
+  if(mode==='stripe'&&!confirm('Switch to Stripe Identity? Stripe charges for each ID check. Members will verify through Stripe instead of asking you.')) return;
+  const {error}=await admCall('admin_set_id_check_mode',{p_mode:mode}); if(!error){ settings.id_check=mode; toast(mode==='stripe'?'Stripe checks on':'Checking by hand'); admLoad(); }
+}
 
 /* --- reports queue --- */
 async function admReports(){
