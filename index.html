@@ -598,6 +598,19 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   </div>
 </div>
 
+<div class="overlay" id="winModal" style="z-index:300;background:rgba(8,5,14,.88)">
+  <canvas id="confetti" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+  <div class="sheet" style="text-align:center;position:relative;border:1px solid var(--accent);box-shadow:0 0 60px rgba(255,61,138,.35)">
+    <div style="font-size:64px;line-height:1;margin-bottom:6px">🏆</div>
+    <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:13px;letter-spacing:.2em;color:var(--accent)">YOU WON!</div>
+    <div id="winPrize" style="font-family:'Unbounded',system-ui,sans-serif;font-size:28px;line-height:1.2;margin:10px 0 4px;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;word-break:break-word"></div>
+    <div id="winTitle" style="color:var(--muted);font-size:14px"></div>
+    <p id="winNote" style="font-size:14px;line-height:1.5;margin:14px 0 16px"></p>
+    <button class="primary" id="winBtn">Awesome!</button>
+    <button class="ghost" id="winLater" onclick="closeWin()">Close</button>
+  </div>
+</div>
+
 <div class="overlay" id="editPostModal" onclick="if(event.target===this)closeModal('editPostModal')">
   <div class="sheet">
     <h3>Edit post</h3>
@@ -946,7 +959,7 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  document.getElementById('landing').classList.add('hidden'); enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome();
+  document.getElementById('landing').classList.add('hidden'); enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
@@ -1068,6 +1081,40 @@ async function downloadMoneyCsv(){
   a.href=URL.createObjectURL(blob); a.download='overvibez-transactions.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
 }
 
+/* ═══════════ WINNER CELEBRATION ═══════════ */
+let winQueue=[], winShowing=false, winCurrent=null, confettiRaf=null;
+function queueWin(n){ if(!n||winQueue.some(x=>x.id===n.id)||(winCurrent&&winCurrent.id===n.id)) return; winQueue.push(n); if(!winShowing) nextWin(); }
+function nextWin(){
+  const n=winQueue.shift(); if(!n){ winShowing=false; winCurrent=null; return; }
+  winShowing=true; winCurrent=n; const d=n.data||{};
+  document.getElementById('winPrize').textContent=d.prize||'a prize'; document.getElementById('winTitle').textContent=d.title?'in “'+d.title+'”':'';
+  document.getElementById('winNote').textContent=d.free?'Add your UK delivery address within 14 days so we can send it to you.':'Congratulations!';
+  const b=document.getElementById('winBtn'); b.textContent=d.free?'Add my delivery address':'Awesome!';
+  b.onclick=()=>{ const id=n.ref_id; closeWin(); if(d.free&&id){ go('raffles'); setTimeout(()=>openPrize(id),300); } };
+  openModal('winModal'); confettiBurst();
+}
+function closeWin(){
+  const n=winCurrent; closeModal('winModal'); stopConfetti();
+  if(n) sb.rpc('mark_notification_read',{p_id:n.id}).then(()=>refreshBadges(),()=>{});
+  winCurrent=null; setTimeout(nextWin,350);
+}
+function stopConfetti(){ if(confettiRaf) cancelAnimationFrame(confettiRaf); confettiRaf=null; const c=document.getElementById('confetti'); if(c){ const x=c.getContext('2d'); x.clearRect(0,0,c.width,c.height); } }
+function confettiBurst(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c=document.getElementById('confetti'), x=c.getContext('2d'); c.width=innerWidth; c.height=innerHeight;
+  const cols=['#FF3D8A','#8B5CF6','#FFB443','#3DDC97','#FFFFFF'], ps=[];
+  for(let i=0;i<170;i++) ps.push({x:c.width/2+(Math.random()-.5)*80,y:c.height*.4,vx:(Math.random()-.5)*14,vy:-Math.random()*15-4,g:.32+Math.random()*.2,s:5+Math.random()*7,r:Math.random()*6.3,vr:(Math.random()-.5)*.4,c:cols[i%cols.length],life:140+Math.random()*80});
+  let f=0; (function tick(){
+    x.clearRect(0,0,c.width,c.height); f++;
+    ps.forEach(p=>{ p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.vx*=.99; p.r+=p.vr; if(p.life-->0&&p.y<c.height+20){ x.save(); x.translate(p.x,p.y); x.rotate(p.r); x.fillStyle=p.c; x.globalAlpha=Math.min(1,p.life/40); x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6); x.restore(); } });
+    if(f<260) confettiRaf=requestAnimationFrame(tick); else stopConfetti();
+  })();
+}
+async function checkWins(){
+  try{ const {data}=await sb.from('notifications').select('*').eq('type','won').is('read_at',null).order('created_at',{ascending:false}).limit(3);
+    (data||[]).reverse().forEach(queueWin); }catch(e){}
+}
+
 /* ═══════════ NOTIFICATIONS + UNREAD BADGES ═══════════ */
 function paintBadges(){
   const b=document.getElementById('bellBadge'), c=document.getElementById('chatBadge');
@@ -1100,6 +1147,7 @@ const notifInfo=n=>{
     case 'won': return ['🏆','You won <b>'+esc(d.prize||'a prize')+'</b> in “'+esc(d.title||'a giveaway')+'”!'+(d.free?' Add your UK delivery address in Raffles.':'')];
     case 'prize_shipped': return ['📦','Your prize is on its way'+(d.tracking?' — tracking '+esc(d.tracking):'')];
     case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')+(['post','comment'].includes(d.kind)?' — tap to appeal':'')];
+    case 'raffle_result': return ['🎲','The draw for <b>'+esc(d.prize||'the raffle')+'</b> is done — <b>@'+esc(d.winner||'someone')+'</b> won'];
     case 'new_giveaway': return ['🎁','New free giveaway: <b>'+esc(d.prize||'a prize')+'</b> — tap to enter'];
     case 'refunded': return ['↩️',d.role==='payee'?'A sale was refunded — '+$$(d.cents)+' was taken from your earnings'+(d.reason?' ('+esc(d.reason)+')':''):'You were refunded '+$$(d.cents)+' to your wallet'+(d.reason?' ('+esc(d.reason)+')':'')];
     case 'topup_reversed': return ['⚠️','A top-up of '+$$(d.cents)+' was reversed ('+esc(d.reason||'refund')+')'+(d.owed>0?'. You now owe '+$$(d.owed)+', taken from your next top-up':'')];
@@ -1127,7 +1175,7 @@ function notifOpen(i){
   if(n.type==='comment'&&n.ref_id&&store.posts.some(p=>p.id===n.ref_id)) return openComments(n.ref_id);
   if(n.type==='payout_paid') return go('studio');
   if(n.type==='removed'&&n.ref_id&&n.data&&['post','comment'].includes(n.data.kind)) return openAppeal(n.data.kind,n.ref_id);
-  if(n.type==='won'||n.type==='prize_shipped'||n.type==='new_giveaway') return go('raffles');
+  if(n.type==='won'||n.type==='prize_shipped'||n.type==='new_giveaway'||n.type==='raffle_result') return go('raffles');
   if(n.actor_id&&user(n.actor_id)) return openProfile(n.actor_id);
 }
 
@@ -1145,7 +1193,7 @@ function subscribeRealtime(){
     else { if(!document.getElementById('threads-view').classList.contains('hidden')) renderThreads();
       store.unreadMsgs++; paintBadges(); toast('New message from '+user(t.withU).username); }
   }).on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:'user_id=eq.'+store.session},async p=>{
-    await ensureUsers([p.new.actor_id]); store.unread++; paintBadges(); const [ic,txt]=notifInfo(p.new); toast(ic+' '+txt.replace(/<[^>]+>/g,''));
+    await ensureUsers([p.new.actor_id]); store.unread++; paintBadges(); if(p.new.type==='won') queueWin(p.new); const [ic,txt]=notifInfo(p.new); toast(ic+' '+txt.replace(/<[^>]+>/g,''));
     if(!document.getElementById('page-notifs').classList.contains('hidden')) renderNotifs();
   }).subscribe();
 }

@@ -106,6 +106,11 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
   ```
   (`pg_cron` and `pg_net` are available; enable them under Database → Extensions first.)
 
+## How a raffle is drawn and announced (migrations 007, 012, 018)
+- **Fair draw (commit-and-reveal)**: when a raffle is created the server makes a secret random seed and publishes only its SHA-256 hash (shown on the raffle card). When it closes, an admin presses **Draw winner**: the winning ticket number is `sha256(seed:raffle:ticket-count)` modulo the number of tickets, so the result can't be steered after entries are in. The seed is then revealed and anyone can confirm it matches the published hash ("seed verified ✓" under Recent winners).
+- **Announcing**: the winner gets a notification (and an email once email is set up) and, the next time the app is open — or instantly if it already is — a full-screen **"YOU WON!" pop-up with confetti** that leads straight to the delivery-address form for free prizes. Everyone else who entered gets "the draw for X is done — @winner won". Recent winners also show on the Raffles page.
+- Redraws (no reply / fake winner) are in Admin → Giveaways → Winners.
+
 ## Not built yet (needed before launch)
 - Automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console. Admins can still mark a user 18+ verified by hand.
 - Notifications, live recording/replays, and multi-guest streams. Terms/Privacy pages exist as lawyer-review drafts.
