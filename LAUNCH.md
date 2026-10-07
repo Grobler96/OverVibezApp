@@ -19,7 +19,8 @@ What is built is live and tested. What is left is mostly **accounts and paperwor
 - [ ] Upgrade to **Pro** (daily backups, no pausing, higher limits).
 - [ ] Auth → Providers → Email: turn on **leaked password protection**.
 - [ ] Auth → URL configuration: set Site URL and redirect URLs to the real domain.
-- [ ] Delete dev/test accounts and change the dev admin password; make sure only your real account is admin.
+- [x] Dev/test accounts deleted; the owner's real account is admin. (3 leftover anonymised test rows remain in Transactions.)
+- [ ] Everyone with staff access turns on Two-step login (Me → Two-step login), then Admin → Invites → "Require for staff".
 
 ## 4. Live streaming
 - [ ] Create a LiveKit Cloud project; set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` as secrets.
