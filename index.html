@@ -329,6 +329,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
         <span>Discover creators, subscribe, unlock exclusive drops</span>
       </div>
     </div>
+    <div id="suCampaign" class="hidden" style="background:linear-gradient(135deg,rgba(255,61,138,.18),rgba(124,92,255,.18));border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:13.5px;line-height:1.5"></div>
     <div class="field hidden" id="suInviteWrap"><label>Invite code <span style="color:var(--muted)">(the beta is invite-only)</span></label><input id="suInvite" placeholder="VIBE-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off"></div>
     <div class="field"><label>Username</label><input id="suUser" placeholder="lowercase, 3–24 chars" maxlength="24"></div>
     <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="you@example.com"></div>
@@ -420,6 +421,31 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="pay-row"><span>Wallet after</span><span id="payAfter"></span></div>
     <button class="primary" id="payConfirmBtn">Confirm payment</button>
     <button class="ghost" onclick="closeModal('payModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="freeModal" onclick="if(event.target===this)closeModal('freeModal')">
+  <div class="sheet">
+    <h3>🎁 Your free giveaway entry</h3>
+    <p>Welcome to OverVibez! Pick the prize you want to enter for free. You get one entry, so choose wisely. No purchase necessary — 18+, UK prizes only.</p>
+    <div id="freeList"></div>
+    <button class="ghost" onclick="closeModal('freeModal')">Maybe later</button>
+  </div>
+</div>
+
+<div class="overlay" id="prizeModal" onclick="if(event.target===this)closeModal('prizeModal')">
+  <div class="sheet">
+    <h3>🏆 Delivery address</h3>
+    <p>Prizes are posted to the UK only. We only use this to send your prize.</p>
+    <div class="field"><label>Full name</label><input id="pzName" maxlength="80" autocomplete="name"></div>
+    <div class="field"><label>Address line 1</label><input id="pzL1" maxlength="100" autocomplete="address-line1"></div>
+    <div class="field"><label>Address line 2 (optional)</label><input id="pzL2" maxlength="100" autocomplete="address-line2"></div>
+    <div class="field"><label>Town / city</label><input id="pzCity" maxlength="60" autocomplete="address-level2"></div>
+    <div class="field"><label>Postcode</label><input id="pzPost" maxlength="10" autocomplete="postal-code" autocapitalize="characters"></div>
+    <div class="field"><label>Phone (optional, for the courier)</label><input id="pzPhone" maxlength="25" type="tel" autocomplete="tel"></div>
+    <div class="err" id="pzErr"></div>
+    <button class="primary" onclick="savePrize()">Save address</button>
+    <button class="ghost" onclick="closeModal('prizeModal')">Cancel</button>
   </div>
 </div>
 
@@ -583,7 +609,7 @@ const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
 const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at,follower_count,category';
 const CATS=[['music','🎵','Music'],['fitness','💪','Fitness'],['art','🎨','Art'],['food','🍳','Food'],['photography','📷','Photography'],['fashion','👗','Fashion'],['gaming','🎮','Gaming'],['comedy','😂','Comedy'],['lifestyle','✨','Lifestyle'],['other','','Other']];
 
-const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
+const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,freeStatus:{eligible:false},prizes:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
@@ -674,11 +700,12 @@ async function hydrate(){
   await ensureUsers((raf.data||[]).map(r=>r.host_id));
   store.raffles=(raf.data||[]).map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{};
     return {id:r.id,title:r.title,host:r.host_id&&user(r.host_id)?user(r.host_id).username:'OverVibez',prize:r.prize,
-      price:r.entry_price_cents,entries:Number(t.entries||0),players:Number(t.players||0),
+      free:!!r.is_free,price:r.entry_price_cents,entries:Number(t.entries||0),players:Number(t.players||0),
       seed:r.seed_hash.slice(0,6)+'…'+r.seed_hash.slice(-4),ends:new Date(r.closes_at).getTime()}; });
   const drawn=await sb.from('raffles').select('id,title,prize').not('winner_entry_id','is',null).order('closes_at',{ascending:false}).limit(5);
   const dres=await Promise.all((drawn.data||[]).map(d=>sb.rpc('raffle_result',{p_raffle:d.id})));
   store.raffleResults=(drawn.data||[]).map((d,i)=>Object.assign({title:d.title,prize:d.prize},(dres[i].data||[{}])[0]||{})).filter(x=>x.winner_username);
+  try{ const [fs,pz]=await Promise.all([sb.rpc('my_free_entry_status'),sb.rpc('my_prizes')]); store.freeStatus=fs.data||{eligible:false}; store.prizes=pz.data||[]; }catch(e){ store.freeStatus={eligible:false}; store.prizes=[]; }
   await loadLive();
   await loadThreads();
 }
@@ -696,12 +723,15 @@ async function loadPublicSettings(){
 (async function boot(){
   if(!sb) return;
   await Promise.all([loadFeatures(),loadPublicSettings()]);
-  const code=new URLSearchParams(location.search).get('invite');
-  if(code){ authTab('signup'); document.getElementById('suInvite').value=code; }
+  const qs=new URLSearchParams(location.search), code=qs.get('invite')||qs.get('campaign');
+  if(code){ authTab('signup'); document.getElementById('suInvite').value=code;
+    try{ const {data:ci}=await sb.rpc('campaign_info',{p_code:code}); if(ci){ campaignName=ci.name;
+      const b=document.getElementById('suCampaign'); b.classList.remove('hidden');
+      b.innerHTML='🎁 <b>Free giveaway entry</b><br>Create your account, confirm your email and pick a giveaway — '+esc(ci.name)+'. 18+, UK prizes only, no purchase needed.'; } }catch(e){} }
 })();
 
 /* ═══════════ AUTH ═══════════ */
-let signupRole='creator', recoveryMode=false;
+let signupRole='creator', recoveryMode=false, campaignName=null, freeShown=false;
 function authTab(t){
   document.getElementById('tabLogin').classList.toggle('on',t==='login');
   document.getElementById('tabSignup').classList.toggle('on',t==='signup');
@@ -725,9 +755,8 @@ async function doSignup(){
   if(pw.length<8) return err.textContent='Password must be at least 8 characters.';
   if(!dob) return err.textContent='Date of birth is required.';
   if((Date.now()-new Date(dob).getTime())/3.15576e10<18) return err.textContent='You must be 18 or older to join OverVibez.';
-  let invite='';
+  let invite=document.getElementById('suInvite').value.trim().toUpperCase();
   if(settings.invite_only){
-    invite=document.getElementById('suInvite').value.trim().toUpperCase();
     if(!invite) return err.textContent='You need an invite code — the beta is invite-only.';
     const {data:valid}=await sb.rpc('check_invite',{p_code:invite});
     if(!valid) return err.textContent='That invite code is not valid, or has been used up.';
@@ -737,9 +766,9 @@ async function doSignup(){
   if(taken) return err.textContent='That username is taken.';
   const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,display_name:un,account_type:signupRole,invite_code:invite}}});
   if(error) return err.textContent=/Database error saving new user/i.test(error.message)?'Could not create the account — the invite code may have just been used up, or that username/email is taken.':error.message;
-  if(new URLSearchParams(location.search).has('invite')) history.replaceState(null,'',location.pathname+location.hash);
+  if(/[?&](invite|campaign)=/.test(location.search)) history.replaceState(null,'',location.pathname+location.hash);
   err.textContent='';
-  if(!data.session){ authTab('login'); document.getElementById('liErr').textContent='Check your email to confirm your account, then log in.'; }
+  if(!data.session){ authTab('login'); document.getElementById('liErr').textContent='Check your email to confirm your account, then log in.'+(campaignName?' Your free giveaway entry is waiting for you 🎁':''); }
 }
 async function doLogin(){
   const err=document.getElementById('liErr');
@@ -791,12 +820,12 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges();
+  enterApp(uid); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
   store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0;
+  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -836,6 +865,8 @@ const notifInfo=n=>{
     case 'like': return ['♥',who+' liked your post'];
     case 'live': return ['🔴',who+' is live: '+esc(d.title||'')];
     case 'payout_paid': return ['🏦','Your payout of '+$$(d.amount_cents)+' has been sent'];
+    case 'won': return ['🏆','You won <b>'+esc(d.prize||'a prize')+'</b> in “'+esc(d.title||'a giveaway')+'”!'+(d.free?' Add your UK delivery address in Raffles.':'')];
+    case 'prize_shipped': return ['📦','Your prize is on its way'+(d.tracking?' — tracking '+esc(d.tracking):'')];
     case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')];
     default: return ['🔔','New activity'];
   }
@@ -857,6 +888,7 @@ function notifOpen(i){
   if(n.type==='live'&&n.ref_id) return openLive(n.ref_id);
   if(n.type==='comment'&&n.ref_id&&store.posts.some(p=>p.id===n.ref_id)) return openComments(n.ref_id);
   if(n.type==='payout_paid') return go('studio');
+  if(n.type==='won'||n.type==='prize_shipped') return go('raffles');
   if(n.actor_id&&user(n.actor_id)) return openProfile(n.actor_id);
 }
 
@@ -1189,21 +1221,57 @@ async function renderExplore(reset){
 
 /* ═══════════ RAFFLES ═══════════ */
 let activeRaffle=null,qty=5;
+function prizePanel(){
+  return (store.prizes||[]).map(x=>{
+    const by=x.claim_by?new Date(x.claim_by).toLocaleDateString():'';
+    const msg=x.status==='needs address'?`<b>🏆 You won ${esc(x.prize)}!</b><br><span style="font-size:12.5px;color:var(--muted)">Add your UK delivery address${by?' by '+by:''} so we can send it.</span><br><button class="abtn ok" style="margin-top:8px" onclick="openPrize('${x.raffle_id}')">Add delivery address</button>`
+      :x.status==='pending'?`<b>🏆 ${esc(x.prize)}</b><br><span style="font-size:12.5px;color:var(--muted)">Address received — we will post it soon. <a href="#" onclick="openPrize('${x.raffle_id}');return false" style="color:var(--accent-2)">Edit address</a></span>`
+      :`<b>📦 ${esc(x.prize)}</b><br><span style="font-size:12.5px;color:var(--muted)">Shipped — look out for it in the post!</span>`;
+    return `<div class="raffle-card" style="margin-bottom:12px">${msg}</div>`; }).join('');
+}
+function freeBtn(r){
+  const f=store.freeStatus||{};
+  if((f.entered||[]).includes(r.id)) return '<button class="enter-btn" disabled style="opacity:.7">You are entered ✓</button>';
+  if(f.eligible&&f.used<f.allowance) return `<button class="enter-btn" onclick="claimFree('${r.id}')">🎁 Enter free</button>`;
+  if(f.eligible) return '<button class="enter-btn" disabled style="opacity:.6">Free entry used</button>';
+  return '<p style="font-size:12.5px;color:var(--muted);text-align:center">Free giveaway — open to members who join through a giveaway link.</p>';
+}
 function renderRaffles(){
-  document.getElementById('raffleList').innerHTML=store.raffles.length?store.raffles.map(r=>{
+  document.getElementById('raffleList').innerHTML=prizePanel()+(store.raffles.length?store.raffles.map(r=>{
     const left=Math.max(0,r.ends-Date.now()), d=Math.floor(left/864e5), h=Math.floor(left%864e5/36e5), m=Math.floor(left%36e5/6e4), s=Math.floor(left%6e4/1e3);
     return `<div class="raffle-card">
-    <div class="raffle-top"><div><h3>${esc(r.title)}</h3><span style="font-size:12px;color:var(--muted)">hosted by ${esc(r.host)}</span></div><span class="prize">${esc(r.prize)}</span></div>
+    <div class="raffle-top"><div><h3>${esc(r.title)}</h3><span style="font-size:12px;color:var(--muted)">hosted by ${esc(r.host)}${r.free?' · FREE giveaway':''}</span></div><span class="prize">${esc(r.prize)}</span></div>
     <div class="countdown">
       <div class="cd-unit"><b>${String(d).padStart(2,'0')}</b><span>days</span></div>
       <div class="cd-unit"><b>${String(h).padStart(2,'0')}</b><span>hrs</span></div>
       <div class="cd-unit"><b>${String(m).padStart(2,'0')}</b><span>min</span></div>
       <div class="cd-unit"><b>${String(s).padStart(2,'0')}</b><span>sec</span></div></div>
-    <div class="raffle-meta"><span>🎟️ ${r.entries.toLocaleString()} entries</span><span>💵 ${$$(r.price)} / entry</span><span>👥 ${r.players.toLocaleString()} players</span></div>
-    <button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries — ${$$(r.price)} each</button></div>`;
-  }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No raffles running right now.</p>';
+    <div class="raffle-meta"><span>🎟️ ${r.entries.toLocaleString()} entries</span><span>${r.free?'🎁 Free entry':'💵 '+$$(r.price)+' / entry'}</span><span>👥 ${r.players.toLocaleString()} players</span></div>
+    ${r.free?freeBtn(r):`<button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries — ${$$(r.price)} each</button>`}</div>`;
+  }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No raffles running right now.</p>');
   if(store.raffleResults.length) document.getElementById('raffleList').innerHTML+=`<div class="section-title" style="padding-top:8px">Recent winners</div><div class="list-card">${
     store.raffleResults.map(w=>`<div class="row" style="cursor:default"><div class="r-ic">🏆</div><div style="flex:1;min-width:0"><b>@${esc(w.winner_username)}</b> won ${esc(w.prize)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(w.title)} · ${Number(w.total_tickets)} tickets · ${w.hash_ok?'seed verified ✓':'seed mismatch ⚠'}</span></div></div>`).join('')}</div>`;
+}
+async function claimFree(id){
+  const r=store.raffles.find(x=>x.id===id); if(!r) return;
+  if(!confirm('Use your free entry on “'+r.title+'”?\n\nYou only get one free entry, so choose the prize you want most.')) return;
+  closeModal('freeModal'); toast('Entering…');
+  if(await rpc('claim_free_entry',{p_raffle:id})){ toast('You are in the draw 🎁 Good luck!'); await settled(); }
+}
+function showFreeWelcome(){
+  const f=store.freeStatus||{}; if(freeShown||!f.eligible||f.used>=f.allowance) return;
+  const open=store.raffles.filter(r=>r.free&&!(f.entered||[]).includes(r.id)); if(!open.length) return;
+  freeShown=true;
+  document.getElementById('freeList').innerHTML=open.map(r=>`<div class="list-card" style="margin:0 0 10px"><div class="row" style="cursor:default"><div class="r-ic">🎁</div><div style="flex:1;min-width:0"><b>${esc(r.prize)}</b><br><span style="font-size:12px;color:var(--muted)">${esc(r.title)}</span></div><button class="abtn ok" onclick="claimFree('${r.id}')">Enter</button></div></div>`).join('');
+  openModal('freeModal');
+}
+let prizeRaffle=null;
+function openPrize(id){ prizeRaffle=id; ['pzName','pzL1','pzL2','pzCity','pzPost','pzPhone'].forEach(k=>document.getElementById(k).value=''); document.getElementById('pzErr').textContent=''; openModal('prizeModal'); }
+async function savePrize(){
+  const v=k=>document.getElementById(k).value, err=document.getElementById('pzErr'); err.textContent='';
+  const {error}=await sb.rpc('submit_prize_address',{p_raffle:prizeRaffle,p_name:v('pzName'),p_line1:v('pzL1'),p_line2:v('pzL2'),p_city:v('pzCity'),p_postcode:v('pzPost'),p_phone:v('pzPhone')||null});
+  if(error) return err.textContent=friendly(error.message);
+  closeModal('prizeModal'); toast('Address saved 📦'); await settled();
 }
 setInterval(()=>{ if(!document.getElementById('page-raffles').classList.contains('hidden')&&store.session) renderRaffles(); },1000);
 function openRaffle(id){ activeRaffle=store.raffles.find(r=>r.id===id); qty=5;
@@ -1706,7 +1774,7 @@ async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}
 const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  const tabs=[['reports','Reports'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  const tabs=[['reports','Reports'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['giveaways','Giveaways'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -1715,7 +1783,7 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({reports:admReports,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({reports:admReports,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,audit:admAudit})[adminTab](); }
 
 /* --- reports queue --- */
 async function admReports(){
@@ -1890,7 +1958,7 @@ async function admPaid(id){
   const {error}=await admCall('admin_mark_payout_paid',{p_id:id}); if(!error){ toast('Marked paid'); admLoad(); }
 }
 async function admRaffles(){
-  const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,closes_at,winner_entry_id').order('created_at',{ascending:false}).limit(20);
+  const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,is_free,closes_at,winner_entry_id').order('created_at',{ascending:false}).limit(20);
   if(error) return toast(error.message);
   const totals=await Promise.all(rs.map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
   const results=await Promise.all(rs.map(r=>r.winner_entry_id?sb.rpc('raffle_result',{p_raffle:r.id}):Promise.resolve({data:null})));
@@ -1903,7 +1971,7 @@ async function admRaffles(){
      <div class="field"><label>Open for (hours)</label><input id="rfHours" type="number" min="1" max="1440" value="72"></div>
      <button class="primary" onclick="admCreateRaffle()">Create raffle</button></div>
    ${rs.map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, res=(results[i].data||[])[0], closed=new Date(r.closes_at)<new Date();
-     return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${$$(r.entry_price_cents)}/entry</span>
+     return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${r.is_free?'free':$$(r.entry_price_cents)+'/entry'}</span>
        <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} tickets · ${Number(t.players||0)} players · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
        ${res?`<div style="font-size:13px">🏆 <b>@${esc(res.winner_username)}</b> · seed ${res.hash_ok?'verified ✓':'MISMATCH ⚠'}</div>`
          :(closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">Draw winner</button>`:'')}</div>`; }).join('')}</div>`;
@@ -1917,6 +1985,59 @@ async function admCreateRaffle(){
 async function admDraw(id){
   if(!confirm('Draw the winner now? This cannot be undone.')) return;
   const {error}=await admCall('admin_draw_raffle',{p_raffle:id}); if(!error){ toast('Winner drawn'); admLoad(); }
+}
+/* --- giveaways: campaign links, free raffles, prize delivery (admin only) --- */
+const campaignLink=code=>location.origin+location.pathname+'?campaign='+encodeURIComponent(code);
+async function admGiveaways(){
+  const [cs,pc,rs]=await Promise.all([admCall('admin_list_campaigns'),admCall('admin_list_prize_claims'),sb.from('raffles').select('id,title,prize,closes_at,winner_entry_id').eq('is_free',true).order('created_at',{ascending:false}).limit(20)]);
+  if(cs.error||pc.error) return;
+  const totals=await Promise.all((rs.data||[]).map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
+  admBody().innerHTML=`<div class="admin-pad">
+   <div class="chart-card"><h4>1. Create a free giveaway</h4>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">One prize per giveaway. Members choose which giveaway to enter, and the winner is drawn fairly (published seed hash, revealed after).</p>
+     <div class="field"><label>Title</label><input id="fgTitle" maxlength="120" placeholder="Win a mystery box"></div>
+     <div class="field"><label>Prize</label><input id="fgPrize" maxlength="120" placeholder="e.g. Branded hoodie"></div>
+     <div class="field"><label>Open for (days)</label><input id="fgDays" type="number" min="1" max="90" value="14"></div>
+     <button class="primary" onclick="admCreateFree()">Create giveaway</button></div>
+   <div class="chart-card"><h4>2. Create a sign-up link</h4>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">New people who join through the link and finish setting up get one free entry. It works even while the beta is invite-only.</p>
+     <div class="field"><label>Campaign name</label><input id="cpName" maxlength="80" placeholder="Autumn giveaway"></div>
+     <div class="field"><label>Link code (letters, numbers, dashes)</label><input id="cpCode" maxlength="24" placeholder="AUTUMN" autocapitalize="characters"></div>
+     <div class="field"><label>Maximum sign-ups</label><input id="cpMax" type="number" min="1" max="100000" value="500"></div>
+     <div class="field"><label>Ends after (days, blank = never)</label><input id="cpDays" type="number" min="1" max="365" placeholder="never"></div>
+     <button class="primary" onclick="admCreateCampaign()">Create link</button></div>
+   ${cs.data.map(c=>`<div class="chart-card" ${!c.active?'style="opacity:.6"':''}>
+     <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(c.name)}</b><span style="font-size:12px;color:var(--muted)">${Number(c.signups)}/${c.max_signups} joined · ${Number(c.entries_claimed)} entered</span></div>
+     <div style="font-family:monospace;font-size:12px;color:var(--muted);margin:4px 0;word-break:break-all">${esc(campaignLink(c.code))}</div>
+     <button class="abtn ok" onclick="copyText(campaignLink('${esc(c.code)}'))">Copy link</button><button class="abtn ${c.active?'danger':''}" onclick="admCampaignActive('${c.id}',${!c.active})">${c.active?'Pause':'Resume'}</button></div>`).join('')}
+   <div class="section-title" style="padding:12px 0 6px">Free giveaways</div>
+   ${(rs.data||[]).map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, closed=new Date(r.closes_at)<new Date();
+     return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)}</span>
+      <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} entries · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
+      ${!r.winner_entry_id&&closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">Draw winner</button>`:''}</div>`; }).join('')||admEmpty('No free giveaways yet.')}
+   <div class="section-title" style="padding:12px 0 6px">Winners to post to</div>
+   ${pc.data.map(c=>`<div class="chart-card"><b>${esc(c.prize)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(c.title)} · won by @${esc(c.winner)}</span>
+     <div style="font-size:12.5px;margin:6px 0;line-height:1.5">${c.full_name?`${esc(c.full_name)}<br>${esc(c.line1)}${c.line2?', '+esc(c.line2):''}<br>${esc(c.city)}, ${esc(c.postcode)}${c.phone?'<br>'+esc(c.phone):''}`:'<span style="color:var(--muted)">No address yet'+(c.claim_by?' — claim by '+new Date(c.claim_by).toLocaleDateString():'')+'</span>'}</div>
+     <div style="font-size:12px;color:var(--muted)">Status: ${esc(c.status)}${c.tracking?' · '+esc(c.tracking):''}</div>
+     ${c.status==='pending'?`<button class="abtn ok" onclick="admShipPrize('${c.raffle_id}')">Mark as posted</button>`:''}
+     ${c.status!=='shipped'?`<button class="abtn danger" onclick="admRedraw('${c.raffle_id}')">Redraw (no reply / fake)</button>`:''}</div>`).join('')||admEmpty('No winners yet.')}
+  </div>`;
+}
+async function admCreateFree(){
+  const days=parseInt(document.getElementById('fgDays').value,10); if(isNaN(days)) return toast('Enter how many days it stays open');
+  const {error}=await admCall('admin_create_free_raffle',{p_title:document.getElementById('fgTitle').value,p_prize:document.getElementById('fgPrize').value,p_hours:days*24});
+  if(!error){ toast('Giveaway created — it is live now'); admLoad(); }
+}
+async function admCreateCampaign(){
+  const max=parseInt(document.getElementById('cpMax').value,10), d=document.getElementById('cpDays').value;
+  const {error}=await admCall('admin_create_campaign',{p_name:document.getElementById('cpName').value,p_code:document.getElementById('cpCode').value,p_max_signups:max,p_entries:1,p_days:d?parseInt(d,10):null});
+  if(!error){ toast('Link created — copy it below'); admLoad(); }
+}
+async function admCampaignActive(id,on){ const {error}=await admCall('admin_set_campaign_active',{p_id:id,p_on:on}); if(!error){ toast(on?'Campaign resumed':'Campaign paused'); admLoad(); } }
+async function admShipPrize(id){ const t=prompt('Tracking number (optional):',''); if(t===null) return; const {error}=await admCall('admin_mark_prize_shipped',{p_raffle:id,p_tracking:t.trim()||null}); if(!error){ toast('Marked as posted — the winner has been told'); admLoad(); } }
+async function admRedraw(id){
+  const why=prompt('Redraw the winner? Say why (e.g. "no reply in 14 days"):',''); if(!why) return;
+  const {error}=await admCall('admin_redraw_raffle',{p_raffle:id,p_reason:why}); if(!error){ toast('New winner drawn and notified'); admLoad(); }
 }
 async function admAudit(){
   const {data,error}=await admCall('admin_list_actions',{p_limit:100}); if(error) return;
