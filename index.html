@@ -1721,11 +1721,13 @@ async function openAgeRequest(){
   const {data}=await sb.rpc('my_age_request'); const r=data||{};
   const mail=settings.support_email?`<a href="mailto:${esc(settings.support_email)}">${esc(settings.support_email)}</a>`:'our support team';
   if(r.status==='pending'){
-    body.innerHTML=`<p style="line-height:1.55">✅ Your request is with us. We will contact you by email to check your ID — usually within a couple of days. You will get a notification here when it is done.</p>`; return;
+    body.innerHTML=`<p style="line-height:1.55">✅ Your request is with us. <b>One more step:</b> email a photo of yourself holding your passport or driving licence to ${mail}, <b>from the email address on your account</b>, with <b>${esc(me().username)}</b> in the subject. Your face and the details on the ID must be clear — you can cover the ID number. We check it and delete it straight away, and you will get a notification here when it is done.</p>`; return;
   }
   body.innerHTML=(r.status==='rejected'?`<p style="color:var(--live);line-height:1.5">Your last request was not approved${r.note?': '+esc(r.note):''}. You can ask again.</p>`:'')+
     `<p style="line-height:1.55;font-size:14px">OverVibez is for adults, so we check ID by hand before you can post, go live or add money.<br><br>
-     Tap <b>Request a check</b>. We will email the address on your account to arrange a quick <b>video call</b> where you show a passport or driving licence — or you can email a photo to ${mail}, and we delete it as soon as it is checked.<br><br>
+     <b>1.</b> Tap <b>Request a check</b>.<br>
+     <b>2.</b> Email a photo of <b>yourself holding your passport or driving licence</b> to ${mail}, from the email address on your account, with your username in the subject. Your face and the details must be clear — you can cover the ID number.<br>
+     <b>3.</b> We check it and delete the photo straight away.<br><br>
      <b>We never store your ID in the app</b> — only that you were verified and when.</p>
      <div class="field"><label>Anything we should know? (optional, e.g. best time for a call)</label><input id="ageNote" maxlength="300"></div>
      <div class="err" id="ageErr"></div><button class="primary" id="ageBtn" onclick="sendAgeRequest()">Request a check</button>`;
@@ -2507,7 +2509,7 @@ async function admAge(){
     <div class="chart-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>ID checks: ${stripeOn?'Stripe Identity (paid per check)':'by hand (free)'}</b>
       <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">${stripeOn?'Members verify through Stripe. Stripe charges per check.':'Members request a check; you look at their ID yourself, then approve below. Nothing is charged.'}</div></div>
       <button class="abtn ${stripeOn?'ok':''}" onclick="admIdMode('${stripeOn?'manual':'stripe'}')">${stripeOn?'Switch to by hand':'Switch to Stripe'}</button></div></div>
-    <div class="chart-card" style="font-size:12.5px;color:var(--muted);line-height:1.55"><b style="color:var(--text)">How to check</b><br>Email or message the member, then look at a passport or driving licence — ideally on a short video call, so nothing is stored. If they email a photo, check it and delete it straight away. Approve only if the photo matches them and they are 18 or over. The note you write is kept as the record — do not put ID numbers in it.</div>
+    <div class="chart-card" style="font-size:12.5px;color:var(--muted);line-height:1.55"><b style="color:var(--text)">How to check</b><br>The member emails a photo of themselves holding a passport or driving licence to your support inbox, from the email shown on their request, with their username in the subject. Check that the face matches the person, the ID looks genuine, the name is plausible and the date of birth makes them 18 or over. Then <b>delete the email and the photo straight away</b> (and empty your trash). Approve only if you are satisfied. The note you write is kept as the record — do not put ID numbers in it.</div>
     <div class="chiprow">${['pending','approved','rejected'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.age='${x}';admLoad()">${x}</button>`).join('')}</div>
     ${data.length?data.map(r=>`<div class="chart-card">
       <div style="display:flex;justify-content:space-between;gap:8px"><b>@${esc(r.username)}</b><span style="font-size:12px;color:var(--muted)">${ago(r.created_at)} ago</span></div>
@@ -2518,7 +2520,7 @@ async function admAge(){
       <button class="abtn" onclick="admOpenUser('${r.user_id}')">View user</button></div>`).join(''):admEmpty(st==='pending'?'No requests waiting ✓':'Nothing here yet.')}</div>`;
 }
 async function admAgeReview(id,approve){
-  const note=prompt(approve?'What did you check? e.g. "driving licence seen on video call, over 18" (no ID numbers)':'Why was it not approved? The member will see this.'); if(note===null) return;
+  const note=prompt(approve?'What did you check? e.g. "photo holding driving licence checked, over 18" (no ID numbers)':'Why was it not approved? The member will see this.'); if(note===null) return;
   const {error}=await admCall('admin_review_age_request',{p_id:id,p_approve:approve,p_note:note}); if(!error){ toast(approve?'Approved ✓':'Rejected'); admLoad(); }
 }
 async function admIdMode(mode){

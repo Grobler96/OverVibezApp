@@ -1,6 +1,6 @@
 -- 025: manual 18+ checks.
 -- Stripe Identity charges per check, so by default the ID check is done by hand: a member asks for a check, an admin looks at
--- their ID OUTSIDE the app (video call, or a photo emailed to support that is deleted straight after), then approves or rejects
+-- their ID OUTSIDE the app (a photo of the member holding their ID, emailed to support and deleted straight after), then approves or rejects
 -- here. The app stores only the result and a short note — never an image of the ID. An admin can switch back to Stripe
 -- Identity later with admin_set_id_check_mode('stripe').
 
@@ -14,8 +14,8 @@ create table if not exists public.age_requests (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles(id) on delete cascade,
   status text not null default 'pending' check (status in ('pending','approved','rejected')),
-  note text,                                   -- what the member wrote (e.g. best time for a video call)
-  review_note text,                            -- what the admin recorded (e.g. "passport seen on video call, over 18")
+  note text,                                   -- what the member wrote (e.g. best time to reply)
+  review_note text,                            -- what the admin recorded (e.g. "photo holding passport checked, over 18")
   reviewed_by uuid references public.profiles(id) on delete set null,
   reviewed_at timestamptz,
   created_at timestamptz not null default now()
@@ -76,7 +76,7 @@ begin
     where r.status = coalesce(p_status, 'pending') order by r.created_at desc limit 100;
 end $$;
 
--- Approve or reject. The note is required: write what you checked (e.g. "passport seen on video call, over 18"). No ID copies are kept here.
+-- Approve or reject. The note is required: write what you checked (e.g. "photo holding passport checked, over 18"). No ID copies are kept here.
 create or replace function public.admin_review_age_request(p_id uuid, p_approve boolean, p_note text) returns void
 language plpgsql security definer set search_path = public as $$
 declare r age_requests%rowtype;
