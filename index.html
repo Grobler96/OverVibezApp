@@ -299,6 +299,23 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 <body>
 
 <!-- ═══════════ AUTH SCREEN ═══════════ -->
+<div id="ageGate" style="display:none;position:fixed;inset:0;z-index:9999;background:#0E0A14;color:#EFEAF6;align-items:center;justify-content:center;padding:24px;text-align:center">
+  <div style="max-width:380px">
+    <div style="font-size:44px;margin-bottom:6px">🔞</div>
+    <h1 style="font-size:26px;margin:0 0 8px;font-family:'Unbounded',system-ui,sans-serif">OverVibez is for adults</h1>
+    <p id="ageMsg" style="color:#9E90B8;font-size:15px;line-height:1.55;margin:0 0 22px">You must be 18 or over to enter. By continuing you confirm you are 18+ and agree to our <a href="terms.html" style="color:#8B5CF6">Terms</a> and <a href="privacy.html" style="color:#8B5CF6">Privacy Policy</a>.</p>
+    <button id="ageYes" style="width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,#FF3D8A,#8B5CF6);color:#fff;font-weight:700;font-size:16px;border:0;cursor:pointer">I am 18 or over — enter</button>
+    <button id="ageNo" style="width:100%;padding:13px;margin-top:10px;border-radius:14px;background:transparent;color:#9E90B8;font-size:14px;border:1px solid #2a2238;cursor:pointer">I am under 18 — leave</button>
+  </div>
+</div>
+<script>
+(function(){
+  var ok=false; try{ ok=localStorage.getItem('ov_18')==='1'; }catch(e){}
+  var g=document.getElementById('ageGate'); if(ok||!g) return; g.style.display='flex';
+  document.getElementById('ageYes').onclick=function(){ try{ localStorage.setItem('ov_18','1'); }catch(e){} g.style.display='none'; };
+  document.getElementById('ageNo').onclick=function(){ document.getElementById('ageMsg').textContent='Sorry — OverVibez is only for people aged 18 and over.'; document.getElementById('ageYes').style.display='none'; document.getElementById('ageNo').style.display='none'; };
+})();
+</script>
 <div class="auth" id="authScreen">
   <div class="logo-big">OverVibez</div>
   <div class="tag">Social · Amplified</div>
@@ -330,7 +347,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
       </div>
     </div>
     <div id="suCampaign" class="hidden" style="background:linear-gradient(135deg,rgba(255,61,138,.18),rgba(124,92,255,.18));border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:13.5px;line-height:1.5"></div>
-    <div class="field hidden" id="suInviteWrap"><label>Invite code <span style="color:var(--muted)">(the beta is invite-only)</span></label><input id="suInvite" placeholder="VIBE-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off"></div>
+    <div class="field hidden" id="suInviteWrap"><label>Invite code <span style="color:var(--muted)">(sign-up is by invitation)</span></label><input id="suInvite" placeholder="VIBE-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off"></div>
     <div class="field"><label>Username</label><input id="suUser" placeholder="lowercase, 3–24 chars" maxlength="24"></div>
     <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="you@example.com"></div>
     <div class="field"><label>Password</label><input id="suPass" type="password" placeholder="min 8 characters"></div>
@@ -339,7 +356,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="err" id="suErr"></div>
   </div>
 
-  <div class="auth-note">By continuing you confirm you are 18+ and agree to the <a href="terms.html" style="color:var(--accent-2)">Terms</a> and <a href="privacy.html" style="color:var(--accent-2)">Privacy Policy</a>.<br>Beta build — payments run in test mode.</div>
+  <div class="auth-note">By continuing you confirm you are 18+ and agree to the <a href="terms.html" style="color:var(--accent-2)">Terms</a> and <a href="privacy.html" style="color:var(--accent-2)">Privacy Policy</a>.<br>Questions? See the <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a>.</div>
 </div>
 
 <!-- ═══════════ APP SHELL ═══════════ -->
@@ -539,15 +556,34 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   </div>
 </div>
 
+<div class="overlay" id="appealModal" onclick="if(event.target===this)closeModal('appealModal')">
+  <div class="sheet">
+    <h3 id="appealTitle">Appeal</h3>
+    <p>Tell us why you think this was a mistake. A team member who was not involved will look again and reply in your notifications.</p>
+    <div class="field"><textarea id="appealBody" rows="5" maxlength="1000" placeholder="What should we know?" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
+    <div class="err" id="appealErr"></div>
+    <button class="primary" onclick="sendAppeal()">Send appeal</button>
+    <button class="ghost" onclick="closeModal('appealModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="blockedModal" onclick="if(event.target===this)closeModal('blockedModal')">
+  <div class="sheet">
+    <h3>Blocked &amp; muted</h3>
+    <div class="list-card" id="blockedList" style="margin:0 0 10px"></div>
+    <button class="ghost" onclick="closeModal('blockedModal')">Close</button>
+  </div>
+</div>
+
 <div class="overlay" id="reportModal" onclick="if(event.target===this)closeModal('reportModal')">
   <div class="sheet">
     <h3>Report</h3>
-    <p>Tell us what is wrong. Reports are reviewed by our Trust &amp; Safety team.</p>
+    <p>Tell us what is wrong. Reports are reviewed by our Trust &amp; Safety team. Illegal content, anyone who may be under 18, and copyright reports are looked at first.</p>
     <div class="field"><label>Reason</label>
       <select id="reportReason" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none">
         <option value="spam">Spam or scam</option><option value="nudity">Non-consensual or prohibited sexual content</option>
         <option value="harassment">Harassment or hate</option><option value="underage">Involves someone under 18</option>
-        <option value="illegal">Illegal content</option><option value="other">Something else</option></select></div>
+        <option value="illegal">Illegal content</option><option value="copyright">Copyright infringement</option><option value="other">Something else</option></select></div>
     <div class="field"><label>Details (optional)</label>
       <textarea id="reportDetails" rows="3" maxlength="800" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
     <button class="primary" id="reportBtn" onclick="submitReport()">Submit report</button>
@@ -609,7 +645,7 @@ const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
 const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at,follower_count,category';
 const CATS=[['music','🎵','Music'],['fitness','💪','Fitness'],['art','🎨','Art'],['food','🍳','Food'],['photography','📷','Photography'],['fashion','👗','Fashion'],['gaming','🎮','Gaming'],['comedy','😂','Comedy'],['lifestyle','✨','Lifestyle'],['other','','Other']];
 
-const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,freeStatus:{eligible:false},prizes:[],likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
+const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,freeStatus:{eligible:false},prizes:[],blocks:new Map(),likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
@@ -651,13 +687,14 @@ async function loadThreads(){
   const convs=c.data||[], msgs=m.data||[];
   await ensureUsers(convs.map(x=>x.user_a===uid?x.user_b:x.user_a));
   store.threads=convs.map(x=>({id:x.id,withU:x.user_a===uid?x.user_b:x.user_a,
-    msgs:msgs.filter(y=>y.conversation_id===x.id).map(mapMsg)}));
+    msgs:msgs.filter(y=>y.conversation_id===x.id).map(mapMsg)})).filter(t=>!store.blocks.has(t.withU));
   store.threads.sort((a,b)=>(b.msgs.length?b.msgs[b.msgs.length-1].ts:'')<(a.msgs.length?a.msgs[a.msgs.length-1].ts:'')?-1:1);
   if(typeof activeThread!=='undefined'&&activeThread) activeThread=store.threads.find(t=>t.id===activeThread.id)||null;
 }
 function mapMsg(m){ return {id:m.id,me:m.sender_id===store.session,t:m.body,read:!!m.read_at,ts:m.created_at}; }
 
 async function hydrate(){
+  try{ const {data:bl}=await sb.from('blocks').select('blocked_id,kind'); store.blocks=new Map((bl||[]).map(b=>[b.blocked_id,b.kind])); }catch(e){ store.blocks=new Map(); }
   const uid=store.session; if(!uid) return;
   const [mine,profs,posts,likes,unl,subs,raf,fol,tx]=await Promise.all([
     sb.rpc('get_my_profile'),
@@ -687,7 +724,7 @@ async function hydrate(){
   const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
   store.posts=(posts.data||[]).map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
     paid:p.is_paid,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),
-    mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null}));
+    mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
   // media URLs: free media is public; paid media needs a signed URL, issued only if storage RLS agrees
   const paidPaths=[];
   store.posts.forEach(p=>{ if(!p.mediaPath) return;
@@ -757,7 +794,7 @@ async function doSignup(){
   if((Date.now()-new Date(dob).getTime())/3.15576e10<18) return err.textContent='You must be 18 or older to join OverVibez.';
   let invite=document.getElementById('suInvite').value.trim().toUpperCase();
   if(settings.invite_only){
-    if(!invite) return err.textContent='You need an invite code — the beta is invite-only.';
+    if(!invite) return err.textContent='You need an invite code — sign-up is by invitation.';
     const {data:valid}=await sb.rpc('check_invite',{p_code:invite});
     if(!valid) return err.textContent='That invite code is not valid, or has been used up.';
   }
@@ -825,7 +862,7 @@ async function startSession(uid){
 }
 function clearSession(){
   store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; freeShown=false;
+  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -835,6 +872,46 @@ if(sb) sb.auth.onAuthStateChange((ev,session)=>{
   if(ev==='PASSWORD_RECOVERY') recoveryMode=true;
   setTimeout(()=>{ if(session&&session.user) startSession(session.user.id); else if(store.session) clearSession(); },0);
 });
+
+
+/* ═══════════ BLOCK / MUTE + APPEALS ═══════════ */
+async function toggleBlock(id,kind){
+  const cur=store.blocks.get(id), c=user(id), name=c?'@'+c.username:'this person';
+  if(cur===kind){
+    if(!(await rpc('set_block',{p_user:id,p_kind:'none'}))) return;
+    toast(kind==='block'?'Unblocked':'Unmuted'); await settled(); return;
+  }
+  const msg=kind==='block'?`Block ${name}?\n\nThey won't be able to follow you, message you or comment on your posts, and you won't see their posts. You will stop following each other.`
+                          :`Mute ${name}?\n\nYou won't see their posts or comments. They aren't told, and can still follow and message you.`;
+  if(!confirm(msg)) return;
+  if(!(await rpc('set_block',{p_user:id,p_kind:kind}))) return;
+  toast(kind==='block'?'Blocked':'Muted'); store.following.delete(id); await settled(); go('home');
+}
+async function openBlocked(){
+  const ids=[...store.blocks.keys()]; await ensureUsers(ids);
+  document.getElementById('blockedList').innerHTML=ids.length?ids.map(id=>{ const c=user(id), k=store.blocks.get(id);
+    return `<div class="row" style="cursor:default"><div class="r-ic">${k==='block'?'⛔':'🔇'}</div><div style="flex:1;min-width:0"><b>@${esc(c?c.username:'user')}</b><br><span style="font-size:11.5px;color:var(--muted)">${k==='block'?'Blocked':'Muted'}</span></div>
+      <button class="abtn" onclick="closeModal('blockedModal');toggleBlock('${id}','${k}')">${k==='block'?'Unblock':'Unmute'}</button></div>`; }).join('')
+    :'<p style="color:var(--muted);text-align:center;padding:20px;font-size:13.5px">You have not blocked or muted anyone.</p>';
+  openModal('blockedModal');
+}
+let appealTarget=null;
+function openAppeal(kind,target){
+  appealTarget={kind,target};
+  document.getElementById('appealTitle').textContent=kind==='ban'?'Appeal your suspension':'Appeal this removal';
+  document.getElementById('appealBody').value=''; document.getElementById('appealErr').textContent='';
+  openModal('appealModal');
+}
+async function sendAppeal(){
+  const err=document.getElementById('appealErr'); err.textContent='';
+  const {error}=await sb.rpc('submit_appeal',{p_kind:appealTarget.kind,p_target:appealTarget.target||null,p_body:document.getElementById('appealBody').value});
+  if(error) return err.textContent=friendly(error.message);
+  closeModal('appealModal'); toast('Appeal sent — we will reply in your notifications');
+}
+function helpContact(){
+  if(settings.support_email) location.href='mailto:'+settings.support_email+'?subject='+encodeURIComponent('OverVibez support');
+  else toast('Use the ⚑ report button on anything that worries you, or check back soon for our contact address');
+}
 
 /* ═══════════ NOTIFICATIONS + UNREAD BADGES ═══════════ */
 function paintBadges(){
@@ -867,7 +944,8 @@ const notifInfo=n=>{
     case 'payout_paid': return ['🏦','Your payout of '+$$(d.amount_cents)+' has been sent'];
     case 'won': return ['🏆','You won <b>'+esc(d.prize||'a prize')+'</b> in “'+esc(d.title||'a giveaway')+'”!'+(d.free?' Add your UK delivery address in Raffles.':'')];
     case 'prize_shipped': return ['📦','Your prize is on its way'+(d.tracking?' — tracking '+esc(d.tracking):'')];
-    case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')];
+    case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')+(['post','comment'].includes(d.kind)?' — tap to appeal':'')];
+    case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b> — it has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
     default: return ['🔔','New activity'];
   }
 };
@@ -888,6 +966,7 @@ function notifOpen(i){
   if(n.type==='live'&&n.ref_id) return openLive(n.ref_id);
   if(n.type==='comment'&&n.ref_id&&store.posts.some(p=>p.id===n.ref_id)) return openComments(n.ref_id);
   if(n.type==='payout_paid') return go('studio');
+  if(n.type==='removed'&&n.ref_id&&n.data&&['post','comment'].includes(n.data.kind)) return openAppeal(n.data.kind,n.ref_id);
   if(n.type==='won'||n.type==='prize_shipped') return go('raffles');
   if(n.actor_id&&user(n.actor_id)) return openProfile(n.actor_id);
 }
@@ -931,7 +1010,7 @@ function renderShell(){
   updateWallet();
   const bb=document.getElementById('banBanner');
   bb.classList.toggle('hidden',!u.isBanned);
-  if(u.isBanned) bb.textContent='Your account is suspended'+(u.banReason?': '+u.banReason:'')+'. You can browse but cannot post, comment, message or spend. Contact support to appeal.';
+  if(u.isBanned) bb.innerHTML='Your account is suspended'+(u.banReason?': '+esc(u.banReason):'')+'. You can browse but cannot post, comment, message or spend. <a href="#" onclick="openAppeal(\'ban\');return false" style="color:#fff;text-decoration:underline;font-weight:700">Appeal this decision</a>';
   paintBadges();
   document.getElementById('bottomNav').innerHTML = isC ? `
     <button class="nav-btn on" data-page="home" onclick="go('home',this)">⌂<span>Home</span></button>
@@ -1048,6 +1127,7 @@ async function loadComments(){
   if(pid!==commentPost) return;
   const p=store.posts.find(x=>x.id===pid); if(p&&data.length<200) p.comments=data.length;
   const el=document.getElementById('commentList'), myId=store.session;
+  data.splice(0,data.length,...data.filter(c=>!store.blocks.has(c.user_id)));
   el.innerHTML=data.length?data.map(c=>{ const a=user(c.user_id)||{username:'user',em:'🫧',av:'a1'};
     return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start">
       <div class="av ${a.av}" style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex:none">${avInner(a)}</div>
@@ -1193,14 +1273,14 @@ async function renderExplore(reset){
     const {data,error}=await sb.rpc('search_people',{p_q:q}); if(document.getElementById('exploreQ').value.trim()!==q) return;
     if(error) return toast(error.message);
     (data||[]).forEach(p=>{ if(!user(p.id)) store.users.push(mapUser(p)); });
-    const ppl=(data||[]).map(p=>user(p.id));
+    const ppl=(data||[]).filter(p=>!store.blocks.has(p.id)).map(p=>user(p.id));
     const cap=store.posts.filter(p=>p.cap.toLowerCase().includes(q.toLowerCase())).slice(0,9);
     body.innerHTML=(ppl.length?`<div class="section-title" style="padding-top:4px">People</div><div class="list-card">${ppl.map(personCard).join('')}</div>`:'')
       +(cap.length?`<div class="section-title" style="padding-top:4px">Posts</div><div class="explore-grid">${cap.map(tileHtml).join('')}</div>`:'')
       +(!ppl.length&&!cap.length?empty('No results for “'+esc(q)+'”.'):'');
     return;
   }
-  const creators=store.users.filter(u=>u.role==='creator'&&u.id!==store.session);
+  const creators=store.users.filter(u=>u.role==='creator'&&u.id!==store.session&&!store.blocks.has(u.id));
   if(exploreTab==='live'){
     body.innerHTML=store.live.length?`<div class="list-card">${store.live.map(l=>{ const c=user(l.creator_id); return c?`<div class="pcard" onclick="openLive('${l.id}')"><div class="av ${c.av}">${avInner(c)}</div>
       <div class="tx"><b>${esc(c.username)} is live</b><span>${esc(l.title)} · ${l.entry_price_cents?$$(l.entry_price_cents)+' entry':'Free'}</span></div><span class="live-tag" style="position:static;transform:none">LIVE</span></div>`:''; }).join('')}</div>`:empty('Nobody is live right now.');
@@ -1591,6 +1671,10 @@ function renderMe(){
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
       <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:!features.identity?`toast('ID verification is coming soon — we will tell you when it is ready')`:`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':features.identity?'Verify now →':'Coming soon'}</span></div>
       <div class="row" onclick="openPassword(false)"><div class="r-ic">🔑</div>Change password</div>
+      <div class="row" onclick="openBlocked()"><div class="r-ic">⛔</div>Blocked &amp; muted<span class="sub">${store.blocks.size||''}</span></div>
+      <div class="row" onclick="helpContact()"><div class="r-ic">💬</div>Help &amp; contact</div>
+      <div class="row" onclick="window.open('guidelines.html','_blank')"><div class="r-ic">📜</div>Community guidelines</div>
+      <div class="row" onclick="window.open('terms.html','_blank')"><div class="r-ic">📄</div>Terms &amp; Privacy<span class="sub"><a href="privacy.html" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent-2)">Privacy</a></span></div>
       <div class="row" onclick="downloadMyData()"><div class="r-ic">📦</div>Download my data</div>
       <div class="row" onclick="logOut()"><div class="r-ic">🚪</div>Log out</div>
       <div class="row" onclick="deleteMyAccount()" style="color:var(--live)"><div class="r-ic">🗑️</div>Delete my account</div>
@@ -1705,6 +1789,7 @@ const reportProfile=cid=>openReport('profile',cid);
 async function submitReport(){
   if(!reportTarget) return;
   const sel=document.getElementById('reportReason'), label=sel.options[sel.selectedIndex].text, det=document.getElementById('reportDetails').value.trim();
+  if(sel.value==='copyright'&&det.length<15) return toast('For copyright reports, say what the work is and where you own it');
   const btn=document.getElementById('reportBtn'); btn.disabled=true;
   const {error}=await sb.from('reports').insert({reporter_id:store.session,target_type:reportTarget.type,target_id:reportTarget.id,
     reason:(sel.value+': '+label+(det?' — '+det:'')).slice(0,1000)});
@@ -1735,7 +1820,8 @@ function renderProfile(){
         <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text)" onclick="msgFromProfile('${c.id}')">Message</button>
       </div>`:''}
       <button class="ghost" style="margin-top:2px" onclick="shareProfile('${esc(c.username)}')">🔗 Copy shareable link</button>
-      ${!isMe?`<button class="ghost" onclick="reportProfile('${c.id}')">Report this account</button>`:''}
+      ${!isMe?`<div style="display:flex;gap:8px;width:100%"><button class="ghost" style="margin:0;flex:1" onclick="toggleBlock('${c.id}','mute')">${store.blocks.get(c.id)==='mute'?'Unmute':'Mute'}</button><button class="ghost" style="margin:0;flex:1" onclick="toggleBlock('${c.id}','block')">${store.blocks.get(c.id)==='block'?'Unblock':'Block'}</button></div>
+      <button class="ghost" onclick="reportProfile('${c.id}')">Report this account</button>`:''}
     </div>
     <div class="feed">${theirPosts.length?theirPosts.map(postCard).join('')
       :'<p style="color:var(--muted);text-align:center;padding:24px;font-size:13.5px">No drops yet.</p>'}</div>`;
@@ -1764,7 +1850,7 @@ window.addEventListener('hashchange',()=>{ const c=hashUser(); if(c&&store.sessi
    Everything here calls admin_* database functions. Those functions re-check the caller's role on the server,
    so hiding this screen from non-staff is only cosmetic — it is not the security boundary. */
 const isStaff=()=>!!(me()&&me().staffRole), isAdmin=()=>!!(me()&&me().staffRole==='admin');
-let adminTab='reports', adminSub={reports:'open',content:'post'}, adminUserQ='';
+let adminTab='reports', adminSub={reports:'open',appeals:'open',content:'post'}, adminUserQ='';
 const admBody=()=>document.getElementById('adminBody');
 const admLoading=()=>{ const b=admBody(); if(b) b.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">Loading…</p>'; };
 const admEmpty=t=>`<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">${t}</p>`;
@@ -1772,7 +1858,7 @@ async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}
 const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  const tabs=[['reports','Reports'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['giveaways','Giveaways'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['invites','Invites'],['giveaways','Giveaways'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -1781,14 +1867,14 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({reports:admReports,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({reports:admReports,appeals:admAppeals,live:admLive,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,audit:admAudit})[adminTab](); }
 
 /* --- reports queue --- */
 async function admReports(){
   const st=adminSub.reports, {data,error}=await admCall('admin_list_reports',{p_status:st}); if(error) return;
   admBody().innerHTML=`<div class="chiprow">${['open','actioned','dismissed'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.reports='${x}';admLoad()">${x}</button>`).join('')}</div>
    <div class="admin-pad">${data.length?data.map(r=>`<div class="chart-card">
-     <div style="display:flex;justify-content:space-between;align-items:center"><b style="text-transform:capitalize">${esc(r.target_type)} report</b><span style="font-size:12px;color:var(--muted)">${ago(r.created_at)} ago</span></div>
+     <div style="display:flex;justify-content:space-between;align-items:center"><b style="text-transform:capitalize">${/^(illegal|underage|copyright)/i.test(r.reason)?'<span style="color:var(--live)">⚠ PRIORITY</span> ':''}${esc(r.target_type)} report</b><span style="font-size:12px;color:var(--muted)">${ago(r.created_at)} ago</span></div>
      <div style="font-size:13px;margin:6px 0">${esc(r.reason)}</div>
      ${r.preview?`<div style="background:var(--panel-2);border-radius:10px;padding:10px;font-size:13px;margin:6px 0;word-break:break-word">${esc(r.preview)}${r.already_removed?' <i style="color:var(--muted)">(already removed)</i>':''}</div>`:''}
      <div style="font-size:12px;color:var(--muted)">Reported by @${esc(r.reporter||'deleted user')} · target @${esc(r.target_username||'unknown')}</div>
@@ -1807,6 +1893,25 @@ async function admResolve(id,action){
   if(ban&&note.trim().length<3) return toast('A reason of at least 3 characters is required to ban');
   const {error}=await admCall('admin_resolve_report',{p_report:id,p_action:action,p_note:note.trim()||null});
   if(!error){ toast('Done'); admLoad(); }
+}
+
+/* --- appeals --- */
+async function admAppeals(){
+  const st=adminSub.appeals, {data,error}=await admCall('admin_list_appeals',{p_status:st}); if(error) return;
+  admBody().innerHTML=`<div class="chiprow">${['open','overturned','upheld'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.appeals='${x}';admLoad()">${x}</button>`).join('')}</div>
+   <div class="admin-pad">${data.length?data.map(a=>`<div class="chart-card">
+     <div style="display:flex;justify-content:space-between"><b>@${esc(a.username)} · ${a.kind==='ban'?'suspension':a.kind+' removal'}</b><span style="font-size:12px;color:var(--muted)">${ago(a.created_at)} ago</span></div>
+     ${a.original_reason?`<div style="font-size:12px;color:var(--muted);margin-top:4px">Original reason: ${esc(a.original_reason)}</div>`:''}
+     ${a.preview?`<div style="background:var(--panel-2);border-radius:10px;padding:10px;font-size:13px;margin:6px 0;word-break:break-word">${esc(a.preview)}</div>`:''}
+     <div style="font-size:13px;margin:8px 0;word-break:break-word"><b>Their appeal:</b> ${esc(a.body)}</div>
+     ${a.resolution_note?`<div style="font-size:12.5px;color:var(--muted)">Reply: ${esc(a.resolution_note)}</div>`:''}
+     ${st==='open'?`<button class="abtn ok" onclick="admAppeal('${a.id}','overturn')">Accept appeal</button><button class="abtn danger" onclick="admAppeal('${a.id}','uphold')">Uphold decision</button><button class="abtn" onclick="admOpenUser('${a.user_id}')">View user</button>`:''}
+   </div>`).join(''):admEmpty('No appeals here ✓')}</div>`;
+}
+async function admAppeal(id,action){
+  const note=prompt(action==='overturn'?'Message to the member (they will see this):':'Why does the decision stand? (the member will see this)'); if(note===null) return;
+  if(note.trim().length<3) return toast('Write a short reply');
+  const {error}=await admCall('admin_resolve_appeal',{p_id:id,p_action:action,p_note:note.trim()}); if(!error){ toast('Reply sent'); admLoad(); }
 }
 
 /* --- live streams --- */
@@ -1902,11 +2007,15 @@ async function admRole(id){
 const inviteLink=c=>location.origin+location.pathname+'?invite='+encodeURIComponent(c);
 async function admInvites(){
   const [st,li]=await Promise.all([sb.rpc('public_settings'),admCall('admin_list_invites')]); if(li.error) return;
-  const on=st.data&&st.data.invite_only; settings.invite_only=on;
+  const on=st.data&&st.data.invite_only; settings.invite_only=on; settings.support_email=st.data&&st.data.support_email||null;
   admBody().innerHTML=`<div class="admin-pad">
-    <div class="chart-card"><div style="display:flex;justify-content:space-between;align-items:center"><div><b>Invite-only beta: ${on?'ON':'OFF'}</b>
+    <div class="chart-card"><div style="display:flex;justify-content:space-between;align-items:center"><div><b>Invitation-only sign-up: ${on?'ON':'OFF'}</b>
       <div style="font-size:12px;color:var(--muted);margin-top:3px">${on?'Nobody can sign up without a valid code.':'Anyone can sign up.'}</div></div>
       <button class="abtn ${on?'danger':'ok'}" onclick="admInviteOnly(${!on})">${on?'Open to everyone':'Require invites'}</button></div></div>
+    <div class="chart-card"><h4>Support email</h4>
+      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px">Shown to members under Help &amp; contact. ${settings.support_email?'Currently <b>'+esc(settings.support_email)+'</b>.':'Not set yet.'}</p>
+      <div class="field"><input id="supEmail" type="email" maxlength="120" placeholder="support@yourdomain.com" value="${esc(settings.support_email||'')}"></div>
+      <button class="primary" onclick="admSupportEmail()">Save</button></div>
     <div class="chart-card"><h4>Create an invite</h4>
       <div class="field"><label>Who is it for? (note)</label><input id="invNote" maxlength="100" placeholder="e.g. Sarah — beta creator"></div>
       <div class="field"><label>How many people can use it</label><input id="invUses" type="number" min="1" max="1000" value="1"></div>
@@ -1930,6 +2039,7 @@ async function admCreateInvite(){
   setTimeout(()=>{ const el=document.getElementById('invNew'); if(el) el.innerHTML=`<div style="background:var(--panel-2);border-radius:12px;padding:12px;font-size:13px">New code: <b style="font-family:monospace">${esc(data)}</b><br>
     <button class="abtn" onclick="copyText('${esc(data)}')">Copy code</button><button class="abtn ok" onclick="copyText(inviteLink('${esc(data)}'))">Copy invite link</button></div>`; },600);
 }
+async function admSupportEmail(){ const {error}=await admCall('admin_set_support_email',{p_email:document.getElementById('supEmail').value.trim()}); if(!error){ toast('Saved'); await loadPublicSettings(); admLoad(); } }
 async function admRevokeInvite(code){
   if(!confirm('Revoke this code? It will stop working immediately (people who already joined keep their accounts).')) return;
   const {error}=await admCall('admin_revoke_invite',{p_code:code}); if(!error){ toast('Code revoked'); admLoad(); }

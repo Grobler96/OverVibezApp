@@ -75,6 +75,14 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 - Not enforced by the database: 18+ is self-declared at sign-up (check the winner's ID before posting a prize). Sending sign-up emails at volume needs custom SMTP (e.g. Resend with a verified domain) configured in the Supabase dashboard.
 - Quirk: the SQL console stalls on text containing `delete from` at the start of a statement; the redraw function builds that statement from two strings for that reason.
 
+## Safety, appeals and legal pages (migration 013)
+- **Block / mute** (`blocks`, `set_block`): a block ends any follow between the two people and is enforced by the database for following, commenting and messaging in both directions; a mute only hides content for the muter. The app also hides blocked/muted people's posts, comments, chats and search results.
+- **Appeals** (`appeals`, `submit_appeal`, `admin_list_appeals`, `admin_resolve_appeal`): members can appeal a suspension or a removed post/comment (max 5 a day, one open per item). Staff answer in Admin → Appeals; accepting restores the content or lifts the ban (suspension appeals are admin-only) and notifies the member.
+- **Reports**: illegal / under-18 / copyright reports sort to the top of the queue and are marked PRIORITY; copyright reports require details.
+- **Support email**: set by an admin in Admin → Invites and shown under Help & contact (`public_settings()` returns it).
+- **18+ entry screen** is a self-declaration stored in the browser; real age assurance remains the ID check.
+- Pages: `terms.html` (now with free prize draw, blocking/appeals and copyright sections), `privacy.html` (cookies/local storage, giveaway and safety data), `guidelines.html`. All still need a solicitor's review and the bracketed company details filled in.
+
 ## Not built yet (needed before launch)
 - Automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console. Admins can still mark a user 18+ verified by hand.
 - Notifications, live recording/replays, and multi-guest streams. Terms/Privacy pages exist as lawyer-review drafts.
