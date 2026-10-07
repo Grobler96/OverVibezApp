@@ -365,7 +365,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="logo">OverVibez</div>
     <div class="actions">
       <span class="role-badge" id="roleBadge">CREATOR</span>
-      <button class="wallet-pill" id="walletPill" onclick="openTopup()" title="Wallet"><span class="c">◈</span><span id="walletAmt">$0.00</span></button>
+      <button class="wallet-pill" id="walletPill" onclick="openTopup()" title="Wallet"><span class="c">◈</span><span id="walletAmt">£0.00</span></button>
       <button class="icon-btn" onclick="go('notifs')" id="bellBtn" title="Notifications">🔔<i class="badge hidden" id="bellBadge">0</i></button>
       <button class="icon-btn" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">🌙</button>
     </div>
@@ -496,7 +496,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
         <button id="ctFree" class="on" onclick="setPostType('free')">Free post</button>
         <button id="ctPaid" onclick="setPostType('paid')">Paid post 🔒</button>
       </div>
-      <div class="field hidden" id="priceField"><label>Price (USD)</label><input id="postPrice" type="number" min="0.99" max="499" step="0.5" value="3.00"></div>
+      <div class="field hidden" id="priceField"><label>Price (GBP)</label><input id="postPrice" type="number" min="0.99" max="499" step="0.5" value="3.00"></div>
       <div class="field"><label>Caption</label><textarea id="postCap" rows="3" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none" placeholder="What are you dropping?"></textarea></div>
       <div class="field"><label>Attach photo or video (optional)</label><input id="postMedia" type="file" accept="image/*,video/*" style="padding:10px"></div>
       <button class="primary" id="publishBtn" onclick="publishPost()">Publish</button>
@@ -508,7 +508,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
         <button id="leFree" class="on" onclick="setLiveEntry('free')">Free entry</button>
         <button id="lePaid" onclick="setLiveEntry('paid')">Paid entry 🎟</button>
       </div>
-      <div class="field hidden" id="livePriceField"><label>Entry price (USD)</label><input id="livePrice" type="number" min="0.99" max="500" step="0.5" value="4.99"></div>
+      <div class="field hidden" id="livePriceField"><label>Entry price (GBP)</label><input id="livePrice" type="number" min="0.99" max="500" step="0.5" value="4.99"></div>
       <button class="primary" id="startLiveBtn" onclick="startBroadcast()">Start broadcasting</button>
     </div>
     <button class="ghost" onclick="closeModal('createModal')">Cancel</button>
@@ -528,7 +528,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <div class="lchat" id="lvChat"></div>
     <div class="live-bottom">
       <input id="lvInput" placeholder="Say something…" maxlength="300" onkeydown="if(event.key==='Enter')liveSend()">
-      <button id="lvTipBtn" onclick="liveTip()" title="Tip $2">💰</button>
+      <button id="lvTipBtn" onclick="liveTip()" title="Tip £2">💰</button>
       <button id="lvReportBtn" onclick="liveReport()" title="Report">⚑</button>
     </div>
   </div>
@@ -541,10 +541,10 @@ input,textarea,select{font-family:inherit;color:var(--text)}
     <p>Top up your wallet to unlock posts, subscribe, tip and join live streams. Payments are handled securely by Stripe — we never see your card details.</p>
     <div class="pay-row"><span>Current balance</span><span id="topupBal"></span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
-      <button class="primary" style="margin:0" onclick="startTopup(1000)">$10</button>
-      <button class="primary" style="margin:0" onclick="startTopup(2500)">$25</button>
-      <button class="primary" style="margin:0" onclick="startTopup(5000)">$50</button>
-      <button class="primary" style="margin:0" onclick="startTopup(10000)">$100</button>
+      <button class="primary" style="margin:0" onclick="startTopup(1000)">£10</button>
+      <button class="primary" style="margin:0" onclick="startTopup(2500)">£25</button>
+      <button class="primary" style="margin:0" onclick="startTopup(5000)">£50</button>
+      <button class="primary" style="margin:0" onclick="startTopup(10000)">£100</button>
     </div>
     <button class="ghost" onclick="closeModal('topupModal')">Close</button>
   </div>
@@ -566,7 +566,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   <div class="sheet">
     <h3>Edit post</h3>
     <div class="field"><label>Caption</label><textarea id="epCaption" rows="4" maxlength="2200" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
-    <div class="field" id="epPriceWrap"><label>Price (USD) — can only change until someone unlocks it</label><input id="epPrice" type="number" min="0.99" max="499.99" step="0.01"></div>
+    <div class="field" id="epPriceWrap"><label>Price (GBP) — can only change until someone unlocks it</label><input id="epPrice" type="number" min="0.99" max="499.99" step="0.01"></div>
     <div class="err" id="epPostErr"></div>
     <button class="primary" onclick="saveEditPost()">Save changes</button>
     <button class="ghost" onclick="closeModal('editPostModal')">Cancel</button>
@@ -665,13 +665,13 @@ const SUPABASE_KEY='sb_publishable_jiM3fKJ42PZ7MFir6gKUoQ_JeleNdaW'; // publisha
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
 
 const FEE = 0.15; // platform share — creators keep 85% (enforced server-side in _settle())
-const $$ = c => '$' + ((Number(c)||0)/100).toFixed(2);
+const $$ = c => '£' + ((Number(c)||0)/100).toFixed(2);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
 const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at,follower_count,category';
 const CATS=[['music','🎵','Music'],['fitness','💪','Fitness'],['art','🎨','Art'],['food','🍳','Food'],['photography','📷','Photography'],['fashion','👗','Fashion'],['gaming','🎮','Gaming'],['comedy','😂','Comedy'],['lifestyle','✨','Lifestyle'],['other','','Other']];
 
-const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,freeStatus:{eligible:false},prizes:[],blocks:new Map(),likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
+const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,freeStatus:{eligible:false},prizes:[],blocks:new Map(),payout:{connected:false,details_submitted:false,payouts_enabled:false},debt:0,likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
 const user = id => store.users.find(u=>u.id===id);
 const me = () => store.session ? user(store.session) : null;
 
@@ -769,12 +769,13 @@ async function hydrate(){
   const dres=await Promise.all((drawn.data||[]).map(d=>sb.rpc('raffle_result',{p_raffle:d.id})));
   store.raffleResults=(drawn.data||[]).map((d,i)=>Object.assign({title:d.title,prize:d.prize},(dres[i].data||[{}])[0]||{})).filter(x=>x.winner_username);
   try{ const [fs,pz]=await Promise.all([sb.rpc('my_free_entry_status'),sb.rpc('my_prizes')]); store.freeStatus=fs.data||{eligible:false}; store.prizes=pz.data||[]; }catch(e){ store.freeStatus={eligible:false}; store.prizes=[]; }
+  try{ if(me()&&me().role==='creator'){ const {data:pa}=await sb.rpc('my_payout_account'); if(pa) store.payout=pa; } }catch(e){}
   await loadLive();
   await loadThreads();
 }
 
 /* ═══════════ FEATURE FLAGS + BETA SETTINGS ═══════════ */
-let features={live:false,payments:false,identity:false}, settings={invite_only:true};
+let features={live:false,payments:false,identity:false,payouts:false}, settings={invite_only:true};
 async function loadFeatures(){
   try{ const {data}=await sb.functions.invoke('features'); if(data&&typeof data.live==='boolean') features=data; }catch(e){}
   const lv=document.getElementById('cmLive'); if(lv) lv.classList.toggle('hidden',!features.live);
@@ -888,7 +889,7 @@ async function startSession(uid){
 }
 function clearSession(){
   store.session=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); freeShown=false;
+  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -943,11 +944,16 @@ function helpContact(){
 /* ═══════════ MONEY HISTORY + RECEIPTS ═══════════ */
 let moneyRows=[], moneyFilter='all', moneyDone=false, receiptText='';
 const EARN_TYPES=['subscription','post_unlock','tip','live_entry'];
-const TX_NAMES={subscription:'Subscription',post_unlock:'Post unlock',tip:'Tip',live_entry:'Live ticket',raffle_entry:'Raffle entries',payout:'Payout',wallet_topup:'Added funds'};
-const TX_ICONS={subscription:'💜',post_unlock:'🔓',tip:'💰',live_entry:'🎟️',raffle_entry:'🎲',payout:'🏦',wallet_topup:'◈'};
+const TX_NAMES={refund:'Refund',subscription:'Subscription',post_unlock:'Post unlock',tip:'Tip',live_entry:'Live ticket',raffle_entry:'Raffle entries',payout:'Payout',wallet_topup:'Added funds'};
+const TX_ICONS={refund:'↩️',subscription:'💜',post_unlock:'🔓',tip:'💰',live_entry:'🎟️',raffle_entry:'🎲',payout:'🏦',wallet_topup:'◈'};
 function txInfo(t){
   const me_=store.session, mine=t.payer_id===me_, other=user(mine?t.payee_id:t.payer_id), who=other?'@'+other.username:(mine?'OverVibez':'a member');
   const name=TX_NAMES[t.type]||t.type;
+  if(t.type==='refund'){
+    if(t.payee_id===me_) return {icon:'↩️',title:'Refund',sub:'Back to your wallet',amt:+t.gross_cents,pot:'wallet',kind:'in'};
+    if(t.payee_id) return {icon:'↩️',title:'Refunded sale · '+who,sub:'Taken from earnings',amt:-t.net_cents,pot:'earnings',kind:'out'};
+    return {icon:'⚠️',title:'Top-up reversed',sub:'Refund or chargeback',amt:-t.gross_cents,pot:'wallet',kind:'out'};
+  }
   if(t.type==='wallet_topup') return {icon:TX_ICONS[t.type],title:'Added funds',sub:'Wallet top-up',amt:+t.gross_cents,pot:'wallet',kind:'in'};
   if(t.type==='payout') return {icon:TX_ICONS[t.type],title:'Payout requested',sub:'From your earnings',amt:-t.gross_cents,pot:'earnings',kind:'out'};
   if(mine) return {icon:TX_ICONS[t.type]||'•',title:name+(t.type==='raffle_entry'?'':' · '+who),sub:'Paid from wallet',amt:-t.gross_cents,pot:'wallet',kind:'out'};
@@ -959,6 +965,7 @@ async function renderMoney(reset){
   const body=document.getElementById('moneyBody'); const u=me();
   if(reset) body.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">Loading…</p>';
   if(!moneyDone&&(reset||moneyRows.length===0)) await moreMoney(true);
+  try{ const {data:ds}=await sb.from('debts').select('cents,settled_cents'); store.debt=(ds||[]).reduce((a,x)=>a+Number(x.cents)-Number(x.settled_cents),0); }catch(e){ store.debt=0; }
   paintMoney();
 }
 async function moreMoney(first){
@@ -971,7 +978,7 @@ async function moreMoney(first){
 function paintMoney(){
   const body=document.getElementById('moneyBody'), u=me(), isC=u.role==='creator';
   const rows=moneyRows.map((t,i)=>({t,i,x:txInfo(t)})).filter(r=>moneyFilter==='all'||(moneyFilter==='in'?r.x.kind==='in'||r.x.kind==='earned':r.x.kind==='out'));
-  body.innerHTML=`<div class="stat-row" style="margin:0 14px 10px"><div class="stat"><b>${$$(u.wallet)}</b><span>Wallet</span></div>${isC?`<div class="stat"><b>${$$(u.earnings)}</b><span>Earnings</span></div>`:''}</div>
+  body.innerHTML=`${store.debt>0?`<div style="margin:0 14px 10px;background:rgba(255,71,87,.12);border:1px solid var(--live);border-radius:12px;padding:12px;font-size:13px;line-height:1.5"><b>You owe ${$$(store.debt)}</b><br>This comes from a refund or chargeback that was bigger than your balance. It is taken from your next top-up${u.role==='creator'?' or sale':''}.</div>`:''}<div class="stat-row" style="margin:0 14px 10px"><div class="stat"><b>${$$(u.wallet)}</b><span>Wallet</span></div>${isC?`<div class="stat"><b>${$$(u.earnings)}</b><span>Earnings</span></div>`:''}</div>
     <div class="chiprow">${[['all','All'],['in','Money in'],['out','Money out']].map(([k,l])=>`<button class="chip ${moneyFilter===k?'on':''}" onclick="moneyFilter='${k}';paintMoney()">${l}</button>`).join('')}</div>
     ${rows.length?`<div class="list-card" style="margin:0 14px">${rows.map(r=>`<div class="row" onclick="openReceipt(${r.i})"><div class="r-ic">${r.x.icon}</div>
       <div style="flex:1;min-width:0"><b style="font-size:13.5px">${esc(r.x.title)}</b><br><span style="font-size:11.5px;color:var(--muted)">${new Date(r.t.created_at).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${r.x.sub}</span></div>
@@ -1031,6 +1038,10 @@ const notifInfo=n=>{
     case 'won': return ['🏆','You won <b>'+esc(d.prize||'a prize')+'</b> in “'+esc(d.title||'a giveaway')+'”!'+(d.free?' Add your UK delivery address in Raffles.':'')];
     case 'prize_shipped': return ['📦','Your prize is on its way'+(d.tracking?' — tracking '+esc(d.tracking):'')];
     case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')+(['post','comment'].includes(d.kind)?' — tap to appeal':'')];
+    case 'refunded': return ['↩️',d.role==='payee'?'A sale was refunded — '+$$(d.cents)+' was taken from your earnings'+(d.reason?' ('+esc(d.reason)+')':''):'You were refunded '+$$(d.cents)+' to your wallet'+(d.reason?' ('+esc(d.reason)+')':'')];
+    case 'topup_reversed': return ['⚠️','A top-up of '+$$(d.cents)+' was reversed ('+esc(d.reason||'refund')+')'+(d.owed>0?'. You now owe '+$$(d.owed)+', taken from your next top-up':'')];
+    case 'topup_restored': return ['✅','Good news — '+$$(d.cents)+' was put back in your wallet'];
+    case 'debt_repaid': return ['🧾',$$(d.cents)+' of your latest payment cleared what you owed'];
     case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b> — it has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
     default: return ['🔔','New activity'];
   }
@@ -1168,7 +1179,7 @@ function postCard(p){
       <button class="act" onclick="shareProfile('${esc(c.username)}')">↗</button>
       ${mine?'':`<button class="act" onclick="openReport('post','${p.id}')" title="Report">⚑</button>`}
       ${mine?`<span class="act tip">earned ${$$(Math.round(p.earned*(1-FEE)))}</span>`:
-        `<button class="act tip" onclick="tip('${p.by}','${p.id}')">💰 Tip $2</button>`}
+        `<button class="act tip" onclick="tip('${p.by}','${p.id}')">💰 Tip £2</button>`}
     </div>
     <div class="card-body"><div class="cap"><b style="cursor:pointer" onclick="openProfile('${p.by}')">${esc(c.username)}</b>${esc(p.cap)}</div></div>
   </article>`;
@@ -1301,7 +1312,7 @@ async function tip(cid,pid){
   toast('Processing tip…');
   if(await rpc('tip_creator',{p_creator:cid,p_amount:200,p_post:pid||null})){
     const u=me(); u.wallet=Math.max(0,u.wallet-200); updateWallet();
-    toast(`Tipped ${user(cid).username} $2.00 — they keep $1.70 ✨`); settled(); }
+    toast(`Tipped ${user(cid).username} £2.00 — they keep £1.70 ✨`); settled(); }
 }
 function openTopup(){
   const u=me(); if(u.role==='creator')return;
@@ -1327,11 +1338,12 @@ async function startVerification(){
 }
 /* back from Stripe (?topup=success|cancel, ?verify=done) */
 function handleStripeReturn(){
-  const q=new URLSearchParams(location.search); if(!q.has('topup')&&!q.has('verify')) return;
+  const q=new URLSearchParams(location.search); if(!q.has('topup')&&!q.has('verify')&&!q.has('connect')) return;
   const refresh=(times)=>times.forEach(ms=>setTimeout(()=>{ if(store.session) settled(); },ms));
   if(q.get('topup')==='success'){ toast('Payment received — your wallet updates in a few seconds ✓'); refresh([3000,8000,15000,30000]); }
   else if(q.get('topup')==='cancel') toast('Payment cancelled — you were not charged');
   if(q.get('verify')==='done'){ toast('Thanks — we are checking your ID. This usually takes a few minutes and updates automatically.'); refresh([10000,30000,60000,120000]); }
+  if(q.has('connect')){ if(q.get('connect')==='return'){ toast('Checking your payout account…'); refreshPayoutStatus().then(st=>{ if(st) toast(st.payouts_enabled?'Payouts are ready ✅':'Almost there — finish the remaining steps with Stripe'); }); } else toast('Payout setup was not finished — tap Payout method to continue'); }
   history.replaceState(null,'',location.pathname+location.hash);
 }
 
@@ -1579,10 +1591,34 @@ async function deletePost(id){
   if(data&&data.mode==='deleted'&&data.media_path){ try{ await sb.storage.from(data.paid?'paid-media':'public-media').remove([data.media_path]); }catch(e){} }
   toast(data&&data.mode==='hidden'?'Post hidden — people who paid for it are not affected':'Post deleted'); await settled();
 }
+async function payoutCall(action){
+  try{ return await stripeCall('payouts',{action}); }
+  catch(e){ throw new Error(e.message==='NOT_CONFIGURED'?'Payouts are not switched on yet — please try again soon.':e.message); }
+}
+async function payoutSetup(){
+  if(!features.payouts) return toast('Bank payouts are coming soon — we will tell you when they are ready');
+  if(store.payout.payouts_enabled) return toast('Your payout account is ready ✅');
+  toast('Opening secure payout setup…');
+  try{ const d=await payoutCall('onboard'); location.href=d.url; }catch(e){ toast(e.message); }
+}
+async function refreshPayoutStatus(){
+  try{ store.payout=await payoutCall('status'); rerender(); return store.payout; }catch(e){ return null; }
+}
 async function requestPayout(){
   const u=me();
-  if(u.earnings<1000) return toast('Minimum payout is $10.00');
-  if(await rpc('request_payout',{p_amount:u.earnings})){ await settled(); toast('Payout requested — it will be sent once bank payouts are connected'); }
+  if(u.earnings<1000) return toast('Minimum payout is £10.00');
+  if(!features.payouts){   // not connected yet: the request is saved and an admin sends it by hand
+    if(await rpc('request_payout',{p_amount:u.earnings})){ await settled(); toast('Payout requested — it will be sent once bank payouts are connected'); }
+    return;
+  }
+  if(!store.payout.payouts_enabled){
+    if(confirm('Set up your payout account first. It takes a few minutes with Stripe and you only do it once. Start now?')) payoutSetup();
+    return;
+  }
+  if(!confirm('Send '+$$(u.earnings)+' to your bank account?\n\nIt usually arrives in 1–3 working days.')) return;
+  toast('Sending your payout…');
+  try{ const r=await payoutCall('payout'); toast('Payout of '+$$(r.amount_cents)+' sent 🎉 It should reach your bank in 1–3 working days'); await settled(); }
+  catch(e){ toast(e.message); await settled(); }
 }
 
 /* ═══════════ CREATE (creators) ═══════════ */
@@ -1596,7 +1632,7 @@ async function publishPost(){
   if(!cap&&!f) return toast('Add a caption or a photo/video first');
   if(!u.ageVerified) return toast('Verify your age first — tap Me → Identity & age verification');
   const price=Math.round(parseFloat(document.getElementById('postPrice').value||'3')*100);
-  if(postType==='paid'&&(isNaN(price)||price<99||price>49999)) return toast('Price must be between $0.99 and $499.99');
+  if(postType==='paid'&&(isNaN(price)||price<99||price>49999)) return toast('Price must be between £0.99 and £499.99');
   const btn=document.getElementById('publishBtn'); btn.disabled=true;
   try{
     const id=crypto.randomUUID(), paid=postType==='paid';
@@ -1650,7 +1686,7 @@ async function startBroadcast(){
   if(!u.ageVerified) return toast('Verify your age first — tap Me → Identity & age verification');
   const title=document.getElementById('liveTitle').value.trim(); if(!title) return toast('Give your stream a title');
   const price=liveEntry==='paid'?Math.round(parseFloat(document.getElementById('livePrice').value||'0')*100):0;
-  if(liveEntry==='paid'&&(isNaN(price)||price<99||price>50000)) return toast('Entry price must be between $0.99 and $500.00');
+  if(liveEntry==='paid'&&(isNaN(price)||price<99||price>50000)) return toast('Entry price must be between £0.99 and £500.00');
   const btn=document.getElementById('startLiveBtn'); btn.disabled=true;
   try{
     const {data:id,error}=await sb.rpc('start_live_stream',{p_title:title,p_price_cents:price});
@@ -1753,8 +1789,8 @@ async function liveTip(){
   if(!liveState) return;
   if(await rpc('tip_creator',{p_creator:liveState.creator,p_amount:200,p_post:liveState.id})){
     const u=me(); u.wallet=Math.max(0,u.wallet-200); updateWallet();
-    const {data}=await sb.from('live_comments').insert({stream_id:liveState.id,user_id:store.session,body:'💰 tipped $2.00'}).select('id,user_id,body').single();
-    if(data) liveChatAdd(data,true); toast('Tipped $2.00 — they keep $1.70 ✨'); }
+    const {data}=await sb.from('live_comments').insert({stream_id:liveState.id,user_id:store.session,body:'💰 tipped £2.00'}).select('id,user_id,body').single();
+    if(data) liveChatAdd(data,true); toast('Tipped £2.00 — they keep £1.70 ✨'); }
 }
 function liveReport(){ if(liveState) openReport('stream',liveState.id); }
 
@@ -1819,7 +1855,7 @@ function renderMe(){
     <div class="section-title" style="padding-top:4px">Settings</div>
     <div class="list-card">
       ${isC?`<div class="row" onclick="changeSubPrice()"><div class="r-ic">💜</div>Subscription price<span class="sub">${$$(u.subPrice)}/mo</span></div>
-             <div class="row" onclick="toast('Bank payouts are not connected yet')"><div class="r-ic">🏦</div>Payout method<span class="sub">Coming soon</span></div>`
+             <div class="row" onclick="payoutSetup()"><div class="r-ic">🏦</div>Payout method<span class="sub">${!features.payouts?'Coming soon':store.payout.payouts_enabled?'Ready ✓':store.payout.connected?'Finish setup →':'Set up →'}</span></div>`
            :`<div class="row" onclick="openTopup()"><div class="r-ic">◈</div>Wallet<span class="sub">${$$(u.wallet)}</span></div>`}
       ${u.staffRole?`<div class="row" onclick="go('admin')"><div class="r-ic">🛡️</div>${u.staffRole==='admin'?'Admin console':'Moderator tools'}<span class="sub">${u.staffRole}</span></div>`:''}
       <div class="row" onclick="openEditProfile()"><div class="r-ic">✏️</div>Edit profile<span class="sub">Name, bio, photos</span></div>
@@ -1837,9 +1873,9 @@ function renderMe(){
     </div>`;
 }
 async function changeSubPrice(){
-  const v=prompt('Monthly subscription price (USD, 1.99–99.99):', (me().subPrice/100).toFixed(2));
+  const v=prompt('Monthly subscription price (GBP, 1.99–99.99):', (me().subPrice/100).toFixed(2));
   if(!v)return; const c=Math.round(parseFloat(v)*100);
-  if(isNaN(c)||c<199||c>9999) return toast('Price must be between $1.99 and $99.99');
+  if(isNaN(c)||c<199||c>9999) return toast('Price must be between £1.99 and £99.99');
   const {error}=await sb.from('profiles').update({sub_price_cents:c}).eq('id',store.session);
   if(error) return toast(error.message);
   me().subPrice=c; renderMe(); toast('Subscription price updated to '+$$(c));
@@ -2134,9 +2170,25 @@ async function admOpenUser(id){
        ${adm?`<button class="abtn" onclick="admFlag('${d.id}',{p_age_verified:${!d.age_verified}})">${d.age_verified?'Remove 18+ verification':'Mark 18+ verified'}</button>
        <button class="abtn" onclick="admFlag('${d.id}',{p_verified:${!d.is_verified}})">${d.is_verified?'Remove badge':'Give verified badge'}</button>
        <button class="abtn" onclick="admCredit('${d.id}')">Credit wallet</button>
+       <button class="abtn" onclick="admTransactions('${d.id}')">Transactions &amp; refunds</button>
        <button class="abtn" onclick="admRole('${d.id}')">Set staff role</button>`:''}</div></div>
    <div class="section-title" style="padding:6px 0">Moderation history</div>
    <div class="list-card" style="margin:0">${d.history.length?d.history.map(h=>`<div class="row" style="cursor:default"><div style="flex:1;font-size:13px"><b>${esc(h.action)}</b> by @${esc(h.by||'system')}<br><span style="font-size:11.5px;color:var(--muted)">${new Date(h.at).toLocaleString()}${h.details&&h.details.reason?' · '+esc(h.details.reason):''}${h.details&&h.details.note?' · '+esc(h.details.note):''}</span></div></div>`).join(''):'<div class="row" style="cursor:default;color:var(--muted)">No actions yet</div>'}</div></div>`;
+}
+async function admTransactions(id){
+  admLoading();
+  const {data,error}=await admCall('admin_list_transactions',{p_user:id}); if(error) return admLoad();
+  admBody().innerHTML=`<div class="admin-pad"><button class="back-btn" onclick="admOpenUser('${id}')" style="padding:0 0 10px">← Back to user</button>
+   <div class="section-title" style="padding:0 0 6px">Recent transactions</div>
+   <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:8px">Unlocks, subscriptions, tips and live tickets can be refunded here: the buyer gets the full amount back, the creator's earnings are reduced (anything they cannot cover becomes a debt taken from future sales), and access is removed. Top-up refunds and chargebacks are handled automatically from Stripe.</p>
+   ${data.length?data.map(t=>`<div class="chart-card"><div style="display:flex;justify-content:space-between"><b>${esc(TX_NAMES[t.type]||t.type)}</b><span style="font-size:12px;color:var(--muted)">${new Date(t.created_at).toLocaleString('en-GB')}</span></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:4px 0">${t.payer?'from @'+esc(t.payer):''}${t.payee?' → @'+esc(t.payee):''} · ${$$(Number(t.gross_cents))}${t.refunded_at?' · <b style="color:var(--live)">REFUNDED</b>':''}</div>
+      ${!t.refunded_at&&['post_unlock','subscription','tip','live_entry'].includes(t.type)&&t.payer&&t.payee?`<button class="abtn danger" onclick="admRefund('${t.id}','${id}')">Refund</button>`:''}</div>`).join(''):admEmpty('No transactions.')}</div>`;
+}
+async function admRefund(tx,user){
+  const why=prompt('Refund this purchase? The buyer is refunded in full and loses access.\n\nReason (the buyer and creator will see it):',''); if(!why) return;
+  if(why.trim().length<3) return toast('A reason is required');
+  const {error}=await admCall('admin_refund_transaction',{p_tx:tx,p_reason:why.trim()}); if(!error){ toast('Refunded'); admTransactions(user); }
 }
 async function admBan(id,banned){
   let reason=null;
@@ -2230,8 +2282,8 @@ async function admRaffles(){
    <div class="chart-card"><h4>Create a raffle</h4>
      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">Paid prize draws are regulated as gambling or sweepstakes in many places. Check the rules for where your users live before running one.</p>
      <div class="field"><label>Title</label><input id="rfTitle" maxlength="120" placeholder="Creator Fund Drop"></div>
-     <div class="field"><label>Prize</label><input id="rfPrize" maxlength="120" placeholder="$2,500"></div>
-     <div class="field"><label>Entry price (USD)</label><input id="rfPrice" type="number" min="0.5" step="0.5" value="2.00"></div>
+     <div class="field"><label>Prize</label><input id="rfPrize" maxlength="120" placeholder="£2,500"></div>
+     <div class="field"><label>Entry price (GBP)</label><input id="rfPrice" type="number" min="0.5" step="0.5" value="2.00"></div>
      <div class="field"><label>Open for (hours)</label><input id="rfHours" type="number" min="1" max="1440" value="72"></div>
      <button class="primary" onclick="admCreateRaffle()">Create raffle</button></div>
    ${rs.map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, res=(results[i].data||[])[0], closed=new Date(r.closes_at)<new Date();

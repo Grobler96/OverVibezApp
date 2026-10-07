@@ -83,6 +83,14 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 - **18+ entry screen** is a self-declaration stored in the browser; real age assurance remains the ID check.
 - Pages: `terms.html` (now with free prize draw, blocking/appeals and copyright sections), `privacy.html` (cookies/local storage, giveaway and safety data), `guidelines.html`. All still need a solicitor's review and the bracketed company details filled in.
 
+## Pounds, refunds and Connect payouts (migration 015 + `payouts`, updated `stripe-webhook`)
+- **Currency is GBP** everywhere (`STRIPE_CURRENCY` now defaults to `gbp`; database messages were rewritten to £).
+- **Top-up refunds and chargebacks** arrive from Stripe (`charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`) and reverse the wallet credit. Whatever the member has already spent becomes a **debt** (`debts`), taken from their next top-up (or, for creators, their next sales) before anything else. A won dispute gives the money back and cancels the debt.
+- **Staff refunds** (Admin → Users → Transactions & refunds, admins only) cover unlocks, subscriptions, tips and live tickets: the buyer gets the full amount, the creator's earnings are reduced, access is removed, and both are notified. Everything is audit-logged.
+- **Connect payouts**: `payouts` edge function (`onboard`, `status`, `payout`). A creator sets up a Stripe Express account once; "Withdraw" then debits earnings (`request_payout`), sends a Stripe Transfer (idempotency key = payout id) and records it. If the transfer fails the earnings are put back automatically. Until the Stripe key is set the app falls back to manual payouts in the admin console.
+- **To switch payouts on**: enable Connect in the Stripe dashboard (Settings → Connect, free), add `STRIPE_SECRET_KEY`, and fund the platform balance (top-ups land there; in test mode use card 4000 0000 0000 0077 for instantly-available test funds).
+- The Stripe webhook endpoint must receive: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `identity.verification_session.verified`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.closed`.
+
 ## Not built yet (needed before launch)
 - Automated bank payouts (Stripe Connect). Payouts are paid by hand and marked paid in the admin console. Admins can still mark a user 18+ verified by hand.
 - Notifications, live recording/replays, and multi-guest streams. Terms/Privacy pages exist as lawyer-review drafts.

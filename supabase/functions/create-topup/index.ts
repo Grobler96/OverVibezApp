@@ -1,10 +1,10 @@
 // POST { cents } -> { url, livemode }   Creates a Stripe Checkout Session for a wallet top-up.
-// Secrets: STRIPE_SECRET_KEY (required), SITE_URL, STRIPE_CURRENCY (default usd). Fails closed (503) if the key is missing.
+// Secrets: STRIPE_SECRET_KEY (required), SITE_URL, STRIPE_CURRENCY (default gbp). Fails closed (503) if the key is missing.
 // Money is NOT credited here — only the signed stripe-webhook does that, after Stripe confirms payment.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { stripeFetch } from './stripe.js';
 
-const PACKS = [1000, 2500, 5000, 10000];   // $10 / $25 / $50 / $100
+const PACKS = [1000, 2500, 5000, 10000];   // £10 / £25 / £50 / £100
 const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
 const json = (b: unknown, status = 200) => new Response(JSON.stringify(b), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   if (!PACKS.includes(cents)) return json({ error: 'Choose one of the listed amounts' }, 400);
 
   const site = Deno.env.get('SITE_URL') || 'https://grobler96.github.io/OverVibezApp/';
-  const currency = (Deno.env.get('STRIPE_CURRENCY') || 'usd').toLowerCase();
+  const currency = (Deno.env.get('STRIPE_CURRENCY') || 'gbp').toLowerCase();
   try {
     const s = await stripeFetch(sk, '/v1/checkout/sessions', { params: {
       mode: 'payment', success_url: site + '?topup=success', cancel_url: site + '?topup=cancel',
