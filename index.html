@@ -156,6 +156,10 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .raffle-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
 .raffle-top h3{font-size:17px;font-weight:700}
 .raffle-top .prize{font-family:'Unbounded';font-weight:700;font-size:15px;color:var(--money)}
+.raffle-img{position:relative;margin:-18px -18px 14px;aspect-ratio:16/9;background:var(--panel-2);overflow:hidden}
+.raffle-img img{width:100%;height:100%;object-fit:cover;display:block}
+.raffle-img .timer{position:absolute;left:12px;bottom:12px;background:rgba(10,6,16,.78);color:#fff;border-radius:999px;padding:6px 13px;font-size:13px;font-weight:700;letter-spacing:.02em;backdrop-filter:blur(6px);font-variant-numeric:tabular-nums}
+.raffle-img .tag{position:absolute;top:12px;left:12px;background:var(--grad);color:#fff;border-radius:999px;padding:5px 11px;font-size:11px;font-weight:700;letter-spacing:.08em}
 .countdown{display:flex;gap:8px;margin:12px 0}
 .cd-unit{background:var(--panel-2);border-radius:10px;padding:8px 0;width:56px;text-align:center}
 .cd-unit b{font-family:'Unbounded';font-size:16px;display:block}
@@ -433,10 +437,10 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 
   <div id="page-raffles" class="hidden">
     <div class="section-title">Raffles &amp; Competitions</div>
-    <div class="section-sub">New draws every 72 hours. Winners announced publicly.</div>
+    <div class="section-sub">Enter free giveaways and raffles. Winners are announced publicly.</div>
     <div id="raffleList"></div>
     <div class="fair-note"><span>🛡️</span>
-      <span><b>Provably fair.</b> Every draw is generated from a public random beacon plus a pre-committed seed hash, verifiable after the draw. Paid random draws may be regulated as gambling in some regions — availability varies by location.</span></div>
+      <span><b>Provably fair.</b> Every draw is locked in with a published fingerprint before entries close, and anyone can check the result afterwards (tap Verify under Recent winners). Paid random draws may be regulated as gambling in some regions — availability varies by location.</span></div>
   </div>
 
   <div id="page-messages" class="hidden">
@@ -819,7 +823,7 @@ async function hydrate(){
   await ensureUsers((raf.data||[]).map(r=>r.host_id));
   store.raffles=(raf.data||[]).map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{};
     return {id:r.id,title:r.title,host:r.host_id&&user(r.host_id)?user(r.host_id).username:'OverVibez',prize:r.prize,
-      free:!!r.is_free,price:r.entry_price_cents,entries:Number(t.entries||0),players:Number(t.players||0),
+      img:r.image_path?pubUrl(r.image_path):null,free:!!r.is_free,price:r.entry_price_cents,entries:Number(t.entries||0),players:Number(t.players||0),
       seed:r.seed_hash.slice(0,6)+'…'+r.seed_hash.slice(-4),ends:new Date(r.closes_at).getTime()}; });
   try{ const {data:te}=await sb.from('raffle_entries').select('raffle_id,qty,ticket_start').order('ticket_start').limit(1000); store.myTickets={}; (te||[]).forEach(t=>{ (store.myTickets[t.raffle_id]=store.myTickets[t.raffle_id]||[]).push({start:t.ticket_start,qty:t.qty}); }); }catch(e){ store.myTickets={}; }
   const drawn=await sb.from('raffles').select('id,title,prize').not('winner_entry_id','is',null).not('announced_at','is',null).order('closes_at',{ascending:false}).limit(5);
@@ -1103,7 +1107,7 @@ function closeDrawStage(){
   dsTimers.forEach(clearTimeout); dsTimers=[]; dsBusy=false; stopConfetti('dsConfetti'); document.getElementById('drawStage').classList.add('hidden'); if(adminTab) admLoad();
 }
 async function openDrawStage(id){
-  const {data:r,error}=await sb.from('raffles').select('id,title,prize,seed_hash,closes_at,winner_entry_id,is_free').eq('id',id).single(); if(error) return toast(error.message);
+  const {data:r,error}=await sb.from('raffles').select('id,title,prize,seed_hash,closes_at,winner_entry_id,is_free,image_path').eq('id',id).single(); if(error) return toast(error.message);
   if(new Date(r.closes_at)>new Date()) return toast('This raffle has not closed yet');
   if(r.winner_entry_id) return toast('This raffle has already been drawn — use Announce winner');
   const {data:tt}=await sb.rpc('raffle_totals',{p_raffle:id}); const t=(tt||[{}])[0]||{};
@@ -1114,6 +1118,7 @@ async function openDrawStage(id){
     <img src="icons/icon-192.png" alt="" width="54" height="54" style="border-radius:14px">
     <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:12px;letter-spacing:.3em;color:var(--accent);margin:14px 0 6px">LIVE DRAW</div>
     <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:clamp(26px,8vw,40px);line-height:1.15;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;word-break:break-word">${esc(r.prize)}</div>
+    ${r.image_path?`<img src="${esc(pubUrl(r.image_path))}" alt="" style="width:100%;max-height:220px;object-fit:cover;border-radius:16px;margin:14px 0 4px">`:''}
     <div style="color:var(--muted);font-size:15px;margin:8px 0 22px">${esc(r.title)}</div>
     <div style="display:flex;gap:10px;justify-content:center;margin-bottom:20px"><div class="stat" style="flex:1"><b>${dsRaffle.tickets.toLocaleString()}</b><span>Tickets in the draw</span></div><div class="stat" style="flex:1"><b>${dsRaffle.players.toLocaleString()}</b><span>Entrants</span></div></div>
     <div style="font-size:11.5px;color:var(--muted);line-height:1.6;margin-bottom:26px">The winning ticket is fixed by a secret number made when this raffle was created. Its fingerprint was published then:<br><code style="word-break:break-all;color:var(--text)">${esc(r.seed_hash)}</code></div>
@@ -1636,9 +1641,10 @@ function freeBtn(r){
 function renderRaffles(){
   document.getElementById('raffleList').innerHTML=prizePanel()+(store.raffles.length?store.raffles.map(r=>{
     const left=Math.max(0,r.ends-Date.now()), d=Math.floor(left/864e5), h=Math.floor(left%864e5/36e5), m=Math.floor(left%36e5/6e4), s=Math.floor(left%6e4/1e3);
-    return `<div class="raffle-card">
+    return `<div class="raffle-card" data-rid="${r.id}">
+    ${r.img?`<div class="raffle-img"><img src="${esc(r.img)}" alt="${esc(r.prize)}" loading="lazy">${r.free?'<span class="tag">FREE GIVEAWAY</span>':''}<span class="timer" data-end="${r.ends}">⏱ ${fmtLeft(left)}</span></div>`:''}
     <div class="raffle-top"><div><h3>${esc(r.title)}</h3><span style="font-size:12px;color:var(--muted)">hosted by ${esc(r.host)}${r.free?' · FREE giveaway':''}</span></div><span class="prize">${esc(r.prize)}</span></div>
-    <div class="countdown">
+    <div class="countdown" data-end="${r.ends}">
       <div class="cd-unit"><b>${String(d).padStart(2,'0')}</b><span>days</span></div>
       <div class="cd-unit"><b>${String(h).padStart(2,'0')}</b><span>hrs</span></div>
       <div class="cd-unit"><b>${String(m).padStart(2,'0')}</b><span>min</span></div>
@@ -1670,7 +1676,23 @@ async function savePrize(){
   if(error) return err.textContent=friendly(error.message);
   closeModal('prizeModal'); toast('Address saved 📦'); await settled();
 }
-setInterval(()=>{ if(!document.getElementById('page-raffles').classList.contains('hidden')&&store.session) renderRaffles(); },1000);
+function fmtLeft(ms){
+  if(ms<=0) return 'Ended';
+  const d=Math.floor(ms/864e5), h=Math.floor(ms%864e5/36e5), m=Math.floor(ms%36e5/6e4), s=Math.floor(ms%6e4/1e3), z=n=>String(n).padStart(2,'0');
+  return d>0?`${d}d ${z(h)}h ${z(m)}m`:`${z(h)}:${z(m)}:${z(s)}`;
+}
+const endedSeen=new Set();
+setInterval(()=>{   // update the clocks in place (rebuilding the cards every second would make the photos flicker)
+  if(document.getElementById('page-raffles').classList.contains('hidden')||!store.session) return;
+  document.querySelectorAll('#raffleList [data-end]').forEach(el=>{
+    const left=Math.max(0,Number(el.dataset.end)-Date.now());
+    if(el.classList.contains('timer')) el.textContent='⏱ '+fmtLeft(left);
+    else{ const b=el.querySelectorAll('b'), d=Math.floor(left/864e5), h=Math.floor(left%864e5/36e5), m=Math.floor(left%36e5/6e4), s=Math.floor(left%6e4/1e3);
+      [d,h,m,s].forEach((v,i)=>{ if(b[i]) b[i].textContent=String(v).padStart(2,'0'); }); }
+    const id=el.closest('[data-rid]')&&el.closest('[data-rid]').dataset.rid;
+    if(left<=0&&id&&!endedSeen.has(id)){ endedSeen.add(id); setTimeout(()=>settled(),2500); }
+  });
+},1000);
 function openRaffle(id){ activeRaffle=store.raffles.find(r=>r.id===id); qty=5;
   document.getElementById('raffleSeed').textContent=activeRaffle.seed;
   document.getElementById('qty').textContent=qty;
@@ -2505,7 +2527,7 @@ const durField=(id,n,u)=>`<div class="field"><label>Open for</label><div style="
 function durHours(id){ const n=parseInt(document.getElementById(id+'N').value,10), u=document.getElementById(id+'U').value;
   if(isNaN(n)||n<1) return null; const h=n*({hours:1,days:24,weeks:168,months:720}[u]||24); return h>24*366?-1:h; }
 async function admRaffles(){
-  const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,is_free,closes_at,winner_entry_id,announced_at').order('created_at',{ascending:false}).limit(20);
+  const {data:rs,error}=await sb.from('raffles').select('id,title,prize,entry_price_cents,is_free,closes_at,winner_entry_id,announced_at,image_path').order('created_at',{ascending:false}).limit(20);
   if(error) return toast(error.message);
   const totals=await Promise.all(rs.map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
   const results=await Promise.all(rs.map(r=>r.winner_entry_id?sb.rpc('raffle_result',{p_raffle:r.id}):Promise.resolve({data:null})));
@@ -2516,26 +2538,48 @@ async function admRaffles(){
      <div class="field"><label>Prize</label><input id="rfPrize" maxlength="120" placeholder="£2,500"></div>
      <div class="field"><label>Entry</label><select id="rfType" onchange="document.getElementById('rfPriceWrap').classList.toggle('hidden',this.value==='free')" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none"><option value="free">Free — every confirmed member can enter, no link needed</option><option value="paid">Paid — members buy entries from their wallet</option></select></div>
      <div class="field hidden" id="rfPriceWrap"><label>Entry price (GBP)</label><input id="rfPrice" type="number" min="0.5" step="0.5" value="2.00"></div>
+     <div class="field"><label>Prize photo (optional)</label><input id="rfImg" type="file" accept="image/*"></div>
      ${durField('rfDur',7,'days')}
      <button class="primary" onclick="admCreateRaffle()">Create</button></div>
    ${rs.map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, res=(results[i].data||[])[0], closed=new Date(r.closes_at)<new Date();
-     return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${r.is_free?'free':$$(r.entry_price_cents)+'/entry'}</span>
+     return `<div class="chart-card">${r.image_path?`<img src="${esc(pubUrl(r.image_path))}" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:8px">`:''}<b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${r.is_free?'free':$$(r.entry_price_cents)+'/entry'}</span>
        <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} tickets · ${Number(t.players||0)} players · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
        ${res?`<div style="font-size:13px">🏆 <b>@${esc(res.winner_username)}</b> · seed ${res.hash_ok?'verified ✓':'MISMATCH ⚠'}</div>`
          :r.winner_entry_id&&!r.announced_at?`<div style="font-size:12.5px;color:var(--live);margin-bottom:4px">Winner drawn but not announced yet</div><button class="abtn ok" onclick="admAnnounce('${r.id}')">Announce winner</button>`
-         :(closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">🎲 Draw winner live</button>`:'')}</div>`; }).join('')}</div>`;
+         :(closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">🎲 Draw winner live</button>`:'')}
+       ${!r.winner_entry_id?`<button class="abtn" onclick="admPickRaffleImage('${r.id}')">📷 ${r.image_path?'Change':'Add'} photo</button>`:''}</div>`; }).join('')}</div>`;
+}
+async function prepImage(file){
+  if(!file||!/^image\//.test(file.type)) throw new Error('Choose a photo (JPG, PNG or WebP)');
+  if(file.size>25*1024*1024) throw new Error('That photo is too big (max 25 MB)');
+  const bmp=await createImageBitmap(file), k=Math.min(1,1280/bmp.width), c=document.createElement('canvas');
+  c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k); c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);
+  const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.86)); if(!blob) throw new Error('Could not read that photo'); return blob;
+}
+async function admUploadRaffleImage(raffleId,file){
+  const blob=await prepImage(file), path=`${store.session}/raffles/${raffleId}-${Date.now()}.jpg`;
+  const up=await sb.storage.from('public-media').upload(path,blob,{contentType:'image/jpeg'}); if(up.error) throw up.error;
+  const {data:old,error}=await sb.rpc('admin_set_raffle_image',{p_raffle:raffleId,p_path:path});
+  if(error){ await sb.storage.from('public-media').remove([path]).catch(()=>{}); throw error; }
+  if(old) sb.storage.from('public-media').remove([old]).catch(()=>{});
+}
+async function admAfterCreate(rid,inputId){ const f=document.getElementById(inputId)&&document.getElementById(inputId).files[0]; if(!f) return; try{ await admUploadRaffleImage(rid,f); }catch(e){ toast('Created, but the photo did not upload: '+e.message); await new Promise(r=>setTimeout(r,1800)); } }
+function admPickRaffleImage(id){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=async()=>{ if(!inp.files[0]) return; toast('Uploading photo…'); try{ await admUploadRaffleImage(id,inp.files[0]); toast('Photo saved ✓'); admLoad(); }catch(e){ toast(e.message); } };
+  inp.click();
 }
 async function admCreateRaffle(){
   const hours=durHours('rfDur'); if(hours===null) return toast('Enter how long it stays open'); if(hours===-1) return toast('The longest a raffle can run is 12 months');
   const title=document.getElementById('rfTitle').value, prize=document.getElementById('rfPrize').value;
   if(document.getElementById('rfType').value==='free'){
-    const {error}=await admCall('admin_create_free_raffle',{p_title:title,p_prize:prize,p_hours:hours});
-    if(!error){ toast('Free giveaway created — every member has been told'); admLoad(); } return;
+    const {data:rid,error}=await admCall('admin_create_free_raffle',{p_title:title,p_prize:prize,p_hours:hours});
+    if(!error){ await admAfterCreate(rid,'rfImg'); toast('Free giveaway created — every member has been told'); admLoad(); } return;
   }
   const price=Math.round(parseFloat(document.getElementById('rfPrice').value)*100);
   if(isNaN(price)) return toast('Enter an entry price');
-  const {error}=await admCall('admin_create_raffle',{p_title:title,p_prize:prize,p_price_cents:price,p_hours:hours});
-  if(!error){ toast('Raffle created — it is now live for users'); admLoad(); }
+  const {data:rid,error}=await admCall('admin_create_raffle',{p_title:title,p_prize:prize,p_price_cents:price,p_hours:hours});
+  if(!error){ await admAfterCreate(rid,'rfImg'); toast('Raffle created — it is now live for users'); admLoad(); }
 }
 async function admDraw(id){ openDrawStage(id); }
 async function admAnnounce(id){
@@ -2560,7 +2604,7 @@ async function admClearErrors(){ if(!confirm('Clear all recorded errors?')) retu
 /* --- giveaways: campaign links, free raffles, prize delivery (admin only) --- */
 const campaignLink=code=>location.origin+location.pathname+'?campaign='+encodeURIComponent(code);
 async function admGiveaways(){
-  const [cs,pc,rs]=await Promise.all([admCall('admin_list_campaigns'),admCall('admin_list_prize_claims'),sb.from('raffles').select('id,title,prize,closes_at,winner_entry_id,announced_at').eq('is_free',true).order('created_at',{ascending:false}).limit(20)]);
+  const [cs,pc,rs]=await Promise.all([admCall('admin_list_campaigns'),admCall('admin_list_prize_claims'),sb.from('raffles').select('id,title,prize,closes_at,winner_entry_id,announced_at,image_path').eq('is_free',true).order('created_at',{ascending:false}).limit(20)]);
   if(cs.error||pc.error) return;
   const totals=await Promise.all((rs.data||[]).map(r=>sb.rpc('raffle_totals',{p_raffle:r.id})));
   admBody().innerHTML=`<div class="admin-pad">
@@ -2568,6 +2612,7 @@ async function admGiveaways(){
      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">One prize per giveaway. Every confirmed member can enter each giveaway once (no link needed), they are notified when you post a new one, and the winner is drawn fairly (published seed hash, revealed after).</p>
      <div class="field"><label>Title</label><input id="fgTitle" maxlength="120" placeholder="Win a mystery box"></div>
      <div class="field"><label>Prize</label><input id="fgPrize" maxlength="120" placeholder="e.g. Branded hoodie"></div>
+     <div class="field"><label>Prize photo (optional)</label><input id="fgImg" type="file" accept="image/*"></div>
      ${durField('fgDur',14,'days')}
      <button class="primary" onclick="admCreateFree()">Create giveaway</button></div>
    <div class="chart-card"><h4>2. Create a sign-up link</h4>
@@ -2583,9 +2628,9 @@ async function admGiveaways(){
      <button class="abtn ok" onclick="copyText(campaignLink('${esc(c.code)}'))">Copy link</button><button class="abtn ${c.active?'danger':''}" onclick="admCampaignActive('${c.id}',${!c.active})">${c.active?'Pause':'Resume'}</button></div>`).join('')}
    <div class="section-title" style="padding:12px 0 6px">Free giveaways</div>
    ${(rs.data||[]).map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, closed=new Date(r.closes_at)<new Date();
-     return `<div class="chart-card"><b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)}</span>
+     return `<div class="chart-card">${r.image_path?`<img src="${esc(pubUrl(r.image_path))}" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:8px">`:''}<b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)}</span>
       <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} entries · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
-      ${!r.winner_entry_id&&closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">🎲 Draw winner live</button>`:''}${r.winner_entry_id&&!r.announced_at?`<div style="font-size:12.5px;color:var(--live);margin:4px 0">Winner drawn but not announced yet</div><button class="abtn ok" onclick="admAnnounce('${r.id}')">Announce winner</button>`:''}</div>`; }).join('')||admEmpty('No free giveaways yet.')}
+      ${!r.winner_entry_id&&closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">🎲 Draw winner live</button>`:''}${r.winner_entry_id&&!r.announced_at?`<div style="font-size:12.5px;color:var(--live);margin:4px 0">Winner drawn but not announced yet</div><button class="abtn ok" onclick="admAnnounce('${r.id}')">Announce winner</button>`:''}${!r.winner_entry_id?`<button class="abtn" onclick="admPickRaffleImage('${r.id}')">📷 ${r.image_path?'Change':'Add'} photo</button>`:''}</div>`; }).join('')||admEmpty('No free giveaways yet.')}
    <div class="section-title" style="padding:12px 0 6px">Winners to post to</div>
    ${pc.data.map(c=>`<div class="chart-card"><b>${esc(c.prize)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(c.title)} · won by @${esc(c.winner)}</span>
      <div style="font-size:12.5px;margin:6px 0;line-height:1.5">${c.full_name?`${esc(c.full_name)}<br>${esc(c.line1)}${c.line2?', '+esc(c.line2):''}<br>${esc(c.city)}, ${esc(c.postcode)}${c.phone?'<br>'+esc(c.phone):''}`:'<span style="color:var(--muted)">No address yet'+(c.claim_by?' — claim by '+new Date(c.claim_by).toLocaleDateString():'')+'</span>'}</div>
@@ -2596,8 +2641,8 @@ async function admGiveaways(){
 }
 async function admCreateFree(){
   const hours=durHours('fgDur'); if(hours===null) return toast('Enter how long it stays open'); if(hours===-1) return toast('The longest a giveaway can run is 12 months');
-  const {error}=await admCall('admin_create_free_raffle',{p_title:document.getElementById('fgTitle').value,p_prize:document.getElementById('fgPrize').value,p_hours:hours});
-  if(!error){ toast('Giveaway created — every member has been told'); admLoad(); }
+  const {data:rid,error}=await admCall('admin_create_free_raffle',{p_title:document.getElementById('fgTitle').value,p_prize:document.getElementById('fgPrize').value,p_hours:hours});
+  if(!error){ await admAfterCreate(rid,'fgImg'); toast('Giveaway created — every member has been told'); admLoad(); }
 }
 async function admCreateCampaign(){
   const max=parseInt(document.getElementById('cpMax').value,10), d=document.getElementById('cpDays').value;
