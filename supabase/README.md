@@ -142,3 +142,6 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 - **Default is by hand and free.** The `id_check` setting is `manual`. A member taps Me → Identity & age verification → **Request a check**. An admin sees it under **Admin → Age checks**, waits for the member to email a photo of themselves holding their passport/driving licence to the support inbox, checks it, and deletes the email and photo straight after, then **Approve** or **Reject** with a short note (no ID numbers). Approving sets `age_verified`; the member is notified. Only the result, date and note are stored — never an image of the ID.
 - **Stripe Identity is off but ready.** `can_start_verification()` refuses unless `id_check = 'stripe'`, so nobody can start (and be charged for) a Stripe check. Switch with the button at the top of Age checks (or `admin_set_id_check_mode('manual'|'stripe')`). The Stripe webhook/function code is unchanged.
 - Admins can still use Users → Mark 18+ verified for one-off cases. Requests are limited to 3 per member per day and one pending at a time.
+
+### 027 — creator welcome animation
+Adds `profiles.intro_seen` (existing accounts are marked as seen), `mark_intro_seen()`, and an `intro_seen` field on `my_security()`. A brand-new creator's first login plays the welcome animation once; Me → Welcome tour replays it.

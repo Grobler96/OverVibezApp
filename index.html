@@ -324,6 +324,40 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .admin-grid .stat b{display:block;font-size:20px} .admin-grid .stat span{font-size:11.5px;color:var(--muted)}
 .admin-pad{padding:0 14px}
 
+/* ═══════════ CREATOR WELCOME ANIMATION (plays once, first login) ═══════════ */
+.intro{position:fixed;inset:0;z-index:500;display:none;background:#0E0A14;color:#EFEAF6;overflow:hidden;font-family:'Outfit',sans-serif}
+.intro.open{display:block}
+.intro .ig-a{position:absolute;inset:0;background:radial-gradient(60vmax 60vmax at 96% 2%,rgba(255,61,138,.4),transparent 70%)}
+.intro .ig-b{position:absolute;inset:0;background:radial-gradient(70vmax 70vmax at 2% 100%,rgba(139,92,246,.44),transparent 70%)}
+.intro .iring{position:absolute;border-radius:50%;border:2px solid rgba(255,61,138,.26);animation:iSpin 50s linear infinite}
+@keyframes iSpin{to{transform:rotate(360deg)}}
+.intro .iskip{position:absolute;top:max(14px,env(safe-area-inset-top));right:16px;z-index:3;color:#A99BC4;font-size:14px;font-weight:500;padding:10px 14px;border-radius:99px;background:rgba(255,255,255,.06)}
+.intro .scene{position:absolute;inset:0;margin:0 auto;max-width:520px;padding:max(70px,env(safe-area-inset-top)) 26px max(26px,env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:center;opacity:0;transform:translateY(26px);transition:opacity .6s ease,transform .6s ease;pointer-events:none}
+.intro .scene.on{opacity:1;transform:none;pointer-events:auto}
+.intro .scene.off{transform:translateY(-26px)}
+.intro .i{opacity:0;transform:translateY(24px);filter:blur(8px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.3,1),filter .6s ease}
+.intro .scene.on .i{opacity:1;transform:none;filter:none}
+.intro.rm .scene,.intro.rm .i{transition:none}
+.intro .ilogo{font-family:'Unbounded',sans-serif;font-weight:900;font-size:clamp(46px,14vw,70px);letter-spacing:-2px;line-height:1;background:linear-gradient(135deg,#FF3D8A,#8B5CF6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.intro .iwelcome{font-family:'Unbounded',sans-serif;font-weight:700;font-size:clamp(22px,6.4vw,30px);line-height:1.25;margin-top:26px;word-break:break-word}
+.intro .itag{margin-top:18px;letter-spacing:.42em;text-transform:uppercase;color:#A99BC4;font-weight:500;font-size:13px}
+.intro h2.ih{font-family:'Unbounded',sans-serif;font-weight:900;font-size:clamp(34px,10.4vw,52px);line-height:1.15;letter-spacing:-1.5px;margin:0}
+.intro h2.ih .g,.intro .g{background:linear-gradient(135deg,#FF3D8A,#8B5CF6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.intro .isub{margin-top:26px;font-size:clamp(17px,4.8vw,21px);line-height:1.45;font-weight:300}
+.intro .isub b{font-weight:600}
+.intro .ititle{font-family:'Unbounded',sans-serif;font-weight:900;font-size:clamp(26px,7.6vw,36px);letter-spacing:-1px;margin:0 0 22px}
+.intro .istep{display:flex;align-items:center;gap:14px;background:rgba(23,16,33,.92);border:1px solid #2C2140;border-radius:18px;padding:13px 16px;margin-bottom:11px}
+.intro .istep .n{flex:none;width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#FF3D8A,#8B5CF6);display:grid;place-items:center;font-family:'Unbounded',sans-serif;font-weight:700;font-size:16px;color:#fff}
+.intro .istep b{display:block;font-size:17px;font-weight:600;line-height:1.2}
+.intro .istep span{display:block;margin-top:2px;font-size:13.5px;color:#A99BC4;line-height:1.35}
+.intro .ibtns{margin-top:18px;display:flex;flex-direction:column;gap:10px}
+.intro .igo{background:linear-gradient(135deg,#FF3D8A,#8B5CF6);color:#fff;font-weight:700;font-size:18px;padding:17px;border-radius:16px;box-shadow:0 12px 44px rgba(255,61,138,.35);animation:iPulse 2.4s ease-in-out infinite}
+@keyframes iPulse{50%{box-shadow:0 12px 60px rgba(255,61,138,.6);transform:scale(1.015)}}
+.intro .ilater{color:#A99BC4;font-size:14.5px;padding:10px}
+.intro .iconf{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:2}
+.intro .iconf i{position:absolute;display:block}
+@media (prefers-reduced-motion:reduce){.intro .iring,.intro .igo{animation:none}}
+
 /* ═══════════ BOOT SPLASH + MOBILE ═══════════ */
 #splash{display:none;position:fixed;inset:0;z-index:300;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:14px}
 #splash .logo-big{font-family:'Unbounded';font-weight:900;font-size:30px;letter-spacing:-1px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;animation:splashPulse 1.2s ease-in-out infinite}
@@ -383,6 +417,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <p style="color:var(--muted);font-size:12.5px;text-align:center;margin:26px 0 0;line-height:1.7"><a href="terms.html" style="color:var(--accent-2)">Terms</a> · <a href="privacy.html" style="color:var(--accent-2)">Privacy</a> · <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a> · <a href="refunds.html" style="color:var(--accent-2)">Refunds &amp; disputes</a> · <a href="terms.html#giveaways" style="color:var(--accent-2)">Giveaway rules</a><br><span id="landingContact">Customer support: use Help &amp; contact after you sign up</span></p>
   </div>
 </div>
+<div class="intro" id="introOv" role="dialog" aria-label="Welcome to OverVibez"></div>
 <div id="splash" aria-hidden="true"><div class="logo-big">OverVibez</div></div>
 <div class="auth" id="authScreen">
   <div class="logo-big">OverVibez</div>
@@ -1079,7 +1114,7 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); loadSecurity().then(()=>{ if(store.session) refresh(); }); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
+  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); loadSecurity().then(()=>{ if(store.session){ refresh(); maybeIntro(); } }); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
@@ -1714,6 +1749,71 @@ async function startTopup(cents){
   try{ const d=await stripeCall('create-topup',{cents}); location.href=d.url; }
   catch(e){ payFail(e,'Adding funds'); }
 }
+/* ═══════════ CREATOR WELCOME ANIMATION ═══════════
+   Plays once for a new creator's first login (the database remembers, per account: profiles.intro_seen) and can be replayed from
+   Me → Welcome tour. Scenes are plain CSS transitions switched on by timers; reduced-motion users get the final scene straight away. */
+let introTimers=[], introShown=false;
+const introAt=(ms,fn)=>introTimers.push(setTimeout(fn,ms));
+function maybeIntro(){
+  const u=me();
+  if(introShown||!u||u.role!=='creator'||!store.sec||store.sec.intro_seen!==false||recoveryMode) return;
+  introShown=true; openIntro(false);
+  sb.rpc('mark_intro_seen').then(()=>{ if(store.sec) store.sec.intro_seen=true; },()=>{});
+}
+function closeIntro(then){
+  introTimers.forEach(clearTimeout); introTimers=[];
+  const ov=document.getElementById('introOv'); ov.className='intro'; ov.innerHTML='';
+  if(typeof then==='function') then();
+}
+function introGo(){
+  closeIntro(()=>{ const u=me();
+    if(u.ageVerified) return openCreate();                     // ready: start the first drop
+    if(settings.id_check==='stripe'&&features.identity){ if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.')) startVerification(); }
+    else openAgeRequest();                                      // otherwise: ask for the hand check
+  });
+}
+function introCount(){
+  const t0=performance.now()+700;
+  const tick=now=>{ const el=document.getElementById('introCnt'); if(!el) return; const p=Math.min(1,Math.max(0,(now-t0)/1000));
+    el.textContent=Math.round(85*(1-Math.pow(1-p,3))); if(p<1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+function introConfetti(){
+  const box=document.querySelector('#introOv .iconf'), cnt=document.getElementById('introCnt'); if(!box||!cnt||!box.animate) return;
+  const r=cnt.getBoundingClientRect(), ox=innerWidth/2, oy=r.top+r.height/2, cols=['#FF3D8A','#8B5CF6','#EFEAF6'];
+  for(let k=0;k<46;k++){
+    const el=document.createElement('i'), s=8+Math.random()*14, a=(-170+Math.random()*160)*Math.PI/180, sp=160+Math.random()*320, dx=Math.cos(a)*sp, dy=Math.sin(a)*sp;
+    el.style.cssText=`left:${ox}px;top:${oy}px;width:${s}px;height:${Math.random()<.5?s:s*.45}px;background:${cols[k%3]};border-radius:${Math.random()<.5?'50%':'3px'}`;
+    box.appendChild(el);
+    el.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:`translate(${dx*.7}px,${dy*.7-40}px) rotate(${Math.random()*360}deg)`,opacity:1,offset:.45},
+      {transform:`translate(${dx}px,${dy+280}px) rotate(${Math.random()*720}deg)`,opacity:0}],{duration:1700+Math.random()*500,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'});
+  }
+}
+function openIntro(replay){
+  const u=me(), ov=document.getElementById('introOv'), reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+  introTimers.forEach(clearTimeout); introTimers=[];
+  const steps=[['Get verified (18+)','Me → Identity &amp; age verification. You need this before you can post.'],
+               ['Make your profile yours','Photo, bio, category and your subscription price.'],
+               ['Post your first drop','Free or paid — photo, video or text.'],
+               ['Go live','Free or ticketed. You keep 85% of every ticket and tip.']];
+  ov.innerHTML=`<div class="ig-a"></div><div class="ig-b"></div>
+    <div class="iring" style="width:70vmax;height:70vmax;right:-30vmax;top:-26vmax"></div>
+    <div class="iring" style="width:44vmax;height:44vmax;right:-14vmax;top:-10vmax;border-color:rgba(139,92,246,.3);animation-direction:reverse"></div>
+    <button class="iskip" onclick="closeIntro()">${replay?'Close':'Skip'}</button><div class="iconf"></div>
+    <div class="scene"><div class="ilogo i">OverVibez</div><div class="iwelcome i" style="transition-delay:.35s">Welcome, ${esc(u.name||u.username||'there')} 👋</div><div class="itag i" style="transition-delay:.7s">Publish. Earn. Win.</div></div>
+    <div class="scene"><h2 class="ih"><span class="i" style="display:block">Your people.</span><span class="i" style="display:block;transition-delay:.35s">Your content.</span><span class="i g" style="display:block;transition-delay:.7s"><span id="introCnt">0</span>% yours.</span></h2>
+      <p class="isub i" style="transition-delay:1.4s">Creators keep <b>85%</b> of every sale, tip and ticket. That is how OverVibez works.</p></div>
+    <div class="scene"><h3 class="ititle i">Your first steps</h3>
+      ${steps.map(([t,d],k)=>`<div class="istep i" style="transition-delay:${.25+k*.35}s"><div class="n">${k+1}</div><div><b>${t}</b><span>${d}</span></div></div>`).join('')}
+      <div class="ibtns i" style="transition-delay:${(.25+steps.length*.35+.2).toFixed(2)}s"><button class="igo" onclick="introGo()">${replay?'Got it':"Let's go"}</button></div></div>`;
+  ov.className='intro open'+(reduce?' rm':'');
+  const sc=[...ov.querySelectorAll('.scene')], show=n=>sc.forEach((s,i)=>{ s.classList.toggle('on',i===n); s.classList.toggle('off',i<n); });
+  if(reduce){ document.getElementById('introCnt').textContent='85'; show(2); return; }
+  show(0);
+  introAt(3300,()=>{ show(1); introCount(); introAt(1700,introConfetti); });
+  introAt(7900,()=>show(2));
+}
+
 /* ═══════════ MANUAL 18+ CHECK ═══════════
    By default OverVibez checks IDs by hand (admin → Age checks). The member only sends a request here; the ID itself is
    looked at outside the app and no image of it is stored. Stripe Identity can be switched on later by an admin. */
@@ -2294,6 +2394,7 @@ function renderMe(){
       <div class="row" onclick="toggleEmailNotif()"><div class="r-ic">✉️</div>Email notifications<span class="sub">${u.emailNotif?'On':'Off'}</span></div>
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
       <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:(settings.id_check==='stripe'&&features.identity)?`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`:`openAgeRequest()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':(settings.id_check==='stripe'&&features.identity)?'Verify now →':'Request a check →'}</span></div>
+      ${u.role==='creator'?`<div class="row" onclick="openIntro(true)"><div class="r-ic">🎬</div>Welcome tour<span class="sub">Replay</span></div>`:''}
       <div class="row" onclick="openPassword(false)"><div class="r-ic">🔑</div>Change password</div>
       <div class="row" onclick="openTwoStep()"><div class="r-ic">🛡️</div>Two-step login<span class="sub">${store.sec&&store.sec.mfa_enabled?'On ✅':u.staffRole?'Set up now →':'Off'}</span></div>
       <div class="row" onclick="go('money')"><div class="r-ic">🧾</div>Money &amp; receipts<span class="sub">History, CSV</span></div>
