@@ -1,0 +1,188 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>OverVibez launch video</title><style>
+/*{{FONTS}}*/
+
+:root{
+  --bg:#0E0A14; --panel:#171021; --panel-2:#1F1630; --line:#2C2140;
+  --text:#EFEAF6; --muted:#A99BC4; --accent:#FF3D8A; --accent-2:#8B5CF6;
+  --grad:linear-gradient(135deg,#FF3D8A 0%,#8B5CF6 100%);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;font-family:'Outfit',system-ui,sans-serif;color:var(--text);display:flex;flex-direction:column;gap:40px;padding:20px}
+.g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---------- shared pieces ---------- */
+.fmt{position:relative;overflow:hidden;background:var(--bg);flex:none}
+.glow{position:absolute;inset:0}
+.glow.a{background:radial-gradient(620px 620px at 94% 3%,rgba(255,61,138,.42),transparent 70%)}
+.glow.b{background:radial-gradient(700px 700px at 3% 98%,rgba(139,92,246,.46),transparent 70%)}
+.glow.c{background:radial-gradient(520px 520px at 102% 60%,rgba(139,92,246,.18),transparent 70%)}
+.ring{position:absolute;border-radius:50%;border:3px solid rgba(255,61,138,.28)}
+.ring.two{border-color:rgba(139,92,246,.3)}
+.inner{position:absolute;display:flex;flex-direction:column}
+.logo{font-family:'Unbounded',sans-serif;font-weight:900;letter-spacing:-2px;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.chip{font-weight:600;letter-spacing:4px;text-transform:uppercase;color:var(--text);border-radius:99px;border:3px solid rgba(255,61,138,.65);background:rgba(255,61,138,.1)}
+.tag{letter-spacing:8px;text-transform:uppercase;color:var(--muted);font-weight:500}
+h1{font-family:'Unbounded',sans-serif;font-weight:900;letter-spacing:-2px}
+.top{display:flex;align-items:center;justify-content:space-between}
+.lead{font-weight:300;color:var(--text)} .lead b{font-weight:600}
+.card{display:flex;align-items:center;background:rgba(23,16,33,.92);border:2px solid var(--line)}
+.ic{flex:none;border-radius:50%;background:var(--grad);display:grid;place-items:center}
+.ic svg{stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.card h3{font-weight:600;line-height:1.15} .card p{color:var(--muted);font-weight:400;line-height:1.3}
+.btn{display:flex;align-items:center;justify-content:center;flex-direction:column;background:var(--grad);color:#fff;text-align:center;box-shadow:0 14px 50px rgba(255,61,138,.35)}
+.btn .k{font-family:'Unbounded',sans-serif;font-weight:900;letter-spacing:-1px;line-height:1.1}
+.btn .u{font-weight:600;opacity:.96}
+.small{color:var(--muted);text-align:center;line-height:1.45} .small b{color:var(--text);font-weight:600}
+
+/* ---------- feed post 1080 x 1350 ---------- */
+#post{width:1080px;height:1350px}
+#post .ring.r1{width:520px;height:520px;right:-200px;top:-170px} #post .ring.r2{width:340px;height:340px;right:-90px;top:-60px}
+#post .inner{left:80px;right:80px;top:76px;bottom:62px}
+#post .logo{font-size:84px} #post .chip{font-size:24px;padding:12px 28px}
+#post .tag{margin-top:24px;font-size:26px}
+#post h1{margin-top:42px;font-size:88px;line-height:1.14}
+#post .cards{margin-top:40px;display:flex;flex-direction:column;gap:18px}
+#post .card{border-radius:32px;padding:20px 32px;gap:28px}
+#post .ic{width:88px;height:88px} #post .ic svg{width:46px;height:46px}
+#post .card h3{font-size:38px} #post .card p{margin-top:4px;font-size:29px}
+#post .sp{flex:1}
+#post .btn{border-radius:34px;height:132px}
+#post .btn .k{font-size:46px} #post .btn .u{margin-top:8px;font-size:32px}
+#post .small{margin-top:22px;font-size:22px}
+
+/* ---------- story / reel cover 1080 x 1920 (keep key content clear of the top 220px and bottom 300px) ---------- */
+#story{width:1080px;height:1920px}
+#story .ring.r1{width:700px;height:700px;right:-290px;top:-200px} #story .ring.r2{width:460px;height:460px;right:-150px;top:-60px}
+#story .ring.r3{width:560px;height:560px;left:-260px;bottom:420px}
+#story .inner{left:84px;right:84px;top:210px;bottom:290px}
+#story .logo{font-size:92px} #story .chip{font-size:26px;padding:14px 32px}
+#story .tag{margin-top:28px;font-size:30px}
+#story h1{margin-top:48px;font-size:100px;line-height:1.13}
+#story .lead{margin-top:30px;font-size:40px;line-height:1.36}
+#story .cards{margin-top:38px;display:flex;flex-direction:column;gap:20px}
+#story .card{border-radius:34px;padding:22px 34px;gap:30px}
+#story .ic{width:96px;height:96px} #story .ic svg{width:50px;height:50px}
+#story .card h3{font-size:42px} #story .card p{margin-top:4px;font-size:32px}
+#story .sp{flex:1}
+#story .btn{border-radius:38px;height:150px;margin-top:30px}
+#story .btn .k{font-size:54px} #story .btn .u{margin-top:10px;font-size:36px}
+#story .small{position:absolute;left:84px;right:84px;bottom:104px;font-size:25px}
+
+/* ---------- square 1080 x 1080 ---------- */
+#square{width:1080px;height:1080px}
+#square .ring.r1{width:520px;height:520px;right:-190px;top:-190px} #square .ring.r2{width:340px;height:340px;right:-90px;top:-90px}
+#square .inner{left:74px;right:74px;top:64px;bottom:52px}
+#square .logo{font-size:78px} #square .chip{font-size:23px;padding:11px 26px}
+#square .tag{margin-top:20px;font-size:24px}
+#square h1{margin-top:44px;font-size:94px;line-height:1.13}
+#square .pills{margin-top:42px;display:flex;gap:16px}
+#square .pill{flex:1;display:flex;align-items:center;gap:16px;background:rgba(23,16,33,.92);border:2px solid var(--line);border-radius:28px;padding:18px 22px}
+#square .ic{width:64px;height:64px} #square .ic svg{width:34px;height:34px}
+#square .pill b{font-size:27px;font-weight:600;line-height:1.15}
+#square .sp{flex:1}
+#square .btn{border-radius:32px;height:128px}
+#square .btn .k{font-size:41px} #square .btn .u{margin-top:6px;font-size:29px}
+#square .small{margin-top:20px;font-size:21px}
+
+body{padding:0!important;gap:0!important;display:block!important}
+.fmt{display:none}
+h1 .ln{display:block}
+.btn{position:relative;overflow:hidden}
+.btn .shine{position:absolute;top:0;bottom:0;left:0;width:38%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.38),transparent);transform:translateX(-160%) skewX(-12deg);pointer-events:none}
+.confetti{position:absolute;left:0;top:0;pointer-events:none}
+.confetti i{position:absolute;display:block;left:0;top:0;will-change:transform,opacity}
+[data-a]{will-change:transform,opacity}
+</style></head><body>
+<div class="fmt" id="story">
+  <div class="glow a" data-bg="a"></div><div class="glow b" data-bg="b"></div><div class="glow c"></div>
+  <div class="ring r1" data-ring="1"></div><div class="ring two r2" data-ring="2"></div><div class="ring two r3" data-ring="3"></div>
+  <div class="inner">
+    <div class="top"><div class="logo" data-a="logo">OverVibez</div><div class="chip" data-a="chip">Now open</div></div>
+    <div class="tag" data-a="tag">Publish. Earn. Win.</div>
+    <h1><span class="ln" data-a="h1a">Your people.</span><span class="ln" data-a="h1b">Your content.</span><span class="ln g" data-a="h1c"><span class="cnt">85</span>% yours.</span></h1>
+    <p class="lead" data-a="lead">The UK platform where creators <b>publish, go live and earn</b> &mdash; and followers <b>win free prizes</b>.</p>
+    <div class="cards">
+      <div class="card" data-a="card1"><div class="ic" data-a="ic1">{{ICON_STAR}}</div><div><h3>Creators keep 85%</h3><p>Posts, subscriptions, tips &amp; live streams</p></div></div>
+      <div class="card" data-a="card2"><div class="ic" data-a="ic2">{{ICON_HEART}}</div><div><h3>Follow your favourites</h3><p>Unlock, tip, chat &amp; join live streams</p></div></div>
+      <div class="card" data-a="card3"><div class="ic" data-a="ic3">{{ICON_GIFT}}</div><div><h3>Free prize draws</h3><p>Every member can enter. No purchase necessary.</p></div></div>
+    </div>
+    <div class="sp"></div>
+    <div class="btn" data-a="btn"><div class="k">Join free today</div><div class="u">www.overvibez.com</div><div class="shine"></div></div>
+  </div>
+  <div class="small" data-a="small"><b>18+ only &middot; UK</b> &middot; No purchase necessary on free draws &middot; Terms apply</div>
+  <div class="confetti"></div>
+</div>
+<div class="fmt" id="post">
+  <div class="glow a" data-bg="a"></div><div class="glow b" data-bg="b"></div><div class="glow c"></div>
+  <div class="ring r1" data-ring="1"></div><div class="ring two r2" data-ring="2"></div>
+  <div class="inner">
+    <div class="top"><div class="logo" data-a="logo">OverVibez</div><div class="chip" data-a="chip">Now open</div></div>
+    <div class="tag" data-a="tag">Publish. Earn. Win.</div>
+    <h1><span class="ln" data-a="h1a">Your people.</span><span class="ln" data-a="h1b">Your content.</span><span class="ln g" data-a="h1c"><span class="cnt">85</span>% yours.</span></h1>
+    <div class="cards">
+      <div class="card" data-a="card1"><div class="ic" data-a="ic1">{{ICON_STAR}}</div><div><h3>For creators</h3><p>Post, subscribe, tip &amp; go live. Keep 85%.</p></div></div>
+      <div class="card" data-a="card2"><div class="ic" data-a="ic2">{{ICON_HEART}}</div><div><h3>For followers</h3><p>Follow, unlock, tip, chat and join live streams.</p></div></div>
+      <div class="card" data-a="card3"><div class="ic" data-a="ic3">{{ICON_GIFT}}</div><div><h3>Free prize draws</h3><p>Every member can enter. No purchase necessary.</p></div></div>
+    </div>
+    <div class="sp"></div>
+    <div class="btn" data-a="btn"><div class="k">Join free today</div><div class="u">www.overvibez.com</div><div class="shine"></div></div>
+    <div class="small" data-a="small"><b>18+ only &middot; UK</b> &middot; Free prize draws: no purchase necessary, UK prizes only &middot; Terms apply</div>
+  </div>
+  <div class="confetti"></div>
+</div>
+<script>
+/* ---------- deterministic timeline: render(t) draws the exact frame for time t (seconds) ---------- */
+const clamp = x => Math.min(1, Math.max(0, x));
+const P = (t, s, d) => clamp((t - s) / d);
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeBack = x => { const c1 = 1.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+let F, conf = [], origin = null;
+function setup(id){
+  F = document.getElementById(id); F.style.display = 'block';
+  const box = F.querySelector('.confetti'); box.style.width = F.clientWidth + 'px'; box.style.height = F.clientHeight + 'px';
+  const r = rng(7), fr = F.getBoundingClientRect(), h = F.querySelector('[data-a=h1c]').getBoundingClientRect();
+  origin = { x: h.left - fr.left + h.width * 0.78, y: h.top - fr.top + h.height * 0.5 };
+  for (let i = 0; i < 46; i++){
+    const a = (-170 + r() * 160) * Math.PI / 180, sp = 520 + r() * 900, el = document.createElement('i');
+    const s = 10 + r() * 22, kind = r(), col = kind < .4 ? '#FF3D8A' : kind < .8 ? '#8B5CF6' : '#EFEAF6';
+    el.style.width = s + 'px'; el.style.height = (r() < .5 ? s : s * .45) + 'px'; el.style.background = col; el.style.borderRadius = r() < .5 ? '50%' : '4px';
+    box.appendChild(el); conf.push({ el, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, rot: r() * 360, vr: (r() - .5) * 900 });
+  }
+}
+const $ = k => F.querySelector('[data-a=' + k + ']');
+function set(el, o, x, y, sc, rot, blur){ if(!el) return; el.style.opacity = o; el.style.transform = `translate(${x||0}px,${y||0}px) scale(${sc==null?1:sc}) rotate(${rot||0}deg)`; el.style.filter = blur ? `blur(${blur}px)` : 'none'; }
+function render(t){
+  // background life
+  F.querySelectorAll('[data-ring]').forEach(el => { const k = +el.dataset.ring; el.style.transform = `rotate(${(k % 2 ? 1 : -1) * t * (5 + k * 2)}deg) scale(${1 + .035 * Math.sin(t * 1.1 + k)})`; });
+  F.querySelectorAll('[data-bg]').forEach(el => { el.style.opacity = (el.dataset.bg === 'a' ? .85 : .8) + .15 * Math.sin(t * 1.4 + (el.dataset.bg === 'a' ? 0 : 2)); });
+  // logo + chip + tagline
+  let p = P(t, .2, .8); set($('logo'), easeOut(P(t, .2, .5)), 0, (1 - easeOut(p)) * 40, .78 + .22 * easeBack(p));
+  p = P(t, .75, .6); set($('chip'), easeOut(P(t, .75, .3)), 0, 0, .5 + .5 * easeBack(p));
+  p = P(t, 1.0, .8); const tg = $('tag'); set(tg, easeOut(p), 0, (1 - easeOut(p)) * 16); tg.style.letterSpacing = (16 - 8 * easeOut(p)) + 'px';
+  // headline lines
+  [['h1a', 1.5], ['h1b', 2.1], ['h1c', 2.7]].forEach(([k, s]) => { const q = P(t, s, .65); set($(k), easeOut(P(t, s, .4)), (1 - easeOut(q)) * -30, (1 - easeOut(q)) * 90, 1, 0, (1 - easeOut(q)) * 14); });
+  const hc = $('h1c'); hc.style.transformOrigin = 'left center';
+  const pop = P(t, 3.8, .5); hc.style.transform += ` scale(${1 + .07 * Math.sin(Math.PI * pop)})`;
+  F.querySelector('.cnt').textContent = Math.round(85 * easeOut(P(t, 2.8, 1.0)));
+  // confetti burst
+  const t0 = 3.8;
+  conf.forEach(c => { const a = t - t0; if (a < 0 || a > 2.2){ c.el.style.opacity = 0; return; }
+    const x = origin.x + c.vx * a, y = origin.y + c.vy * a + 1700 * a * a / 2;
+    c.el.style.opacity = a < 1.4 ? 1 : 1 - (a - 1.4) / .8; c.el.style.transform = `translate(${x}px,${y}px) rotate(${c.rot + c.vr * a}deg)`; });
+  // lead + cards
+  p = P(t, 4.0, .6); set($('lead'), easeOut(p), 0, (1 - easeOut(p)) * 34);
+  [['card1', 'ic1', 4.7], ['card2', 'ic2', 5.3], ['card3', 'ic3', 5.9]].forEach(([c, i, s]) => {
+    const q = P(t, s, .55); set($(c), easeOut(P(t, s, .35)), (1 - easeOut(q)) * 140, 0);
+    const w = P(t, s + .2, .5); set($(i), easeOut(P(t, s + .2, .2)), 0, 0, easeBack(w), (1 - w) * -40); });
+  // button
+  p = P(t, 6.7, .65); const b = $('btn'); const br = t > 7.4 ? .014 * Math.sin((t - 7.4) * 3.4) : 0;
+  set(b, easeOut(P(t, 6.7, .35)), 0, (1 - easeOut(p)) * 110, (.9 + .1 * easeBack(p)) + br);
+  b.style.boxShadow = `0 14px ${50 + (t > 7.4 ? 24 * (.5 + .5 * Math.sin((t - 7.4) * 3.4)) : 0)}px rgba(255,61,138,${.35 + (t > 7.4 ? .2 * (.5 + .5 * Math.sin((t - 7.4) * 3.4)) : 0)})`;
+  const sh = F.querySelector('.shine'), q = P(t, 7.9, .9); sh.style.transform = `translateX(${-160 + 440 * easeOut(q)}%) skewX(-12deg)`;
+  const q2 = P(t, 10.4, .9); if (q2 > 0) sh.style.transform = `translateX(${-160 + 440 * easeOut(q2)}%) skewX(-12deg)`;
+  // small print
+  set($('small'), easeOut(P(t, 7.4, .6)), 0, 0);
+}
+window.setup = setup; window.render = render;
+</script></body></html>
