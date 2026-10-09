@@ -2216,7 +2216,7 @@ async function requestBonusPayout(){
   catch(e){ toast(e.message); await settled(); }
 }
 
-/* ═══════════ CREATE (creators) ═══════════
+/* ═══════════ CREATE (creators) ═══════════ */
 let postType='free';
 function setPostType(t){ postType=t;
   document.getElementById('ctFree').classList.toggle('on',t==='free');
