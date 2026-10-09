@@ -810,9 +810,20 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
       <input id="epAvatar" type="file" accept="image/png,image/jpeg,image/webp" style="padding:8px"></div></div>
     <div class="field"><label>Cover photo</label><div class="cover" id="epCoverPrev" style="margin:0 0 8px;height:70px"></div>
       <input id="epCover" type="file" accept="image/png,image/jpeg,image/webp" style="padding:8px"></div>
-    <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">Photos are resized and re-saved in your browser, which also removes hidden data such as GPS location.</p>
+    <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">Pick a photo, then drag and zoom it into the frame. Photos are re-saved in your browser, which also removes hidden data such as GPS location.</p>
     <button class="primary" id="epSave" onclick="saveProfile()">Save</button>
     <button class="ghost" onclick="closeModal('editProfileModal')">Cancel</button>
+  </div>
+</div>
+
+<div class="overlay" id="cropModal" style="z-index:140">
+  <div class="sheet">
+    <h3 id="cropTitle">Position your photo</h3>
+    <p>Drag the photo to move it and use the slider to zoom. What you see inside the frame is what everyone will see.</p>
+    <div id="cropFrame" style="position:relative;margin:0 auto 14px;overflow:hidden;background:#000;touch-action:none;cursor:grab;border:2px solid var(--accent)"><canvas id="cropCv" style="display:block;width:100%;height:100%"></canvas></div>
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px"><span style="color:var(--muted)">－</span><input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1" style="flex:1;padding:0" aria-label="Zoom"><span style="color:var(--muted)">＋</span></div>
+    <button class="primary" onclick="cropApply()">Use this photo</button>
+    <button class="ghost" onclick="cropCancel()">Cancel</button>
   </div>
 </div>
 
@@ -2544,18 +2555,66 @@ function imgToBlob(file,w,h,q=0.86){
 function openEditProfile(){
   const u=me();
   document.getElementById('epName').value=u.name; document.getElementById('epBio').value=u.bio||'';
-  document.getElementById('epAvatar').value=''; document.getElementById('epCover').value='';
+  document.getElementById('epAvatar').value=''; document.getElementById('epCover').value=''; pendingImg={};
   document.getElementById('epCatWrap').classList.toggle('hidden',u.role!=='creator'); document.getElementById('epCat').value=u.category||'';
   const av=document.getElementById('epAvPrev'); av.className='av '+u.av; av.innerHTML=avInner(u);
   document.getElementById('epCoverPrev').style.backgroundImage=u.coverUrl?`url('${u.coverUrl}')`:'none';
   openModal('editProfileModal');
 }
-document.addEventListener('change',e=>{
-  if(e.target&&(e.target.id==='epAvatar'||e.target.id==='epCover')&&e.target.files[0]){
-    const url=URL.createObjectURL(e.target.files[0]);
-    if(e.target.id==='epAvatar') document.getElementById('epAvPrev').innerHTML=`<img src="${url}" alt="">`;
+/* Photo framing: the member drags and zooms the photo inside the exact frame it will appear in, and we save that crop. */
+let crop=null, pendingImg={};
+function loadImageFile(file){
+  return new Promise((res,rej)=>{
+    if(!/^image\/(png|jpeg|webp)$/.test(file.type)) return rej(new Error('Please choose a PNG, JPG or WebP image'));
+    if(file.size>15*1024*1024) return rej(new Error('That image is too large (max 15 MB)'));
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{ URL.revokeObjectURL(url); res(img); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('That file could not be read as an image')); };
+    img.src=url;
+  });
+}
+function cropDraw(ctx,img,fw,fh,zoom,ox,oy,k){
+  const sc=Math.max(fw/img.width,fh/img.height)*zoom, dw=img.width*sc, dh=img.height*sc;
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,fw*k,fh*k);
+  ctx.drawImage(img,((fw-dw)/2+ox)*k,((fh-dh)/2+oy)*k,dw*k,dh*k);
+}
+function cropClamp(){
+  const c=crop, sc=Math.max(c.fw/c.img.width,c.fh/c.img.height)*c.zoom, mx=Math.max(0,(c.img.width*sc-c.fw)/2), my=Math.max(0,(c.img.height*sc-c.fh)/2);
+  c.ox=Math.min(mx,Math.max(-mx,c.ox)); c.oy=Math.min(my,Math.max(-my,c.oy));
+}
+function cropPaint(){ const c=crop, cv=document.getElementById('cropCv'); cropClamp(); cropDraw(cv.getContext('2d'),c.img,c.fw,c.fh,c.zoom,c.ox,c.oy,2); }
+async function openCrop(file,kind){
+  let img; try{ img=await loadImageFile(file); }catch(e){ document.getElementById(kind==='avatar'?'epAvatar':'epCover').value=''; return toast(e.message); }
+  const isAv=kind==='avatar', fr=document.getElementById('cropFrame'), cv=document.getElementById('cropCv');
+  const fw=isAv?250:Math.max(220,Math.min(window.innerWidth-48,470)), fh=isAv?250:Math.round(fw/3);
+  fr.style.width=fw+'px'; fr.style.height=fh+'px'; fr.style.borderRadius=isAv?'50%':'14px'; cv.width=fw*2; cv.height=fh*2;
+  crop={img,kind,fw,fh,ow:isAv?512:1200,oh:isAv?512:400,zoom:1,ox:0,oy:0};
+  document.getElementById('cropZoom').value=1; document.getElementById('cropTitle').textContent=isAv?'Position your profile picture':'Position your cover photo';
+  openModal('cropModal'); cropPaint();
+}
+(function(){
+  const fr=document.getElementById('cropFrame'); let d=null;
+  fr.addEventListener('pointerdown',e=>{ if(!crop) return; d={x:e.clientX,y:e.clientY,ox:crop.ox,oy:crop.oy}; fr.setPointerCapture(e.pointerId); fr.style.cursor='grabbing'; });
+  fr.addEventListener('pointermove',e=>{ if(!d||!crop) return; crop.ox=d.ox+(e.clientX-d.x); crop.oy=d.oy+(e.clientY-d.y); cropPaint(); });
+  const end=()=>{ d=null; fr.style.cursor='grab'; }; fr.addEventListener('pointerup',end); fr.addEventListener('pointercancel',end);
+  fr.addEventListener('wheel',e=>{ if(!crop) return; e.preventDefault(); const z=document.getElementById('cropZoom'); z.value=Math.min(4,Math.max(1,+z.value-e.deltaY/500)); crop.zoom=+z.value; cropPaint(); },{passive:false});
+  document.getElementById('cropZoom').addEventListener('input',e=>{ if(!crop) return; crop.zoom=+e.target.value; cropPaint(); });
+})();
+function cropCancel(){ if(crop) document.getElementById(crop.kind==='avatar'?'epAvatar':'epCover').value=''; crop=null; closeModal('cropModal'); }
+function cropApply(){
+  const c=crop; if(!c) return;
+  const out=document.createElement('canvas'); out.width=c.ow; out.height=c.oh;
+  cropDraw(out.getContext('2d'),c.img,c.fw,c.fh,c.zoom,c.ox,c.oy,c.ow/c.fw);
+  out.toBlob(b=>{
+    if(!b) return toast('Could not process the image');
+    pendingImg[c.kind]=b; const url=URL.createObjectURL(b);       // re-encoding drops EXIF/GPS data
+    if(c.kind==='avatar') document.getElementById('epAvPrev').innerHTML=`<img src="${url}" alt="">`;
     else document.getElementById('epCoverPrev').style.backgroundImage=`url('${url}')`;
-  }
+    crop=null; closeModal('cropModal');
+  },'image/jpeg',0.88);
+}
+document.addEventListener('change',e=>{
+  if(e.target&&(e.target.id==='epAvatar'||e.target.id==='epCover')&&e.target.files[0]) openCrop(e.target.files[0],e.target.id==='epAvatar'?'avatar':'cover');
 });
 async function saveProfile(){
   const u=me(), btn=document.getElementById('epSave'), name=document.getElementById('epName').value.trim(), bio=document.getElementById('epBio').value.trim();
@@ -2564,17 +2623,16 @@ async function saveProfile(){
   try{
     const patch={display_name:name,bio:bio||null}, old=[];
     if(u.role==='creator') patch.category=document.getElementById('epCat').value||null;
-    const up=async(file,w,h,kind)=>{
-      const blob=await imgToBlob(file,w,h), path=`${u.id}/${kind}-${Date.now()}.jpg`;
+    const up=async(blob,kind)=>{
+      const path=`${u.id}/${kind}-${Date.now()}.jpg`;
       const {error}=await sb.storage.from('public-media').upload(path,blob,{contentType:'image/jpeg'}); if(error) throw new Error(error.message);
       return path;
     };
-    const af=document.getElementById('epAvatar').files[0], cf=document.getElementById('epCover').files[0];
-    if(af){ patch.avatar_url=await up(af,512,512,'avatar'); if(u.avatarPath) old.push(u.avatarPath); }
-    if(cf){ patch.cover_url=await up(cf,1200,400,'cover'); }
+    if(pendingImg.avatar){ patch.avatar_url=await up(pendingImg.avatar,'avatar'); if(u.avatarPath) old.push(u.avatarPath); }
+    if(pendingImg.cover){ patch.cover_url=await up(pendingImg.cover,'cover'); }
     const {error}=await sb.from('profiles').update(patch).eq('id',u.id); if(error) throw new Error(error.message);
     if(old.length) sb.storage.from('public-media').remove(old).then(()=>{});          // tidy the replaced picture
-    closeModal('editProfileModal'); await hydrate(); rerender(); toast('Profile saved ✓');
+    pendingImg={}; closeModal('editProfileModal'); await hydrate(); rerender(); toast('Profile saved ✓');
   }catch(e){ toast(e.message||'Could not save your profile'); }
   finally{ btn.disabled=false; }
 }
