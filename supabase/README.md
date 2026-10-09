@@ -152,3 +152,10 @@ Adds `profiles.intro_seen` (existing accounts are marked as seen), `mark_intro_s
 ### 029 — post metrics and a separate bonus balance
 - `record_views(uuid[])` / `record_share(uuid)` count views (once per member per post, never your own) and shares (once per member per post per day). The counts live in `post_metrics`; nobody can read these tables directly. `creator_post_stats()` gives a creator views, likes, comments, shares, unlocks, tips and money kept for each of their posts (Studio → Your posts).
 - Bonuses from OverVibez now go to `profiles.bonus_cents`, shown as their own card in Studio and withdrawn separately (`request_bonus_payout`, `fail_bonus_payout`; the payouts function accepts `action: 'payout_bonus'`). Sales earnings and their withdrawal are untouched. Admin stats show "Bonuses not yet withdrawn".
+
+### 030 — stronger subscriptions
+- **Post access:** a post is free, **pay-per-view** (`sub_included` says whether a subscription also unlocks it) or **subscribers only** (`subs_only`: cannot be bought one at a time; `purchase_post` refuses it). `can_view_post` enforces this, including for private media.
+- **Auto-renewal:** `subscribe_to_creator` now sets `subscriptions.auto_renew`. The hourly job `renew_subscriptions()` (pg_cron `renew-subscriptions`) sends a reminder 3 days before, renews from the wallet at the agreed price (retrying hourly for up to 3 days if the wallet is short), and ends the subscription after that. Notifications (and emails) `sub_renew_soon`, `sub_renewed`, `sub_renew_failed`, `sub_ended`. `cancel_subscription` turns renewal off (access lasts to the end of the paid period); `resume_subscription` turns it back on.
+- **Live tickets:** subscribers pay half (rounded up) via `buy_live_ticket`.
+- **Studio:** a "Your subscribers" card (count, monthly value, who renews when); creators see a 💜 subscriber tag next to subscribers' comments. Subscribers are not shown publicly.
+- `tests/comments.test.js` fails if a block comment is left open (that once disabled "publish a post").
