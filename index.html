@@ -218,6 +218,21 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .content-row .ti b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;font-weight:500}
 .content-row .ti span{font-size:11.5px;color:var(--muted)}
 .content-row .earn{color:var(--money);font-weight:700}
+.pm{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 2px}
+.pm div{background:var(--panel-2);border-radius:10px;padding:7px 4px;text-align:center;font-size:11px;color:var(--muted)}
+.pm div b{display:block;font-size:14px;color:var(--text);font-weight:600}
+.pcard-row{padding:13px 0;border-bottom:1px solid var(--line)}
+.pcard-row:last-child{border:none}
+.pcard-row .top{display:flex;gap:11px;align-items:center}
+.pcard-row .sc{width:46px;height:46px;border-radius:10px;display:grid;place-items:center;font-size:20px;flex:none;overflow:hidden}
+.pcard-row .sc img,.pcard-row .sc video{width:100%;height:100%;object-fit:cover}
+.pcard-row .ttl{flex:1;min-width:0}
+.pcard-row .ttl b{display:block;font-weight:500;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard-row .ttl span{font-size:11.5px;color:var(--muted)}
+.pcard-row .earn{color:var(--money);font-weight:700;font-size:14px}
+.bonus-card{background:linear-gradient(135deg,rgba(255,61,138,.16),rgba(139,92,246,.16));border:1px solid var(--accent);border-radius:var(--radius);padding:16px;margin-bottom:14px}
+.bonus-card .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.bonus-card .amt{font-family:'Unbounded';font-weight:900;font-size:26px;margin:4px 0}
 .payout-btn{width:100%;background:var(--panel);border:1px solid var(--money);color:var(--money);font-weight:700;padding:13px;border-radius:12px;margin-bottom:20px}
 
 /* ═══════════ ME / PROFILE ═══════════ */
@@ -829,7 +844,7 @@ function ago(iso){ const t=(Date.now()-new Date(iso))/1000;
 function mapUser(p,followers){
   return {id:p.id,username:p.username,name:p.display_name||p.username,role:p.account_type,
     av:'a'+(1+hue(p.username)%6),em:p.account_type==='creator'?'✦':'🫧',verified:!!p.is_verified,
-    subPrice:p.sub_price_cents,followers:p.follower_count!=null?p.follower_count:(followers||0),category:p.category||null,createdAt:p.created_at,earnings:Number(p.earnings_cents||0),
+    subPrice:p.sub_price_cents,followers:p.follower_count!=null?p.follower_count:(followers||0),category:p.category||null,createdAt:p.created_at,earnings:Number(p.earnings_cents||0),bonus:Number(p.bonus_cents||0),
     wallet:Number(p.wallet_cents||0),emailNotif:p.email_notifications!==false,ageVerified:!!p.age_verified,bio:p.bio||'',live:false,
     staffRole:p.staff_role||null,isBanned:!!p.is_banned,banReason:p.ban_reason||'',
     avatarPath:p.avatar_url||null,avatarUrl:p.avatar_url?pubUrl(p.avatar_url):null,coverUrl:p.cover_url?pubUrl(p.cover_url):null};
@@ -1186,8 +1201,8 @@ function txInfo(t){
   }
   if(t.type==='wallet_topup') return {icon:TX_ICONS[t.type],title:'Added funds',sub:'Wallet top-up',amt:+t.gross_cents,pot:'wallet',kind:'in'};
   if(t.type==='admin_credit') return {icon:TX_ICONS[t.type],title:'Credit from OverVibez',sub:'Added to your wallet by our team',amt:+t.gross_cents,pot:'wallet',kind:'in'};
-  if(t.type==='admin_bonus') return {icon:TX_ICONS[t.type],title:'Bonus from OverVibez',sub:'Added to your earnings — no fee taken',amt:+t.net_cents,pot:'earnings',kind:'earned'};
-  if(t.type==='payout') return {icon:TX_ICONS[t.type],title:'Payout requested',sub:'From your earnings',amt:-t.gross_cents,pot:'earnings',kind:'out'};
+  if(t.type==='admin_bonus') return {icon:TX_ICONS[t.type],title:'Bonus from OverVibez',sub:'Added to your bonus balance — no fee taken',amt:+t.net_cents,pot:'bonus',kind:'earned'};
+  if(t.type==='payout') return {icon:TX_ICONS[t.type],title:'Withdrawal requested',sub:'Sent to your bank',amt:-t.gross_cents,pot:'earnings',kind:'out'};
   if(mine) return {icon:TX_ICONS[t.type]||'•',title:name+(t.type==='raffle_entry'?'':' · '+who),sub:'Paid from wallet',amt:-t.gross_cents,pot:'wallet',kind:'out'};
   return {icon:TX_ICONS[t.type]||'•',title:name+' from '+who,sub:'You keep 85%',amt:+t.net_cents,pot:'earnings',kind:'earned'};
 }
@@ -1406,7 +1421,7 @@ const notifInfo=n=>{
     case 'topup_reversed': return ['⚠️','A top-up of '+$$(d.cents)+' was reversed ('+esc(d.reason||'refund')+')'+(d.owed>0?'. You now owe '+$$(d.owed)+', taken from your next top-up':'')];
     case 'topup_restored': return ['✅','Good news — '+$$(d.cents)+' was put back in your wallet'];
     case 'debt_repaid': return ['🧾',$$(d.cents)+' of your latest payment cleared what you owed'];
-    case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your earnings, no fee taken'];
+    case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
     case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Me'];
     case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b> — it has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
@@ -1524,7 +1539,7 @@ function canView(p){
 function postCard(p){
   const u=me(), c=user(p.by); if(!c) return '';
   const mine=p.by===u.id, open=canView(p), liked=store.likes[u.id+p.id];
-  return `<article class="card">
+  return `<article class="card" data-pid="${p.id}" data-mine="${mine?1:0}">
     <div class="card-head">
       <div class="av ${c.av}" style="cursor:pointer" onclick="openProfile('${p.by}')">${avInner(c)}</div>
       <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}${p.edited?' · edited':''}</span></div>
@@ -1543,7 +1558,7 @@ function postCard(p){
     <div class="card-actions">
       <button class="act ${liked?'liked':''}" onclick="likePost('${p.id}')">${liked?'♥':'♡'} ${p.likes.toLocaleString()}</button>
       <button class="act" onclick="openComments('${p.id}')">💬 ${p.comments||0}</button>
-      <button class="act" onclick="shareProfile('${esc(c.username)}')">↗</button>
+      <button class="act" onclick="sharePost('${p.id}','${esc(c.username)}',${mine?1:0})">↗</button>
       ${mine?'':`<button class="act" onclick="openReport('post','${p.id}')" title="Report">⚑</button>`}
       ${mine?`<span class="act tip">earned ${$$(Math.round(p.earned*(1-FEE)))}</span>`:
         `<button class="act tip" onclick="tip('${p.by}','${p.id}')">💰 Tip £2</button>`}
@@ -2032,6 +2047,39 @@ async function sendMsg(){
 
 /* ═══════════ STUDIO (creators) ═══════════ */
 let studioAn={days:30,data:null,at:0};
+let postStats={data:null,at:0,sort:'new'};
+async function loadPostStats(){
+  const {data,error}=await sb.rpc('creator_post_stats'); if(error) return;
+  postStats.data=data||[]; postStats.at=Date.now(); paintPostStats();
+}
+function setPostSort(k){ postStats.sort=k; paintPostStats(); }
+function paintPostStats(){
+  const box=document.getElementById('postsBox'); if(!box) return;
+  const d=postStats.data;
+  if(!d){ box.innerHTML='<div class="chart-card"><h4>Your posts</h4><p style="color:var(--muted);font-size:13px">Loading…</p></div>'; return; }
+  const sum=k=>d.reduce((a,x)=>a+Number(x[k]||0),0), srt={new:null,views:'views',likes:'likes',earned:'earned_cents'}[postStats.sort];
+  const rows=srt?d.slice().sort((a,b)=>Number(b[srt])-Number(a[srt])):d;
+  const chips=[['new','Newest'],['views','Most viewed'],['likes','Most liked'],['earned','Most earned']].map(([k,l])=>`<button class="chip ${postStats.sort===k?'on':''}" onclick="setPostSort('${k}')">${l}</button>`).join('');
+  const thumb=x=>{ const lp=store.posts.find(q=>q.id===x.id), c=me();
+    if(lp&&lp.mediaUrl&&!lp.paid&&lp.mediaKind==='image') return `<img src="${esc(lp.mediaUrl)}" alt="">`;
+    return lp?lp.scene:(x.media_type==='video'?'🎬':x.media_type==='image'?'🖼️':'✍️'); };
+  box.innerHTML=`<div class="chart-card"><h4>Your posts <span style="color:var(--muted);font-weight:400">· ${d.length}</span></h4>
+    <div class="stat-row" style="grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px">
+      <div class="stat" style="padding:10px 4px"><b style="font-size:14px">${fmtN(sum('views'))}</b><span>Views</span></div>
+      <div class="stat" style="padding:10px 4px"><b style="font-size:14px">${fmtN(sum('likes'))}</b><span>Likes</span></div>
+      <div class="stat" style="padding:10px 4px"><b style="font-size:14px">${fmtN(sum('comments'))}</b><span>Comments</span></div>
+      <div class="stat" style="padding:10px 4px"><b style="font-size:14px">${fmtN(sum('shares'))}</b><span>Shares</span></div></div>
+    <div style="font-size:13px;margin:0 0 8px;color:var(--muted)">Earned from posts (after fees): <b style="color:var(--money)">${$$(sum('earned_cents'))}</b></div>
+    <div class="chiprow" style="padding:0 0 4px;overflow-x:auto">${chips}</div>
+    ${rows.length?rows.map(x=>`<div class="pcard-row"><div class="top"><div class="sc ${me().av}">${thumb(x)}</div>
+        <div class="ttl"><b>${esc(x.caption)||'(media post)'}</b><span>${new Date(x.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · ${x.is_paid?'🔒 Paid '+$$(x.price_cents||0):'Free'}</span></div>
+        <span class="earn">${$$(Number(x.earned_cents))}</span></div>
+      <div class="pm"><div><b>${fmtN(x.views)}</b>Views</div><div><b>${fmtN(x.likes)}</b>Likes</div><div><b>${fmtN(x.comments)}</b>Comments</div><div><b>${fmtN(x.shares)}</b>Shares</div></div>
+      ${x.is_paid||Number(x.tips)?`<div style="font-size:12px;color:var(--muted);margin:4px 0">${x.is_paid?'🔓 '+x.unlocks+' unlock'+(Number(x.unlocks)===1?'':'s')+' · ':''}💰 ${x.tips} tip${Number(x.tips)===1?'':'s'}</div>`:''}
+      <div><button class="abtn" onclick="openEditPost('${x.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${x.id}')">Delete</button></div></div>`).join('')
+      :'<p style="color:var(--muted);font-size:13px;padding:8px 0">No posts yet — hit ＋ to publish your first one.</p>'}
+    <p style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5">Views count each member once per post. Shares count link shares from the post. Money is what you kept after the 15% fee, with refunds taken off.</p></div>`;
+}
 function renderStudio(){
   const u=me();
   if(u.role!=='creator'){ document.getElementById('studioBody').innerHTML='<p style="color:var(--muted);padding:10px 4px">Studio is for Vibe Creator accounts.</p>'; return; }
@@ -2049,17 +2097,14 @@ function renderStudio(){
       <div class="stat"><b>${myPosts.length}</b><span>Drops</span></div>
     </div>
     <div id="anBox"></div>
-    <div class="chart-card"><h4>Your content</h4>
-      ${myPosts.length?myPosts.map(p=>`
-        <div class="content-row"><div class="sc ${u.av}">${p.scene}</div>
-          <div class="ti"><b>${esc(p.cap)||'(media)'}</b><span>${p.paid?'🔒 Paid · '+$$(p.price):'Free'} · ${p.likes.toLocaleString()} likes${p.edited?' · edited':''}</span>
-            <span><button class="abtn" onclick="openEditPost('${p.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${p.id}')">Delete</button></span></div>
-          <span class="earn">${$$(Math.round(p.earned*(1-FEE)))}</span></div>`).join('')
-        :'<p style="color:var(--muted);font-size:13px">No drops yet — hit ＋ to publish your first post.</p>'}
-    </div>
+    ${u.bonus>0?`<div class="bonus-card"><div class="lbl">🎁 Bonus from OverVibez</div><div class="amt">${$$(u.bonus)}</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team — no fee taken. Kept separate from your sales earnings.</div>
+      <button class="primary" onclick="requestBonusPayout()">Withdraw bonus ${$$(u.bonus)}</button></div>`:''}
+    <div id="postsBox"></div>
     <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(u.earnings)}</button>
     <button class="ghost" style="margin-top:10px" onclick="go('money')">💳 Money &amp; receipts</button>`;
   paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
+  paintPostStats(); if(!postStats.data||Date.now()-postStats.at>30000) loadPostStats();
 }
 async function loadAnalytics(days){
   if(days) studioAn.days=days;
@@ -2114,7 +2159,7 @@ async function saveEditPost(){
   let price=null; if(p.paid){ const v=Math.round(parseFloat(document.getElementById('epPrice').value)*100); if(isNaN(v)) return err.textContent='Enter a price'; price=v; }
   const {error}=await sb.rpc('edit_post',{p_post:editPostId,p_caption:cap,p_price_cents:price});
   if(error) return err.textContent=friendly(error.message);
-  closeModal('editPostModal'); toast('Post updated'); await settled();
+  closeModal('editPostModal'); toast('Post updated'); postStats.at=0; await settled();
 }
 async function deletePost(id){
   const p=store.posts.find(x=>x.id===id); if(!p) return;
@@ -2122,7 +2167,7 @@ async function deletePost(id){
   const {data,error}=await sb.rpc('delete_post',{p_post:id});
   if(error) return toast(friendly(error.message));
   if(data&&data.mode==='deleted'&&data.media_path){ try{ await sb.storage.from(data.paid?'paid-media':'public-media').remove([data.media_path]); }catch(e){} }
-  toast(data&&data.mode==='hidden'?'Post hidden — people who paid for it are not affected':'Post deleted'); await settled();
+  toast(data&&data.mode==='hidden'?'Post hidden — people who paid for it are not affected':'Post deleted'); postStats.at=0; await settled();
 }
 async function payoutCall(action){
   try{ return await stripeCall('payouts',{action}); }
@@ -2154,7 +2199,24 @@ async function requestPayout(){
   catch(e){ toast(e.message); await settled(); }
 }
 
-/* ═══════════ CREATE (creators) ═══════════ */
+async function requestBonusPayout(){
+  const u=me();
+  if(u.bonus<1000) return toast('Minimum withdrawal is £10.00 — your bonus is '+$$(u.bonus));
+  if(!features.payouts){
+    if(await rpc('request_bonus_payout',{p_amount:u.bonus})){ await settled(); toast('Withdrawal requested — it will be sent once bank payouts are connected'); }
+    return;
+  }
+  if(!store.payout.payouts_enabled){
+    if(confirm('Set up your payout account first. It takes a few minutes with Stripe and you only do it once. Start now?')) payoutSetup();
+    return;
+  }
+  if(!confirm('Send your bonus of '+$$(u.bonus)+' to your bank account?\n\nIt usually arrives in 1–3 working days.')) return;
+  toast('Sending your bonus…');
+  try{ const r=await payoutCall('payout_bonus'); toast('Bonus of '+$$(r.amount_cents)+' sent 🎉 It should reach your bank in 1–3 working days'); await settled(); }
+  catch(e){ toast(e.message); await settled(); }
+}
+
+/* ═══════════ CREATE (creators) ═══════════
 let postType='free';
 function setPostType(t){ postType=t;
   document.getElementById('ctFree').classList.toggle('on',t==='free');
@@ -2500,6 +2562,17 @@ function rerender(){
 }
 const refresh=rerender;
 function shareLink(un){ return location.href.split('#')[0]+'#'+un; }
+function sharePost(pid,un,mine){ if(!mine) sb.rpc('record_share',{p_post:pid}).then(()=>{},()=>{}); shareProfile(un); }
+/* views: a post counts once the member has had at least half of it on screen for a second (once per member per post, never your own) */
+const viewSeen=new Set(), viewQueue=new Set(), viewTimers=new Map();
+const viewObs=('IntersectionObserver' in window)?new IntersectionObserver(es=>es.forEach(e=>{
+  const id=e.target.dataset.pid; if(!id||e.target.dataset.mine==='1'||viewSeen.has(id)) return;
+  if(e.isIntersecting){ if(!viewTimers.has(id)) viewTimers.set(id,setTimeout(()=>{ viewTimers.delete(id); viewSeen.add(id); viewQueue.add(id); viewObs.unobserve(e.target); },1000)); }
+  else if(viewTimers.has(id)){ clearTimeout(viewTimers.get(id)); viewTimers.delete(id); }
+}),{threshold:.5}):null;
+function watchViews(root){ if(!viewObs||!store.session) return; (root||document).querySelectorAll('article.card[data-pid]').forEach(el=>{ if(!el._vw){ el._vw=1; viewObs.observe(el); } }); }
+setInterval(()=>{ if(!viewQueue.size||!store.session) return; const ids=[...viewQueue].slice(0,50); ids.forEach(i=>viewQueue.delete(i)); sb.rpc('record_views',{p_posts:ids}).then(()=>{},()=>{}); },3000);
+if(window.MutationObserver){ let vt=null; new MutationObserver(()=>{ if(vt) return; vt=setTimeout(()=>{ vt=null; watchViews(); },400); }).observe(document.body,{childList:true,subtree:true}); }
 function shareProfile(un){
   const l=shareLink(un);
   if(navigator.clipboard&&navigator.clipboard.writeText){
@@ -2770,7 +2843,7 @@ async function admFlag(id,flags){
   const {error}=await admCall('admin_set_user_flags',Object.assign({p_user:id},flags)); if(!error){ toast('Updated'); admOpenUser(id); }
 }
 async function admBonus(id){
-  const v=prompt('Bonus amount in pounds (0.01–100). It goes straight to their withdrawable earnings with no fee, and comes out of OverVibez funds when they withdraw it.'); if(v===null) return;
+  const v=prompt('Bonus amount in pounds (0.01–100). It goes to their separate bonus balance (they can withdraw it, no fee), and comes out of OverVibez funds when they withdraw it.'); if(v===null) return;
   const cents=Math.round(parseFloat(v)*100); if(isNaN(cents)) return toast('Enter an amount like 25.00');
   const reason=prompt('Reason (kept in the audit log):'); if(reason===null) return;
   if(!confirm('Pay '+$$(cents)+' to this creator? This is real money you will owe them.')) return;
@@ -2840,7 +2913,7 @@ async function admStats(){
   const items=[['Users',s.users],['Creators',s.creators],['Followers',s.followers],['Age verified',s.age_verified],['New (7 days)',s.new_users_7d],['Banned',s.banned],
     ['Posts',s.posts],['Posts removed',s.posts_removed],['Comments',s.comments],['Open reports',s.open_reports],
     ['Gross sales',admMoney(s.gross_cents)],['Platform fees (15%)',admMoney(s.platform_fees_cents)],['Raffle revenue',admMoney(s.raffle_revenue_cents)],
-    ['Owed to creators',admMoney(s.creator_earnings_owed_cents)],['User wallet balances',admMoney(s.wallet_liability_cents)],['Pending payouts',admMoney(s.pending_payouts_cents)+' ('+s.pending_payouts+')'],['Bonuses paid (your cost)',admMoney(s.bonuses_paid_cents)]];
+    ['Owed to creators',admMoney(s.creator_earnings_owed_cents)],['User wallet balances',admMoney(s.wallet_liability_cents)],['Pending payouts',admMoney(s.pending_payouts_cents)+' ('+s.pending_payouts+')'],['Bonuses paid (your cost)',admMoney(s.bonuses_paid_cents)],['Bonuses not yet withdrawn',admMoney(s.bonus_owed_cents)]];
   admBody().innerHTML=`<div class="admin-grid">${items.map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
    <p class="admin-pad" style="font-size:12px;color:var(--muted);line-height:1.5">Wallet balances and creator earnings are money you hold on behalf of users, so they are liabilities, not revenue. Bonuses are a cost to you: they are paid out of your own funds when creators withdraw.</p>`;
 }
