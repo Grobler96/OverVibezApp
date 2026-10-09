@@ -612,9 +612,12 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
       <p>Publish to your followers — free, or set a price and keep 85%.</p>
       <div class="toggle-row">
         <button id="ctFree" class="on" onclick="setPostType('free')">Free post</button>
-        <button id="ctPaid" onclick="setPostType('paid')">Paid post 🔒</button>
+        <button id="ctPaid" onclick="setPostType('paid')">Pay-per-view 🔒</button>
+        <button id="ctSubs" onclick="setPostType('subs')">Subscribers 💜</button>
       </div>
-      <div class="field hidden" id="priceField"><label>Price (GBP)</label><input id="postPrice" type="number" min="0.99" max="499" step="0.5" value="3.00"></div>
+      <p id="postTypeHelp" style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:-4px 0 10px">Anyone can see a free post.</p>
+      <div class="field hidden" id="priceField"><label>Price (GBP)</label><input id="postPrice" type="number" min="0.99" max="499" step="0.5" value="3.00">
+        <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;text-transform:none;letter-spacing:0"><input type="checkbox" id="postIncluded" checked style="width:auto"> Also included for my subscribers</label></div>
       <div class="field"><label>Caption</label><textarea id="postCap" rows="3" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none" placeholder="What are you dropping?"></textarea></div>
       <div class="field"><label>Attach photo or video (optional)</label><input id="postMedia" type="file" accept="image/*,video/*" style="padding:10px"></div>
       <button class="primary" id="publishBtn" onclick="publishPost()">Publish</button>
@@ -889,7 +892,7 @@ async function hydrate(){
     sb.from('posts').select('*').order('created_at',{ascending:false}).limit(200),
     sb.from('likes').select('post_id').eq('user_id',uid),
     sb.from('post_unlocks').select('post_id').eq('user_id',uid),
-    sb.from('subscriptions').select('creator_id,status,current_period_end').eq('subscriber_id',uid),
+    sb.from('subscriptions').select('creator_id,status,current_period_end,price_cents').eq('subscriber_id',uid),
     sb.from('raffles').select('*').gt('closes_at',new Date().toISOString()).is('winner_entry_id',null).order('closes_at'),
     sb.from('follows').select('creator_id').eq('follower_id',uid).limit(5000),
     sb.from('transactions').select('reference_id,gross_cents').eq('payee_id',uid).in('type',['post_unlock','tip'])]);
@@ -905,12 +908,12 @@ async function hydrate(){
   await ensureUsers((posts.data||[]).map(p=>p.creator_id));
   store.likes={}; (likes.data||[]).forEach(l=>store.likes[uid+l.post_id]=true);
   store.unlocks={}; (unl.data||[]).forEach(l=>store.unlocks[uid+l.post_id]=true);
-  store.subs={}; store.subEnds={}; store.subCanceled={};
+  store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={};
   (subs.data||[]).forEach(x=>{ if((x.status==='active'||x.status==='canceled')&&new Date(x.current_period_end)>new Date()){
-    store.subs[uid+x.creator_id]=true; store.subEnds[x.creator_id]=x.current_period_end; if(x.status==='canceled') store.subCanceled[x.creator_id]=true; }});
+    store.subs[uid+x.creator_id]=true; store.subEnds[x.creator_id]=x.current_period_end; store.subPrice[x.creator_id]=x.price_cents; if(x.status==='canceled') store.subCanceled[x.creator_id]=true; }});
   const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
   store.posts=(posts.data||[]).map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
-    paid:p.is_paid,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),at:p.created_at,
+    paid:p.is_paid,subsOnly:!!p.subs_only,subIncluded:p.sub_included!==false,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),at:p.created_at,
     edited:!!p.edited_at,mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
   // media URLs: free media is public; paid media needs a signed URL, issued only if storage RLS agrees
   const paidPaths=[];
@@ -1134,7 +1137,7 @@ async function startSession(uid){
 }
 function clearSession(){
   store.session=null; store.sec=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
+  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -1421,6 +1424,10 @@ const notifInfo=n=>{
     case 'topup_reversed': return ['⚠️','A top-up of '+$$(d.cents)+' was reversed ('+esc(d.reason||'refund')+')'+(d.owed>0?'. You now owe '+$$(d.owed)+', taken from your next top-up':'')];
     case 'topup_restored': return ['✅','Good news — '+$$(d.cents)+' was put back in your wallet'];
     case 'debt_repaid': return ['🧾',$$(d.cents)+' of your latest payment cleared what you owed'];
+    case 'sub_renew_soon': return ['🔔','Your subscription to <b>'+esc(d.creator||'a creator')+'</b> renews on '+new Date(d.on).toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' for '+$$(d.cents)+' from your wallet'];
+    case 'sub_renewed': return ['💜','Renewed your subscription to <b>'+esc(d.creator||'a creator')+'</b> — '+$$(d.cents)+' taken from your wallet'];
+    case 'sub_renew_failed': return ['⚠️','Your wallet was too low to renew <b>'+esc(d.creator||'a creator')+'</b> ('+$$(d.cents)+') — add funds and we will try again within the hour'];
+    case 'sub_ended': return ['💔','Your subscription to <b>'+esc(d.creator||'a creator')+'</b> has ended'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
     case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Me'];
@@ -1534,7 +1541,7 @@ function renderStories(){
 }
 function canView(p){
   const u=me();
-  return !p.paid || p.by===u.id || store.unlocks[u.id+p.id] || store.subs[u.id+p.by];
+  return !p.paid || p.by===u.id || store.unlocks[u.id+p.id] || (store.subs[u.id+p.by]&&(p.subsOnly||p.subIncluded));
 }
 function postCard(p){
   const u=me(), c=user(p.by); if(!c) return '';
@@ -1543,7 +1550,7 @@ function postCard(p){
     <div class="card-head">
       <div class="av ${c.av}" style="cursor:pointer" onclick="openProfile('${p.by}')">${avInner(c)}</div>
       <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}${p.edited?' · edited':''}</span></div>
-      ${mine?'<span class="own-tag">Your post</span>':
+      ${mine?`<span class="own-tag">${p.subsOnly?'💜 Subscribers only':(p.paid&&!p.subIncluded?'🔒 Pay-per-view only':'Your post')}</span>`:
         `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?(store.subCanceled[p.by]?'Ends '+new Date(store.subEnds[p.by]).toLocaleDateString():'Subscribed'):'Subscribe '+$$(c.subPrice)}</button>`}
     </div>
     <div class="media ${open?'':'locked'}">
@@ -1552,8 +1559,10 @@ function postCard(p){
         :`<img class="scene-media" src="${esc(p.mediaUrl)}" alt="">`)
         :`<div class="scene ${c.av}">${p.scene}</div>`}
       ${open?'':`<div class="lockglass"><div class="lock-ic">🔒</div>
-        <button class="unlock-btn" onclick="startUnlock('${p.id}')">Unlock for <span class="price">${$$(p.price)}</span></button>
-        <span class="lock-note">or subscribe · creator keeps 85%</span></div>`}
+        ${p.subsOnly
+          ?`<button class="unlock-btn" onclick="subscribe('${p.by}')">💜 Subscribers only · ${$$(c.subPrice)}/month</button><span class="lock-note">Subscribe to see this and every subscriber post</span>`
+          :`<button class="unlock-btn" onclick="startUnlock('${p.id}')">Unlock for <span class="price">${$$(p.price)}</span></button>
+        <span class="lock-note">${p.subIncluded?'or subscribe · creator keeps 85%':'pay-per-view · not included in subscriptions'}</span>`}</div>`}
     </div>
     <div class="card-actions">
       <button class="act ${liked?'liked':''}" onclick="likePost('${p.id}')">${liked?'♥':'♡'} ${p.likes.toLocaleString()}</button>
@@ -1650,6 +1659,7 @@ function openComments(pid){
   commentPost=pid;
   document.getElementById('commentList').innerHTML='<p style="color:var(--muted);text-align:center;padding:20px;font-size:13px">Loading…</p>';
   document.getElementById('commentInput').value='';
+  if(me()&&me().role==='creator') loadSubscribers();
   openModal('commentsModal'); loadComments();
 }
 async function loadComments(){
@@ -1664,7 +1674,7 @@ async function loadComments(){
   el.innerHTML=data.length?data.map(c=>{ const a=user(c.user_id)||{username:'user',em:'🫧',av:'a1'};
     return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start">
       <div class="av ${a.av}" style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex:none">${avInner(a)}</div>
-      <div style="flex:1;min-width:0;font-size:13.5px;line-height:1.45;word-break:break-word"><b>${esc(a.username)}</b> <span style="color:var(--muted);font-size:11.5px">${ago(c.created_at)}</span><br>${esc(c.body)}</div>
+      <div style="flex:1;min-width:0;font-size:13.5px;line-height:1.45;word-break:break-word"><b>${esc(a.username)}</b>${store.subscriberIds&&store.subscriberIds.has(c.user_id)?' <span title="Subscriber" style="font-size:11px">💜 subscriber</span>':''} <span style="color:var(--muted);font-size:11.5px">${ago(c.created_at)}</span><br>${esc(c.body)}</div>
       ${c.user_id===myId?`<button onclick="deleteComment('${c.id}')" title="Delete" style="color:var(--muted);font-size:15px;padding:2px 6px">✕</button>`
       :`<button onclick="closeModal('commentsModal');openReport('comment','${c.id}')" title="Report" style="color:var(--muted);font-size:14px;padding:2px 6px">⚑</button>`}
     </div>`; }).join('')
@@ -1691,7 +1701,7 @@ async function deleteComment(id){
 async function settled(){ await hydrate(); rerender(); }
 function startUnlock(pid){
   const p=store.posts.find(x=>x.id===pid), u=me();
-  document.getElementById('payTitle').textContent='Unlock this post';
+  payBtn(); document.getElementById('payTitle').textContent='Unlock this post';
   document.getElementById('paySub').textContent='One-time payment from your wallet. The creator keeps 85%.';
   document.getElementById('payPrice').textContent=$$(p.price);
   document.getElementById('payCreator').textContent=$$(Math.round(p.price*(1-FEE)));
@@ -1705,28 +1715,35 @@ function startUnlock(pid){
   };
   openModal('payModal');
 }
+function payBtn(label){ document.getElementById('payConfirmBtn').textContent=label||'Confirm payment'; }
 function subscribe(cid){
   const u=me(), c=user(cid);
-  if(store.subs[u.id+cid]&&!store.subCanceled[cid]){
-    const end=new Date(store.subEnds[cid]).toLocaleDateString();
-    if(confirm('You are subscribed to '+c.username+' until '+end+'.\n\nCancel? You keep access until '+end+' and will not be charged again.')) cancelSub(cid);
+  if(store.subs[u.id+cid]){
+    const end=new Date(store.subEnds[cid]).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    if(store.subCanceled[cid]){
+      if(confirm('Your subscription to '+c.username+' is cancelled and runs until '+end+'.\n\nTurn automatic renewal back on? You will not be charged now — it would renew on '+end+' for '+$$(c.subPrice)+' from your wallet.')) resumeSub(cid);
+    } else if(confirm('You are subscribed to '+c.username+'. It renews automatically on '+end+' for '+$$(store.subPrice[cid]||c.subPrice)+' from your wallet.\n\nCancel renewal? You keep access until '+end+' and will not be charged again.')) cancelSub(cid);
     return;
   }
-  document.getElementById('payTitle').textContent=store.subs[u.id+cid]?'Renew '+c.username:'Subscribe to '+c.username;
-  document.getElementById('paySub').textContent='30 days of access to all their paid posts. Renew anytime.';
+  document.getElementById('payTitle').textContent='Subscribe to '+c.username;
+  document.getElementById('paySub').textContent='Renews automatically every 30 days from your wallet until you cancel — cancel any time on their page and keep access to the end of the period. Includes subscriber-only posts, their paid posts marked “included”, and half-price live tickets.';
   document.getElementById('payPrice').textContent=$$(c.subPrice)+' / 30 days';
   document.getElementById('payCreator').textContent=$$(Math.round(c.subPrice*(1-FEE)));
   document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-c.subPrice));
+  payBtn('Subscribe · '+$$(c.subPrice)+' every 30 days');
   document.getElementById('payConfirmBtn').onclick=async()=>{
     closeModal('payModal'); toast('Processing payment…');
     if(await rpc('subscribe_to_creator',{p_creator:cid})){
-      store.subs[u.id+cid]=true; store.subEnds[cid]=new Date(Date.now()+30*864e5).toISOString();
-      u.wallet=Math.max(0,u.wallet-c.subPrice); rerender(); toast('Subscribed to '+c.username+' ✦ all paid posts unlocked');
+      store.subs[u.id+cid]=true; store.subEnds[cid]=new Date(Date.now()+30*864e5).toISOString(); delete store.subCanceled[cid];
+      u.wallet=Math.max(0,u.wallet-c.subPrice); rerender(); toast('Subscribed to '+c.username+' 💜 subscriber posts unlocked');
       await sb.from('follows').upsert({follower_id:u.id,creator_id:cid},{ignoreDuplicates:true});
       settled();
     }
   };
   openModal('payModal');
+}
+async function resumeSub(cid){
+  if(await rpc('resume_subscription',{p_creator:cid})){ delete store.subCanceled[cid]; rerender(); toast('Automatic renewal is back on'); settled(); }
 }
 async function toggleFollow(cid){
   const u=me(), c=user(cid); if(!c||cid===u.id) return;
@@ -1739,7 +1756,7 @@ async function toggleFollow(cid){
 async function cancelSub(cid){
   if(await rpc('cancel_subscription',{p_creator:cid})){
     store.subCanceled[cid]=true; rerender();
-    toast('Subscription cancelled — access continues until '+new Date(store.subEnds[cid]).toLocaleDateString());
+    toast('Renewal cancelled — access continues until '+new Date(store.subEnds[cid]).toLocaleDateString());
     settled();
   }
 }
@@ -1885,7 +1902,7 @@ function personCard(c){
 function tileHtml(p,i){
   const c=user(p.by); if(!c) return '';
   const img=!p.paid&&p.mediaUrl&&p.mediaKind==='image';
-  return `<div class="tile ${i%7===0?'big':''} ${img?'img':c.av}" ${img?`style="background-image:url('${esc(p.mediaUrl)}')"`:''} onclick="openProfile('${p.by}')">${img?'':p.scene}${p.paid?`<span class="t-lock">🔒 ${$$(p.price)}</span>`:''}</div>`;
+  return `<div class="tile ${i%7===0?'big':''} ${img?'img':c.av}" ${img?`style="background-image:url('${esc(p.mediaUrl)}')"`:''} onclick="openProfile('${p.by}')">${img?'':p.scene}${p.paid?`<span class="t-lock">${p.subsOnly?'💜 Subs':'🔒 '+$$(p.price)}</span>`:''}</div>`;
 }
 async function renderExplore(reset){
   if(reset){ document.getElementById('exploreQ').value=''; }
@@ -2048,6 +2065,22 @@ async function sendMsg(){
 /* ═══════════ STUDIO (creators) ═══════════ */
 let studioAn={days:30,data:null,at:0};
 let postStats={data:null,at:0,sort:'new'};
+let mySubscribers={rows:null,at:0};
+async function loadSubscribers(){
+  if(mySubscribers.rows&&Date.now()-mySubscribers.at<30000) return;
+  const {data,error}=await sb.from('subscriptions').select('subscriber_id,status,current_period_end,price_cents,auto_renew,created_at').eq('creator_id',store.session).gt('current_period_end',new Date().toISOString()).order('created_at',{ascending:false}).limit(500);
+  if(error) return; await ensureUsers((data||[]).map(x=>x.subscriber_id));
+  mySubscribers={rows:data||[],at:Date.now()}; store.subscriberIds=new Set(mySubscribers.rows.map(x=>x.subscriber_id)); paintSubscribers();
+}
+function paintSubscribers(){
+  const box=document.getElementById('subsBox'); if(!box) return; const r=mySubscribers.rows;
+  if(!r){ box.innerHTML=''; return; }
+  const renewing=r.filter(x=>x.status==='active'&&x.auto_renew), monthly=renewing.reduce((a,x)=>a+Math.round(x.price_cents*(1-FEE)),0);
+  box.innerHTML=`<div class="chart-card"><h4>💜 Your subscribers <span style="color:var(--muted);font-weight:400">· ${r.length}</span></h4>
+    ${r.length?`<div class="stat-row" style="grid-template-columns:1fr 1fr;margin-bottom:8px"><div class="stat"><b>${renewing.length}</b><span>Renewing automatically</span></div><div class="stat"><b>${$$(monthly)}</b><span>Per month if they all renew</span></div></div>
+      ${r.slice(0,30).map(x=>{ const a=user(x.subscriber_id)||{username:'member'}; return `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;font-size:13px;border-bottom:1px solid var(--line)"><span>@${esc(a.username)}</span><span style="color:var(--muted)">${x.status==='active'&&x.auto_renew?'renews ':'ends '}${new Date(x.current_period_end).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span></div>`; }).join('')}`
+      :'<p style="color:var(--muted);font-size:13px;line-height:1.5">No subscribers yet. Post a few subscriber-only posts (the 💜 option when you create a post) to give people a reason to subscribe. Subscribers also get half-price tickets to your live streams.</p>'}</div>`;
+}
 async function loadPostStats(){
   const {data,error}=await sb.rpc('creator_post_stats'); if(error) return;
   postStats.data=data||[]; postStats.at=Date.now(); paintPostStats();
@@ -2072,10 +2105,10 @@ function paintPostStats(){
     <div style="font-size:13px;margin:0 0 8px;color:var(--muted)">Earned from posts (after fees): <b style="color:var(--money)">${$$(sum('earned_cents'))}</b></div>
     <div class="chiprow" style="padding:0 0 4px;overflow-x:auto">${chips}</div>
     ${rows.length?rows.map(x=>`<div class="pcard-row"><div class="top"><div class="sc ${me().av}">${thumb(x)}</div>
-        <div class="ttl"><b>${esc(x.caption)||'(media post)'}</b><span>${new Date(x.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · ${x.is_paid?'🔒 Paid '+$$(x.price_cents||0):'Free'}</span></div>
+        <div class="ttl"><b>${esc(x.caption)||'(media post)'}</b><span>${new Date(x.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · ${x.subs_only?'💜 Subscribers only':x.is_paid?'🔒 Pay-per-view '+$$(x.price_cents||0)+(x.sub_included===false?' (not in subscription)':''):'Free'}</span></div>
         <span class="earn">${$$(Number(x.earned_cents))}</span></div>
       <div class="pm"><div><b>${fmtN(x.views)}</b>Views</div><div><b>${fmtN(x.likes)}</b>Likes</div><div><b>${fmtN(x.comments)}</b>Comments</div><div><b>${fmtN(x.shares)}</b>Shares</div></div>
-      ${x.is_paid||Number(x.tips)?`<div style="font-size:12px;color:var(--muted);margin:4px 0">${x.is_paid?'🔓 '+x.unlocks+' unlock'+(Number(x.unlocks)===1?'':'s')+' · ':''}💰 ${x.tips} tip${Number(x.tips)===1?'':'s'}</div>`:''}
+      ${x.is_paid&&!x.subs_only||Number(x.tips)?`<div style="font-size:12px;color:var(--muted);margin:4px 0">${x.is_paid&&!x.subs_only?'🔓 '+x.unlocks+' unlock'+(Number(x.unlocks)===1?'':'s')+' · ':''}💰 ${x.tips} tip${Number(x.tips)===1?'':'s'}</div>`:''}
       <div><button class="abtn" onclick="openEditPost('${x.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${x.id}')">Delete</button></div></div>`).join('')
       :'<p style="color:var(--muted);font-size:13px;padding:8px 0">No posts yet — hit ＋ to publish your first one.</p>'}
     <p style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5">Views count each member once per post. Shares count link shares from the post. Money is what you kept after the 15% fee, with refunds taken off.</p></div>`;
@@ -2100,11 +2133,13 @@ function renderStudio(){
     ${u.bonus>0?`<div class="bonus-card"><div class="lbl">🎁 Bonus from OverVibez</div><div class="amt">${$$(u.bonus)}</div>
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team — no fee taken. Kept separate from your sales earnings.</div>
       <button class="primary" onclick="requestBonusPayout()">Withdraw bonus ${$$(u.bonus)}</button></div>`:''}
+    <div id="subsBox"></div>
     <div id="postsBox"></div>
     <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(u.earnings)}</button>
     <button class="ghost" style="margin-top:10px" onclick="go('money')">💳 Money &amp; receipts</button>`;
   paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
   paintPostStats(); if(!postStats.data||Date.now()-postStats.at>30000) loadPostStats();
+  paintSubscribers(); loadSubscribers();
 }
 async function loadAnalytics(days){
   if(days) studioAn.days=days;
@@ -2150,13 +2185,13 @@ let editPostId=null;
 function openEditPost(id){
   const p=store.posts.find(x=>x.id===id); if(!p) return; editPostId=id;
   document.getElementById('epCaption').value=p.cap; document.getElementById('epPrice').value=(p.price/100).toFixed(2);
-  document.getElementById('epPriceWrap').classList.toggle('hidden',!p.paid); document.getElementById('epPostErr').textContent='';
+  document.getElementById('epPriceWrap').classList.toggle('hidden',!p.paid||p.subsOnly); document.getElementById('epPostErr').textContent='';
   openModal('editPostModal');
 }
 async function saveEditPost(){
   const p=store.posts.find(x=>x.id===editPostId); if(!p) return; const err=document.getElementById('epPostErr'); err.textContent='';
   const cap=document.getElementById('epCaption').value;
-  let price=null; if(p.paid){ const v=Math.round(parseFloat(document.getElementById('epPrice').value)*100); if(isNaN(v)) return err.textContent='Enter a price'; price=v; }
+  let price=null; if(p.paid&&!p.subsOnly){ const v=Math.round(parseFloat(document.getElementById('epPrice').value)*100); if(isNaN(v)) return err.textContent='Enter a price'; price=v; }
   const {error}=await sb.rpc('edit_post',{p_post:editPostId,p_caption:cap,p_price_cents:price});
   if(error) return err.textContent=friendly(error.message);
   closeModal('editPostModal'); toast('Post updated'); postStats.at=0; await settled();
@@ -2218,23 +2253,27 @@ async function requestBonusPayout(){
 
 /* ═══════════ CREATE (creators) ═══════════ */
 let postType='free';
+const POST_HELP={free:'Anyone can see a free post.',paid:'Followers pay once to unlock it. Tick the box if subscribers should get it without paying.',subs:'Only your subscribers can see it. It cannot be bought one at a time, so it gives people a reason to subscribe.'};
 function setPostType(t){ postType=t;
   document.getElementById('ctFree').classList.toggle('on',t==='free');
   document.getElementById('ctPaid').classList.toggle('on',t==='paid');
-  document.getElementById('priceField').classList.toggle('hidden',t==='free'); }
+  document.getElementById('ctSubs').classList.toggle('on',t==='subs');
+  document.getElementById('postTypeHelp').textContent=POST_HELP[t];
+  document.getElementById('priceField').classList.toggle('hidden',t!=='paid'); }
 async function publishPost(){
   const u=me(), cap=document.getElementById('postCap').value.trim(), f=document.getElementById('postMedia').files[0];
   if(!cap&&!f) return toast('Add a caption or a photo/video first');
   if(!u.ageVerified) return toast('Verify your age first — tap Me → Identity & age verification');
   const price=Math.round(parseFloat(document.getElementById('postPrice').value||'3')*100);
   if(postType==='paid'&&(isNaN(price)||price<99||price>49999)) return toast('Price must be between £0.99 and £499.99');
+  if(postType==='subs'&&!u.subPrice) return toast('Set a subscription price first (Me → Edit profile) so people can subscribe');
   const btn=document.getElementById('publishBtn'); btn.disabled=true;
   try{
-    const id=crypto.randomUUID(), paid=postType==='paid';
+    const id=crypto.randomUUID(), paid=postType!=='free', subsOnly=postType==='subs';
     const kind=f?(f.type.startsWith('video')?'video':'image'):'text';
     const ext=f?(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,''):'';
     const path=f?`${u.id}/${id}/${Date.now()}.${ext}`:null;
-    const {error}=await sb.from('posts').insert({id,creator_id:u.id,caption:cap||null,media_type:kind,media_path:path,is_paid:paid,price_cents:paid?price:null});
+    const {error}=await sb.from('posts').insert({id,creator_id:u.id,caption:cap||null,media_type:kind,media_path:path,is_paid:paid,price_cents:paid&&!subsOnly?price:null,subs_only:subsOnly,sub_included:subsOnly||document.getElementById('postIncluded').checked});
     if(error) return toast(error.message);
     if(f){
       const up=await sb.storage.from(paid?'paid-media':'public-media').upload(path,f,{contentType:f.type});
@@ -2300,14 +2339,15 @@ async function openLive(streamId){
   if(s.entry_price_cents>0){
     const {data}=await sb.from('live_tickets').select('stream_id').eq('stream_id',s.id).eq('user_id',u.id);
     if(!data||!data.length){
-      document.getElementById('payTitle').textContent='Join '+c.username+' live';
-      document.getElementById('paySub').textContent='Ticket for this live stream. The creator keeps 85%.';
-      document.getElementById('payPrice').textContent=$$(s.entry_price_cents);
-      document.getElementById('payCreator').textContent=$$(Math.round(s.entry_price_cents*(1-FEE)));
-      document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-s.entry_price_cents));
+      payBtn(); document.getElementById('payTitle').textContent='Join '+c.username+' live';
+      const price=store.subs[u.id+s.creator_id]?Math.ceil(s.entry_price_cents/2):s.entry_price_cents;
+      document.getElementById('paySub').textContent=price<s.entry_price_cents?'Ticket for this live stream — half price because you subscribe to '+c.username+'. The creator keeps 85%.':'Ticket for this live stream. The creator keeps 85%. (Subscribers pay half price.)';
+      document.getElementById('payPrice').textContent=$$(price);
+      document.getElementById('payCreator').textContent=$$(Math.round(price*(1-FEE)));
+      document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-price));
       document.getElementById('payConfirmBtn').onclick=async()=>{
         closeModal('payModal'); toast('Processing payment…');
-        if(await rpc('buy_live_ticket',{p_stream:s.id})){ u.wallet=Math.max(0,u.wallet-s.entry_price_cents); updateWallet(); watchLive(s,c); }
+        if(await rpc('buy_live_ticket',{p_stream:s.id})){ u.wallet=Math.max(0,u.wallet-price); updateWallet(); watchLive(s,c); }
       };
       return openModal('payModal');
     }
@@ -2446,7 +2486,7 @@ function renderMe(){
       </div>
     </div>
     ${!isC&&mySubs.length?`<div class="section-title" style="padding-top:4px">Your subscriptions</div>
-      <div class="list-card">${mySubs.map(c=>`<div class="row"><div class="r-ic ${c.av}">${avInner(c)}</div>${esc(c.username)}<span class="sub">${store.subCanceled[c.id]?'cancelled · ends ':'renews manually · until '}${new Date(store.subEnds[c.id]).toLocaleDateString()}</span></div>`).join('')}</div>`:''}
+      <div class="list-card">${mySubs.map(c=>`<div class="row" onclick="subscribe('${c.id}')"><div class="r-ic ${c.av}">${avInner(c)}</div>${esc(c.username)}<span class="sub">${store.subCanceled[c.id]?'cancelled · ends ':'renews '}${new Date(store.subEnds[c.id]).toLocaleDateString()}</span></div>`).join('')}</div>`:''}
     <div class="section-title" style="padding-top:4px">Settings</div>
     <div class="list-card">
       ${isC?`<div class="row" onclick="changeSubPrice()"><div class="r-ic">💜</div>Subscription price<span class="sub">${$$(u.subPrice)}/mo</span></div>
