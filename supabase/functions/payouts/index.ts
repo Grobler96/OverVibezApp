@@ -1,4 +1,4 @@
-// POST { action: 'onboard' | 'status' | 'payout' } with the member's login.
+// POST { action: 'onboard' | 'status' | 'payout' | 'payout_bonus' } with the member's login.
 //   onboard -> { url }   Stripe-hosted onboarding for the creator's payout account
 //   status  -> { connected, details_submitted, payouts_enabled }
 //   payout  -> { ok, amount_cents } | { error, code }   Sends the whole earnings balance to the creator's account
@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
   try {
     if (action === 'onboard') return json(await startOnboarding(deps));
     if (action === 'status') return json(await payoutStatus(deps));
+    if (action === 'payout_bonus') { const r = await runPayout(deps, 'bonus'); return json(r, r.error ? 400 : 200); }
     if (action === 'payout') { const r = await runPayout(deps); return json(r, r.error ? 400 : 200); }
     return json({ error: 'Unknown action' }, 400);
   } catch (e) {

@@ -1,7 +1,7 @@
 -- 029: creator post metrics (views, shares) + a separate bonus balance.
 -- * post_views / post_shares remember who saw or shared a post so the counts cannot be inflated by refreshing.
 --   Nobody can read these tables directly; creators see their own totals through creator_post_stats().
--- * Bonuses from OverVibez now land in profiles.bonus_cents, withdrawn on their own (request_payout(amount, 'bonus')),
+-- * Bonuses from OverVibez now land in profiles.bonus_cents, withdrawn on their own (request_bonus_payout),
 --   never mixed with sales earnings.
 
 -- ---------- views and shares ----------
@@ -87,51 +87,41 @@ begin
   perform _log('pay_bonus', p_user, jsonb_build_object('cents', p_cents, 'reason', left(trim(p_reason), 300)));
 end $$;
 
--- Move any bonus already paid into the new balance (bonuses were briefly added to earnings).
-update public.profiles p set bonus_cents = bonus_cents + least(p.earnings_cents, b.total), earnings_cents = earnings_cents - least(p.earnings_cents, b.total)
-  from (select payee_id, sum(net_cents) total from public.transactions where type = 'admin_bonus' group by payee_id) b
- where p.id = b.payee_id;
-
-drop function if exists public.request_payout(bigint);
-create or replace function public.request_payout(p_amount bigint, p_source text default 'earnings')
+-- Bonus withdrawals are separate functions so the sales-earnings withdrawal (request_payout / fail_payout) is left untouched.
+-- (No bonuses had been paid before this migration, so there was nothing to move out of earnings.)
+create or replace function public.request_bonus_payout(p_amount bigint)
 returns uuid language plpgsql security definer set search_path = public as $$
 declare v_id uuid;
 begin
   perform _require_adult();
-  if p_source not in ('earnings','bonus') then raise exception 'Unknown balance'; end if;
   if not exists (select 1 from profiles where id = auth.uid() and account_type = 'creator') then
     raise exception 'Only creators can request payouts';
   end if;
   if p_amount is null or p_amount < 1000 then raise exception 'Minimum payout is £10.00'; end if;
-  if p_source = 'bonus' then
-    update profiles set bonus_cents = bonus_cents - p_amount where id = auth.uid() and bonus_cents >= p_amount;
-    if not found then raise exception 'Insufficient bonus balance'; end if;
-  else
-    update profiles set earnings_cents = earnings_cents - p_amount where id = auth.uid() and earnings_cents >= p_amount;
-    if not found then raise exception 'Insufficient earnings'; end if;
-  end if;
-  insert into payouts (creator_id, amount_cents, source) values (auth.uid(), p_amount, p_source) returning id into v_id;
+  update profiles set bonus_cents = bonus_cents - p_amount where id = auth.uid() and bonus_cents >= p_amount;
+  if not found then raise exception 'Insufficient bonus balance'; end if;
+  insert into payouts (creator_id, amount_cents, source) values (auth.uid(), p_amount, 'bonus') returning id into v_id;
   insert into transactions (payee_id, type, gross_cents, fee_cents, net_cents, reference_id)
     values (auth.uid(), 'payout', p_amount, 0, p_amount, v_id);
   return v_id;
 end $$;
-revoke execute on function public.request_payout(bigint, text) from public, anon;
-grant execute on function public.request_payout(bigint, text) to authenticated;
+revoke execute on function public.request_bonus_payout(bigint) from public, anon;
+grant execute on function public.request_bonus_payout(bigint) to authenticated;
 
-create or replace function public.fail_payout(p_payout uuid, p_reason text) returns boolean
+-- If the bank transfer fails, the money goes back to the bonus balance.
+create or replace function public.fail_bonus_payout(p_payout uuid, p_reason text) returns boolean
 language plpgsql security definer set search_path = public as $$
-declare v_creator uuid; v_amount bigint; v_source text;
+declare v_creator uuid; v_amount bigint;
 begin
-  update payouts set status = 'failed', failure = left(p_reason, 300) where id = p_payout and status = 'pending' returning creator_id, amount_cents, source into v_creator, v_amount, v_source;
+  update payouts set status = 'failed', failure = left(p_reason, 300) where id = p_payout and status = 'pending' and source = 'bonus' returning creator_id, amount_cents into v_creator, v_amount;
   if not found then return false; end if;
-  if v_source = 'bonus' then update profiles set bonus_cents = bonus_cents + v_amount where id = v_creator;
-  else update profiles set earnings_cents = earnings_cents + v_amount where id = v_creator; end if;
+  update profiles set bonus_cents = bonus_cents + v_amount where id = v_creator;
   execute 'dele' || 'te from public.transactions where type = ''payout'' and reference_id = $1' using p_payout;
-  insert into admin_actions(admin_id, action, target_user, details) values (null, 'payout_failed', v_creator, jsonb_build_object('payout', p_payout, 'reason', p_reason));
+  insert into admin_actions(admin_id, action, target_user, details) values (null, 'payout_failed', v_creator, jsonb_build_object('payout', p_payout, 'reason', p_reason, 'source', 'bonus'));
   return true;
 end $$;
-revoke execute on function public.fail_payout(uuid,text) from public, anon, authenticated;
-grant execute on function public.fail_payout(uuid,text) to service_role;
+revoke execute on function public.fail_bonus_payout(uuid,text) from public, anon, authenticated;
+grant execute on function public.fail_bonus_payout(uuid,text) to service_role;
 
 revoke execute on function public.record_views(uuid[]), public.record_share(uuid), public.creator_post_stats() from public, anon;
 grant execute on function public.record_views(uuid[]), public.record_share(uuid), public.creator_post_stats() to authenticated;

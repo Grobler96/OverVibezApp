@@ -53,19 +53,20 @@ export async function payoutStatus(deps) {
   return { connected: true, details_submitted: row.details_submitted, payouts_enabled: row.payouts_enabled };
 }
 
-/** Pays out the creator's whole earnings balance. Returns { ok, amount_cents } or { error, code }. */
-export async function runPayout(deps) {
+/** Pays out the creator's whole earnings balance (or, with source 'bonus', the whole bonus balance). Returns { ok, amount_cents } or { error, code }. */
+export async function runPayout(deps, source = 'earnings') {
+  const bonus = source === 'bonus';
   const { admin, userClient, stripe, user, currency } = deps;
   const p = await requireCreator(deps);
   const acct = await loadAccount(deps);
   if (!acct) return { error: 'Set up your payout account first', code: 'no_account' };
   const fresh = await refreshAccount(deps, acct.stripe_account_id);
   if (!fresh.payouts_enabled) return { error: 'Finish setting up your payout account first', code: 'not_enabled' };
-  const amount = Number(p.earnings_cents);
+  const amount = Number(bonus ? p.bonus_cents : p.earnings_cents);
   if (!(amount >= 1000)) return { error: 'The minimum payout is £10.00', code: 'too_small' };
 
   // 1) take the money out of earnings and record the payout (atomic, in the database)
-  const { data: payoutId, error: reqErr } = await userClient.rpc('request_payout', { p_amount: amount });
+  const { data: payoutId, error: reqErr } = await userClient.rpc(bonus ? 'request_bonus_payout' : 'request_payout', { p_amount: amount });
   if (reqErr || !payoutId) return { error: friendly(reqErr?.message) || 'Could not start the payout', code: 'request_failed' };
 
   // 2) move it to their Stripe account; the idempotency key means a retry can never pay twice
@@ -75,8 +76,8 @@ export async function runPayout(deps) {
       transfer_group: 'payout_' + payoutId, metadata: { payout_id: payoutId, user_id: user.id } }, idempotencyKey: 'payout_' + payoutId });
   } catch (e) {
     console.error('transfer failed', payoutId, e.message);
-    await admin.rpc('fail_payout', { p_payout: payoutId, p_reason: String(e.message).slice(0, 250) });     // earnings go back
-    return { error: 'The payout could not be sent just now — your money is safe in your earnings. Please try again later.', code: 'transfer_failed' };
+    await admin.rpc(bonus ? 'fail_bonus_payout' : 'fail_payout', { p_payout: payoutId, p_reason: String(e.message).slice(0, 250) });     // the money goes back
+    return { error: 'The payout could not be sent just now — your money is safe in your balance. Please try again later.', code: 'transfer_failed' };
   }
 
   // 3) record that it went. The transfer already happened, so retry rather than ever undoing it.

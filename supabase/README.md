@@ -148,3 +148,7 @@ Adds `profiles.intro_seen` (existing accounts are marked as seen), `mark_intro_s
 
 ### 028 — creator bonuses (replaces wallet credits)
 `admin_pay_bonus(user, pence, reason)` adds up to £100 straight to a creator's withdrawable earnings with no 15% fee, logs it as `admin_bonus` ("Bonus from OverVibez"), notifies the creator and writes the audit log. Admins can't pay themselves, and only creators can receive one. A bonus is a real cost: it comes out of your own Stripe balance when the creator withdraws. `admin_credit_wallet` is switched off because a wallet credit had no money behind it and produced a fake platform fee when spent. Admin stats show "Bonuses paid".
+
+### 029 — post metrics and a separate bonus balance
+- `record_views(uuid[])` / `record_share(uuid)` count views (once per member per post, never your own) and shares (once per member per post per day). The counts live in `post_metrics`; nobody can read these tables directly. `creator_post_stats()` gives a creator views, likes, comments, shares, unlocks, tips and money kept for each of their posts (Studio → Your posts).
+- Bonuses from OverVibez now go to `profiles.bonus_cents`, shown as their own card in Studio and withdrawn separately (`request_bonus_payout`, `fail_bonus_payout`; the payouts function accepts `action: 'payout_bonus'`). Sales earnings and their withdrawal are untouched. Admin stats show "Bonuses not yet withdrawn".
