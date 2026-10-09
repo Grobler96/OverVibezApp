@@ -1174,8 +1174,8 @@ function helpContact(){
 /* ═══════════ MONEY HISTORY + RECEIPTS ═══════════ */
 let moneyRows=[], moneyFilter='all', moneyDone=false, receiptText='';
 const EARN_TYPES=['subscription','post_unlock','tip','live_entry'];
-const TX_NAMES={refund:'Refund',subscription:'Subscription',post_unlock:'Post unlock',tip:'Tip',live_entry:'Live ticket',raffle_entry:'Raffle entries',payout:'Payout',wallet_topup:'Added funds',admin_credit:'Credit from OverVibez'};
-const TX_ICONS={refund:'↩️',subscription:'💜',post_unlock:'🔓',tip:'💰',live_entry:'🎟️',raffle_entry:'🎲',payout:'🏦',wallet_topup:'◈',admin_credit:'🎁'};
+const TX_NAMES={refund:'Refund',subscription:'Subscription',post_unlock:'Post unlock',tip:'Tip',live_entry:'Live ticket',raffle_entry:'Raffle entries',payout:'Payout',wallet_topup:'Added funds',admin_credit:'Credit from OverVibez',admin_bonus:'Bonus from OverVibez'};
+const TX_ICONS={refund:'↩️',subscription:'💜',post_unlock:'🔓',tip:'💰',live_entry:'🎟️',raffle_entry:'🎲',payout:'🏦',wallet_topup:'◈',admin_credit:'🎁',admin_bonus:'🎁'};
 function txInfo(t){
   const me_=store.session, mine=t.payer_id===me_, other=user(mine?t.payee_id:t.payer_id), who=other?'@'+other.username:(mine?'OverVibez':'a member');
   const name=TX_NAMES[t.type]||t.type;
@@ -1186,6 +1186,7 @@ function txInfo(t){
   }
   if(t.type==='wallet_topup') return {icon:TX_ICONS[t.type],title:'Added funds',sub:'Wallet top-up',amt:+t.gross_cents,pot:'wallet',kind:'in'};
   if(t.type==='admin_credit') return {icon:TX_ICONS[t.type],title:'Credit from OverVibez',sub:'Added to your wallet by our team',amt:+t.gross_cents,pot:'wallet',kind:'in'};
+  if(t.type==='admin_bonus') return {icon:TX_ICONS[t.type],title:'Bonus from OverVibez',sub:'Added to your earnings — no fee taken',amt:+t.net_cents,pot:'earnings',kind:'earned'};
   if(t.type==='payout') return {icon:TX_ICONS[t.type],title:'Payout requested',sub:'From your earnings',amt:-t.gross_cents,pot:'earnings',kind:'out'};
   if(mine) return {icon:TX_ICONS[t.type]||'•',title:name+(t.type==='raffle_entry'?'':' · '+who),sub:'Paid from wallet',amt:-t.gross_cents,pot:'wallet',kind:'out'};
   return {icon:TX_ICONS[t.type]||'•',title:name+' from '+who,sub:'You keep 85%',amt:+t.net_cents,pot:'earnings',kind:'earned'};
@@ -1220,7 +1221,7 @@ function paintMoney(){
 function openReceipt(i){
   const t=moneyRows[i]; if(!t) return; const x=txInfo(t), when=new Date(t.created_at);
   const lines=[['Date',when.toLocaleString('en-GB')],['Type',TX_NAMES[t.type]||t.type],['Details',x.title],
-    ['Amount charged',$$(t.gross_cents)]].concat(t.type==='payout'||t.type==='wallet_topup'||t.type==='admin_credit'?[]:[['Platform fee (15%)',$$(t.fee_cents)],['Net to creator',$$(t.net_cents)]])
+    ['Amount charged',$$(t.gross_cents)]].concat(t.type==='payout'||t.type==='wallet_topup'||t.type==='admin_credit'||t.type==='admin_bonus'?[]:[['Platform fee (15%)',$$(t.fee_cents)],['Net to creator',$$(t.net_cents)]])
     .concat([['Receipt number',t.id.slice(0,8).toUpperCase()]]);
   receiptText='OverVibez receipt\n'+lines.map(l=>l[0]+': '+l[1]).join('\n')+'\nThis is a record of a digital transaction on OverVibez.';
   document.getElementById('receiptBody').innerHTML=`<div class="list-card" style="margin:0 0 10px">${lines.map(l=>`<div class="row" style="cursor:default"><span style="color:var(--muted);font-size:13px">${esc(l[0])}</span><span class="sub" style="color:var(--text)">${esc(String(l[1]))}</span></div>`).join('')}</div>
@@ -1405,6 +1406,7 @@ const notifInfo=n=>{
     case 'topup_reversed': return ['⚠️','A top-up of '+$$(d.cents)+' was reversed ('+esc(d.reason||'refund')+')'+(d.owed>0?'. You now owe '+$$(d.owed)+', taken from your next top-up':'')];
     case 'topup_restored': return ['✅','Good news — '+$$(d.cents)+' was put back in your wallet'];
     case 'debt_repaid': return ['🧾',$$(d.cents)+' of your latest payment cleared what you owed'];
+    case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your earnings, no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
     case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Me'];
     case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b> — it has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
@@ -2738,7 +2740,7 @@ async function admOpenUser(id){
      <div>${d.is_banned?`<button class="abtn ok" onclick="admBan('${d.id}',false)">Unban</button>`:`<button class="abtn danger" onclick="admBan('${d.id}',true)">Ban user</button>`}
        ${adm?`<button class="abtn" onclick="admFlag('${d.id}',{p_age_verified:${!d.age_verified}})">${d.age_verified?'Remove 18+ verification':'Mark 18+ verified'}</button>
        <button class="abtn" onclick="admFlag('${d.id}',{p_verified:${!d.is_verified}})">${d.is_verified?'Remove badge':'Give verified badge'}</button>
-       <button class="abtn" onclick="admCredit('${d.id}')">Credit wallet</button>
+       ${d.account_type==='creator'?`<button class="abtn" onclick="admBonus('${d.id}')">Pay creator a bonus</button>`:''}
        <button class="abtn" onclick="admTransactions('${d.id}')">Transactions &amp; refunds</button>
        <button class="abtn" onclick="admRole('${d.id}')">Set staff role</button>`:''}</div></div>
    <div class="section-title" style="padding:6px 0">Moderation history</div>
@@ -2767,11 +2769,12 @@ async function admBan(id,banned){
 async function admFlag(id,flags){
   const {error}=await admCall('admin_set_user_flags',Object.assign({p_user:id},flags)); if(!error){ toast('Updated'); admOpenUser(id); }
 }
-async function admCredit(id){
-  const v=prompt('Credit how many dollars? (0.01–1000)'); if(v===null) return;
+async function admBonus(id){
+  const v=prompt('Bonus amount in pounds (0.01–100). It goes straight to their withdrawable earnings with no fee, and comes out of OverVibez funds when they withdraw it.'); if(v===null) return;
   const cents=Math.round(parseFloat(v)*100); if(isNaN(cents)) return toast('Enter an amount like 25.00');
   const reason=prompt('Reason (kept in the audit log):'); if(reason===null) return;
-  const {error}=await admCall('admin_credit_wallet',{p_user:id,p_cents:cents,p_reason:reason.trim()}); if(!error){ toast('Wallet credited '+$$(cents)); admOpenUser(id); }
+  if(!confirm('Pay '+$$(cents)+' to this creator? This is real money you will owe them.')) return;
+  const {error}=await admCall('admin_pay_bonus',{p_user:id,p_cents:cents,p_reason:reason.trim()}); if(!error){ toast('Bonus paid '+$$(cents)); admOpenUser(id); }
 }
 async function admRole(id){
   const v=prompt('Staff role: type moderator, admin, or none'); if(v===null) return;
@@ -2837,9 +2840,9 @@ async function admStats(){
   const items=[['Users',s.users],['Creators',s.creators],['Followers',s.followers],['Age verified',s.age_verified],['New (7 days)',s.new_users_7d],['Banned',s.banned],
     ['Posts',s.posts],['Posts removed',s.posts_removed],['Comments',s.comments],['Open reports',s.open_reports],
     ['Gross sales',admMoney(s.gross_cents)],['Platform fees (15%)',admMoney(s.platform_fees_cents)],['Raffle revenue',admMoney(s.raffle_revenue_cents)],
-    ['Owed to creators',admMoney(s.creator_earnings_owed_cents)],['User wallet balances',admMoney(s.wallet_liability_cents)],['Pending payouts',admMoney(s.pending_payouts_cents)+' ('+s.pending_payouts+')']];
+    ['Owed to creators',admMoney(s.creator_earnings_owed_cents)],['User wallet balances',admMoney(s.wallet_liability_cents)],['Pending payouts',admMoney(s.pending_payouts_cents)+' ('+s.pending_payouts+')'],['Bonuses paid (your cost)',admMoney(s.bonuses_paid_cents)]];
   admBody().innerHTML=`<div class="admin-grid">${items.map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
-   <p class="admin-pad" style="font-size:12px;color:var(--muted);line-height:1.5">Wallet balances and creator earnings are money you hold on behalf of users, so they are liabilities, not revenue.</p>`;
+   <p class="admin-pad" style="font-size:12px;color:var(--muted);line-height:1.5">Wallet balances and creator earnings are money you hold on behalf of users, so they are liabilities, not revenue. Bonuses are a cost to you: they are paid out of your own funds when creators withdraw.</p>`;
 }
 async function admPayouts(){
   const {data,error}=await admCall('admin_list_payouts',{p_status:'pending'}); if(error) return;

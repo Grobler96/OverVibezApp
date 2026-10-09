@@ -29,7 +29,7 @@ Apply migrations in order: `001_core_schema.sql`, `002_storage_realtime.sql`, `0
   (Admin console → Users → Set staff role), or you can set it directly in the Supabase SQL editor:
   `update profiles set staff_role = 'admin' where username = 'your.username';`
 - Moderators: reports queue, remove/restore content, ban/unban users, user investigation. They cannot see money or run raffles.
-- Admins: everything above plus stats, 18+/badge flags, wallet credits, payouts, raffles, staff roles and the audit log.
+- Admins: everything above plus stats, 18+/badge flags, creator bonuses, payouts, raffles, staff roles and the audit log.
 - Every staff action is written to `admin_actions`. Content removal is soft (`removed_at`) so evidence is kept.
 - Banned users can still log in and read but cannot post, comment, message, like, follow or spend.
 - `dev.creator` is currently an admin.
@@ -145,3 +145,6 @@ Video is carried by **LiveKit Cloud**; our database decides who may broadcast or
 
 ### 027 — creator welcome animation
 Adds `profiles.intro_seen` (existing accounts are marked as seen), `mark_intro_seen()`, and an `intro_seen` field on `my_security()`. A brand-new creator's first login plays the welcome animation once; Me → Welcome tour replays it.
+
+### 028 — creator bonuses (replaces wallet credits)
+`admin_pay_bonus(user, pence, reason)` adds up to £100 straight to a creator's withdrawable earnings with no 15% fee, logs it as `admin_bonus` ("Bonus from OverVibez"), notifies the creator and writes the audit log. Admins can't pay themselves, and only creators can receive one. A bonus is a real cost: it comes out of your own Stripe balance when the creator withdraws. `admin_credit_wallet` is switched off because a wallet credit had no money behind it and produced a fake platform fee when spent. Admin stats show "Bonuses paid".
