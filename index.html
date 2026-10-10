@@ -801,7 +801,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 <div class="overlay" id="appealModal" onclick="if(event.target===this)closeModal('appealModal')">
   <div class="sheet">
     <h3 id="appealTitle">Appeal</h3>
-    <p>Tell us why you think this was a mistake. A team member who was not involved will look again and reply in your notifications.</p>
+    <p>Tell us why you think this was a mistake. A team member who was not involved will look again, and <b>a person will reply within 48 hours</b>, in your notifications.</p>
     <div class="field"><textarea id="appealBody" rows="5" maxlength="1000" placeholder="What should we know?" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
     <div class="err" id="appealErr"></div>
     <button class="primary" onclick="sendAppeal()">Send appeal</button>
@@ -986,6 +986,10 @@ async function hydrate(){
     sb.from('follows').select('creator_id').eq('follower_id',uid).limit(5000),
     sb.from('transactions').select('reference_id,gross_cents').eq('payee_id',uid).in('type',['post_unlock','tip'])]);
   const bad=[mine,profs,posts,likes,unl,subs,raf,fol,tx].find(r=>r.error); if(bad) throw bad.error;
+  // The Following feed promises every post from the people you follow, so fetch those separately: the general list above is capped.
+  let postRows=posts.data||[];
+  try{ const {data:fp}=await sb.rpc('following_posts',{p_limit:150});
+    if(fp&&fp.length){ const seen=new Set(postRows.map(r=>r.id)); fp.forEach(r=>{ if(!seen.has(r.id)) postRows.push(r); }); postRows=postRows.slice().sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)); } }catch(e){}
   store.following=new Set((fol.data||[]).map(f=>f.creator_id));
   store.users=(profs.data||[]).map(p=>mapUser(p));
   const m=mine.data; if(m){ const i=store.users.findIndex(u=>u.id===m.id), mu=mapUser(m);
@@ -994,14 +998,14 @@ async function hydrate(){
   if(h&&!store.users.some(u=>u.username===h)){
     const {data}=await sb.from('profiles').select(PUB_COLS).eq('username',h).maybeSingle();
     if(data) store.users.push(mapUser(data,0)); }
-  await ensureUsers((posts.data||[]).map(p=>p.creator_id));
+  await ensureUsers(postRows.map(p=>p.creator_id));
   store.likes={}; (likes.data||[]).forEach(l=>store.likes[uid+l.post_id]=true);
   store.unlocks={}; (unl.data||[]).forEach(l=>store.unlocks[uid+l.post_id]=true);
   store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={};
   (subs.data||[]).forEach(x=>{ if((x.status==='active'||x.status==='canceled')&&new Date(x.current_period_end)>new Date()){
     store.subs[uid+x.creator_id]=true; store.subEnds[x.creator_id]=x.current_period_end; store.subPrice[x.creator_id]=x.price_cents; if(x.status==='canceled') store.subCanceled[x.creator_id]=true; }});
   const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
-  store.posts=(posts.data||[]).map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
+  store.posts=postRows.map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
     paid:p.is_paid,subsOnly:!!p.subs_only,subIncluded:p.sub_included!==false,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),at:p.created_at,
     edited:!!p.edited_at,mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
   // media URLs: free media is public; paid media needs a signed URL, issued only if storage RLS agrees
@@ -1271,7 +1275,7 @@ async function sendAppeal(){
   const err=document.getElementById('appealErr'); err.textContent='';
   const {error}=await sb.rpc('submit_appeal',{p_kind:appealTarget.kind,p_target:appealTarget.target||null,p_body:document.getElementById('appealBody').value});
   if(error) return err.textContent=friendly(error.message);
-  closeModal('appealModal'); toast('Appeal sent — we will reply in your notifications');
+  closeModal('appealModal'); toast('Appeal sent — a person will reply within 48 hours');
 }
 function helpContact(){
   if(settings.support_email) location.href='mailto:'+settings.support_email+'?subject='+encodeURIComponent('OverVibez support');
@@ -1733,7 +1737,7 @@ function renderFeed(){
   const empty=tab==='following'
     ?'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">Nothing here yet.<br>Follow creators to see their posts in this feed.<br><button class="abtn ok" style="margin-top:10px" onclick="go(\'explore\')">Find creators</button></p>'
     :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No drops yet.<br>Creators will appear here as they publish.</p>';
-  document.getElementById('feed').innerHTML=tabs+liveBanners()+(posts.length?posts.map(postCard).join(''):empty);
+  document.getElementById('feed').innerHTML=tabs+(tab==='following'?'<p style="color:var(--muted);font-size:12px;text-align:center;margin:-2px 14px 6px">Every post from creators you follow, newest first. No algorithm decides.</p>':'')+liveBanners()+(posts.length?posts.map(postCard).join(''):empty);
 }
 async function likePost(id){
   const u=me(), k=u.id+id, p=store.posts.find(x=>x.id===id), was=!!store.likes[k];
@@ -2341,15 +2345,19 @@ function paintPostStats(){
       <div class="stat" style="padding:10px 4px"><b style="font-size:14px">${fmtN(sum('comments'))}</b><span>Comments</span></div>
       <div class="stat" style="padding:10px 4px"><b style="font-size:14px">${fmtN(sum('shares'))}</b><span>Shares</span></div></div>
     <div style="font-size:13px;margin:0 0 8px;color:var(--muted)">Earned from posts (after fees): <b style="color:var(--money)">${$$(sum('earned_cents'))}</b></div>
+    ${(()=>{ const f=me().followers, recent=d.filter(x=>Date.now()-new Date(x.created_at)>864e5).slice(0,10); if(!f||!recent.length) return '';
+      const avg=Math.round(recent.reduce((a,x)=>a+Math.min(1,Number(x.follower_views||0)/f),0)/recent.length*100);
+      return `<div style="background:var(--panel-2);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin:0 0 8px">📣 <b>Your reach:</b> on average <b>${avg}%</b> of your followers saw each of your last ${recent.length} post${recent.length===1?'':'s'}. Every post goes to every follower's Following feed, newest first. No algorithm decides who sees it.</div>`; })()}
     <div class="chiprow" style="padding:0 0 4px;overflow-x:auto">${chips}</div>
     ${rows.length?rows.map(x=>`<div class="pcard-row"><div class="top"><div class="sc ${me().av}">${thumb(x)}</div>
         <div class="ttl"><b>${esc(x.caption)||'(media post)'}</b><span>${new Date(x.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · ${x.subs_only?'💜 Subscribers only':x.is_paid?'🔒 Pay-per-view '+$$(x.price_cents||0)+(x.sub_included===false?' (not in subscription)':''):'Free'}</span></div>
         <span class="earn">${$$(Number(x.earned_cents))}</span></div>
+      ${me().followers>0?`<div style="font-size:12px;color:var(--muted);margin:2px 0 6px">👁 Seen by <b style="color:var(--text)">${Number(x.follower_views||0)}</b> of ${me().followers} followers (${Math.min(100,Math.round(Number(x.follower_views||0)/me().followers*100))}%)</div>`:''}
       <div class="pm"><div><b>${fmtN(x.views)}</b>Views</div><div><b>${fmtN(x.likes)}</b>Likes</div><div><b>${fmtN(x.comments)}</b>Comments</div><div><b>${fmtN(x.shares)}</b>Shares</div></div>
       ${x.is_paid&&!x.subs_only||Number(x.tips)?`<div style="font-size:12px;color:var(--muted);margin:4px 0">${x.is_paid&&!x.subs_only?'🔓 '+x.unlocks+' unlock'+(Number(x.unlocks)===1?'':'s')+' · ':''}💰 ${x.tips} tip${Number(x.tips)===1?'':'s'}</div>`:''}
       <div><button class="abtn" onclick="openEditPost('${x.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${x.id}')">Delete</button></div></div>`).join('')
       :'<p style="color:var(--muted);font-size:13px;padding:8px 0">No posts yet — hit ＋ to publish your first one.</p>'}
-    <p style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5">Views count each member once per post. Shares count link shares from the post. Money is what you kept after the 15% fee, with refunds taken off.</p></div>`;
+    <p style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5">Views count each member once per post, once they have scrolled it into view. "Seen by" counts only people who follow you. Shares count link shares from the post. Money is what you kept after the 15% fee, with refunds taken off.</p></div>`;
 }
 function renderStudio(){
   const u=me();
@@ -3116,10 +3124,12 @@ async function admResolve(id,action){
 
 /* --- appeals --- */
 async function admAppeals(){
-  const st=adminSub.appeals, {data,error}=await admCall('admin_list_appeals',{p_status:st}); if(error) return;
-  admBody().innerHTML=`<div class="chiprow">${['open','overturned','upheld'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.appeals='${x}';admLoad()">${x}</button>`).join('')}</div>
+  const st=adminSub.appeals, {data:raw,error}=await admCall('admin_list_appeals',{p_status:st}); if(error) return;
+  const data=st==='open'?raw.slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)):raw, late=a=>st==='open'&&Date.now()-new Date(a.created_at)>48*36e5;
+  const {data:cnt}=await admCall('admin_appeal_counts');
+  admBody().innerHTML=(cnt&&cnt.overdue>0?`<div style="background:rgba(255,71,87,.15);border:1px solid var(--live);border-radius:12px;padding:10px 14px;margin:0 14px 10px;font-size:13px">⏰ <b>${cnt.overdue} appeal${cnt.overdue==1?' is':'s are'} overdue</b> — we promise members a reply within 48 hours. Oldest first below.</div>`:(cnt&&cnt.open>0?`<div style="margin:0 14px 10px;font-size:12.5px;color:var(--muted)">${cnt.open} open · all within the 48-hour promise ✓</div>`:''))+`<div class="chiprow">${['open','overturned','upheld'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.appeals='${x}';admLoad()">${x}</button>`).join('')}</div>
    <div class="admin-pad">${data.length?data.map(a=>`<div class="chart-card">
-     <div style="display:flex;justify-content:space-between"><b>@${esc(a.username)} · ${a.kind==='ban'?'suspension':a.kind+' removal'}</b><span style="font-size:12px;color:var(--muted)">${ago(a.created_at)} ago</span></div>
+     <div style="display:flex;justify-content:space-between"><b>@${esc(a.username)} · ${a.kind==='ban'?'suspension':a.kind+' removal'}</b><span style="font-size:12px;${late(a)?'color:var(--live);font-weight:700':'color:var(--muted)'}">${late(a)?'⏰ OVERDUE · ':''}${ago(a.created_at)} ago</span></div>
      ${a.original_reason?`<div style="font-size:12px;color:var(--muted);margin-top:4px">Original reason: ${esc(a.original_reason)}</div>`:''}
      ${a.preview?`<div style="background:var(--panel-2);border-radius:10px;padding:10px;font-size:13px;margin:6px 0;word-break:break-word">${esc(a.preview)}</div>`:''}
      <div style="font-size:13px;margin:8px 0;word-break:break-word"><b>Their appeal:</b> ${esc(a.body)}</div>
