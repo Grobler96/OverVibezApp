@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/:username([a-z0-9_.]{3,24})", "destination": "/creator.html" }
+  ]
+}

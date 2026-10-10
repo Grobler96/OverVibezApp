@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>OverVibez</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0E0A14">
+<link rel="icon" type="image/svg+xml" href="/icons/favicon.svg">
+<style>
+:root{--bg:#0E0A14;--panel:#171021;--panel-2:#1F1630;--line:#2C2140;--text:#EFEAF6;--muted:#A99BC4;--accent:#FF3D8A;--accent-2:#8B5CF6;--grad:linear-gradient(135deg,#FF3D8A,#8B5CF6)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;line-height:1.5;-webkit-text-size-adjust:100%}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px calc(36px + env(safe-area-inset-bottom))}
+.brand{display:flex;justify-content:space-between;align-items:center;padding:calc(14px + env(safe-area-inset-top)) 0 12px}
+.logo{font-weight:900;font-size:22px;letter-spacing:-.04em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.chip{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:5px 11px}
+.cover{height:150px;border-radius:20px;background:var(--panel-2) center/cover no-repeat;margin:0 -0px}
+.av{width:96px;height:96px;border-radius:50%;margin:-48px auto 12px;border:3px solid transparent;background:linear-gradient(var(--panel-2),var(--panel-2)) padding-box,var(--grad) border-box;display:grid;place-items:center;font-size:38px;overflow:hidden;position:relative}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+h1{font-size:22px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.tick{font-size:13px;color:#fff;background:var(--grad);border-radius:50%;width:20px;height:20px;display:inline-grid;place-items:center}
+.handle{text-align:center;color:var(--muted);font-size:14px;margin:2px 0 10px}
+.bio{text-align:center;font-size:15px;color:var(--text);margin:0 0 6px;white-space:pre-wrap;word-break:break-word}
+.stats{display:flex;justify-content:center;gap:22px;color:var(--muted);font-size:13px;margin:10px 0 16px}
+.stats b{color:var(--text);font-size:16px;display:block;text-align:center}
+.btn{display:block;width:100%;text-align:center;font-weight:700;font-size:16px;padding:15px;border-radius:16px;background:var(--grad);color:#fff;box-shadow:0 10px 36px rgba(255,61,138,.28);margin-bottom:12px}
+.btn.alt{background:var(--panel);border:1px solid var(--line);box-shadow:none;font-weight:600}
+.links a{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;margin-bottom:10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;font-weight:600;font-size:15px;word-break:break-word}
+.links a span{color:var(--muted);flex:none}
+h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 10px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tile{aspect-ratio:1;border-radius:12px;background:var(--panel-2) center/cover no-repeat;display:grid;place-items:center;font-size:12px;color:var(--muted);text-align:center;padding:6px;overflow:hidden;position:relative;line-height:1.3}
+.tile .lk{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.6);border-radius:8px;padding:2px 7px;font-size:11px;color:#fff}
+.note{color:var(--muted);font-size:12px;text-align:center;margin-top:22px;line-height:1.6}
+.note a{text-decoration:underline}
+.gate{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;align-items:center;justify-content:center;padding:24px;text-align:center}
+.gate .box{max-width:380px}
+.gate h2{font-size:22px;letter-spacing:0;text-transform:none;color:var(--text);margin:8px 0 10px}
+.gate p{color:var(--muted);font-size:14px;margin-bottom:18px}
+.gate button,.gate a.b{display:block;width:100%;padding:14px;border-radius:14px;font-weight:700;font-size:16px;margin-bottom:10px;border:0;cursor:pointer;background:var(--grad);color:#fff}
+.gate a.b.alt{background:var(--panel);color:var(--muted);border:1px solid var(--line);font-weight:500}
+.center{text-align:center;padding:60px 10px}
+.skeleton{height:150px;border-radius:20px;background:var(--panel);animation:p 1.2s infinite alternate}@keyframes p{to{opacity:.5}}
+</style></head><body>
+<div class="gate" id="gate"><div class="box"><div class="logo" style="font-size:34px">OverVibez</div><h2>Are you 18 or over?</h2>
+  <p>This page links to a creator on OverVibez, a platform for adults in the UK. You must be 18+ to continue.</p>
+  <button id="yes">I'm 18 or over</button><a class="b alt" href="https://www.google.com">I'm under 18</a></div></div>
+<div class="wrap" id="root"><div class="brand"><a class="logo" href="/">OverVibez</a><span class="chip">18+ · UK</span></div><div class="skeleton"></div></div>
+<script>
+(function(){
+  var B='https://ectwnzhuebgnvejdpgdk.supabase.co', K='sb_publishable_jiM3fKJ42PZ7MFir6gKUoQ_JeleNdaW';
+  var root=document.getElementById('root'), gate=document.getElementById('gate');
+  var uname=decodeURIComponent(location.pathname.replace(/^\/+|\/+$/g,'')).toLowerCase();
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+  var money=function(c){ return '£'+(c/100).toFixed(2); };
+  var pub=function(p){ return B+'/storage/v1/object/public/public-media/'+p.split('/').map(encodeURIComponent).join('/'); };
+  var ok=false; try{ ok=localStorage.getItem('ov_18')==='1'; }catch(e){}
+  if(!ok){ gate.style.display='flex'; }
+  document.getElementById('yes').onclick=function(){ try{ localStorage.setItem('ov_18','1'); }catch(e){} gate.style.display='none'; };
+  function notFound(){ root.innerHTML='<div class="brand"><a class="logo" href="/">OverVibez</a><span class="chip">18+ · UK</span></div><div class="center"><h1 style="display:block">We couldn\'t find that page</h1><p class="bio" style="margin-top:10px;color:var(--muted)">The creator may have changed their name, or the link is wrong.</p><a class="btn" style="margin-top:22px" href="/">Go to OverVibez</a></div>'; document.title='Not found — OverVibez'; }
+  if(!/^[a-z0-9_.]{3,24}$/.test(uname)){ notFound(); return; }
+  fetch(B+'/rest/v1/rpc/public_creator_page',{method:'POST',headers:{apikey:K,'Content-Type':'application/json'},body:JSON.stringify({p_username:uname})})
+   .then(function(r){ if(!r.ok) throw new Error('bad'); return r.json(); })
+   .then(function(p){
+     if(!p){ notFound(); return; }
+     var name=p.display_name||p.username; document.title=name+' on OverVibez';
+     var app='/#'+encodeURIComponent(p.username);
+     var links=(p.links||[]).map(function(l){ return '<a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer nofollow ugc" data-id="'+esc(l.id)+'">'+esc(l.title)+'<span>↗</span></a>'; }).join('');
+     var posts=(p.posts||[]).map(function(x){
+       if(x.is_paid) return '<a class="tile" href="'+app+'">🔒<span class="lk">'+(x.subs_only?'💜 Subscribers':money(x.price_cents||0))+'</span></a>';
+       if(x.media_type==='image'&&x.media_path) return '<a class="tile" href="'+app+'" style="background-image:url(\''+esc(pub(x.media_path))+'\')"></a>';
+       if(x.media_type==='video') return '<a class="tile" href="'+app+'">🎬</a>';
+       return '<a class="tile" href="'+app+'">'+esc((x.caption||'').slice(0,90))+'</a>'; }).join('');
+     root.innerHTML='<div class="brand"><a class="logo" href="/">OverVibez</a><span class="chip">18+ · UK</span></div>'
+      +'<div class="cover" '+(p.cover_url?'style="background-image:url(\''+esc(pub(p.cover_url))+'\')"':'style="background:linear-gradient(135deg,#2a1440,#1a0f2e)"')+'></div>'
+      +'<div class="av">'+(p.avatar_url?'<img alt="" src="'+esc(pub(p.avatar_url))+'">':'✦')+'</div>'
+      +'<h1>'+esc(name)+(p.is_verified?'<span class="tick" title="Verified">✔</span>':'')+'</h1>'
+      +'<div class="handle">@'+esc(p.username)+'</div>'
+      +(p.bio?'<p class="bio">'+esc(p.bio)+'</p>':'')
+      +'<div class="stats"><div><b>'+(p.followers||0)+'</b>followers</div>'+(p.sub_price_cents?'<div><b>'+money(p.sub_price_cents)+'</b>per month</div>':'')+'</div>'
+      +'<a class="btn" href="'+app+'">Follow '+esc(name)+' on OverVibez</a>'
+      +(p.sub_price_cents?'<a class="btn alt" href="'+app+'">💜 Subscribe · '+money(p.sub_price_cents)+'/month</a>':'')
+      +(links?'<h2>Links</h2><div class="links">'+links+'</div>':'')
+      +(posts?'<h2>Latest</h2><div class="grid">'+posts+'</div>':'')
+      +'<p class="note">Joining is free. You must be 18+ and verified to unlock paid content.<br><a href="/terms.html">Terms</a> · <a href="/privacy.html">Privacy</a> · <a href="/guidelines.html">Community guidelines</a></p>';
+     root.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('.links a'); if(!a) return;
+       try{ fetch(B+'/rest/v1/rpc/track_link_click',{method:'POST',keepalive:true,headers:{apikey:K,'Content-Type':'application/json'},body:JSON.stringify({p_link:a.getAttribute('data-id')})}); }catch(x){} });
+   }).catch(function(){ root.innerHTML='<div class="brand"><a class="logo" href="/">OverVibez</a></div><div class="center"><p class="bio">Something went wrong loading this page. Please try again.</p><a class="btn" style="margin-top:18px" href="">Try again</a></div>'; });
+})();
+</script></body></html>
