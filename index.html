@@ -233,6 +233,18 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .bonus-card{background:linear-gradient(135deg,rgba(255,61,138,.16),rgba(139,92,246,.16));border:1px solid var(--accent);border-radius:var(--radius);padding:16px;margin-bottom:14px}
 .bonus-card .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .bonus-card .amt{font-family:'Unbounded';font-weight:900;font-size:26px;margin:4px 0}
+.kit-step{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:14px}
+.kit-step:last-child{border:none}
+.kit-step .ck{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:14px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+.kit-step.done .ck{background:var(--grad);border-color:transparent;color:#fff}
+.kit-step .go{margin-left:auto;font-size:12.5px;color:var(--accent-2);font-weight:600;flex:none}
+.bulk-row{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.bulk-row .th{width:48px;height:48px;border-radius:10px;background:var(--panel-2) center/cover no-repeat;flex:none;display:grid;place-items:center;font-size:20px}
+.bulk-row input{flex:1;min-width:0;padding:8px 10px;font-size:13px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;color:var(--text)}
+.bulk-row .st{font-size:11.5px;color:var(--muted);min-width:64px;text-align:right}
+.bulk-row .st.ok{color:var(--ok)} .bulk-row .st.bad{color:var(--live)}
+.bulk-bar{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;margin:10px 0}.bulk-bar i{display:block;height:100%;background:var(--grad);width:0;transition:width .3s}
+#switchModal,#bulkModal{z-index:131}
 .payout-btn{width:100%;background:var(--panel);border:1px solid var(--money);color:var(--money);font-weight:700;padding:13px;border-radius:12px;margin-bottom:20px}
 
 /* ═══════════ ME / PROFILE ═══════════ */
@@ -680,6 +692,35 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   <div id="lvSummary" class="live-summary hidden"></div>
 </div>
 
+<div class="overlay" id="switchModal" onclick="if(event.target===this)closeModal('switchModal')">
+  <div class="sheet" style="max-height:92vh">
+    <h3>🚀 Switch kit</h3>
+    <p>Everything you need to bring your audience over from TikTok and Instagram.</p>
+    <div id="switchBody"></div>
+    <button class="ghost" onclick="closeModal('switchModal')">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="bulkModal" onclick="if(event.target===this&&!(bulk&&bulk.busy))closeModal('bulkModal')">
+  <div class="sheet" style="max-height:92vh">
+    <h3>📦 Bulk upload</h3>
+    <p>Add up to 30 photos and videos at once. Each becomes its own post, so your page isn't empty when your audience arrives. Photos are re-saved without hidden location data.</p>
+    <input id="bulkFiles" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/quicktime,video/webm" multiple style="padding:10px">
+    <div class="toggle-row" style="margin-top:10px">
+      <button id="bkFree" class="on" onclick="bulkType('free')">Free</button>
+      <button id="bkPaid" onclick="bulkType('paid')">Pay-per-view 🔒</button>
+      <button id="bkSubs" onclick="bulkType('subs')">Subscribers 💜</button>
+    </div>
+    <div class="field hidden" id="bkPriceField"><label>Price for each post (GBP)</label><input id="bkPrice" type="number" min="0.99" max="499" step="0.5" value="3.00">
+      <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px;text-transform:none;letter-spacing:0"><input type="checkbox" id="bkIncluded" checked style="width:auto"> Also included for my subscribers</label></div>
+    <div id="bulkList" style="margin:8px 0"></div>
+    <div class="bulk-bar hidden" id="bulkBar"><i id="bulkBarI"></i></div>
+    <div class="err" id="bulkErr"></div>
+    <button class="primary" id="bulkGo" onclick="bulkStart()" disabled>Upload</button>
+    <button class="ghost" id="bulkClose" onclick="closeModal('bulkModal')">Close</button>
+  </div>
+</div>
+
 <div class="overlay" id="vibeModal" onclick="if(event.target===this)closeModal('vibeModal')">
   <div class="sheet">
     <div style="display:flex;justify-content:space-between;align-items:center"><h3>Send a vibe ✨</h3><button onclick="closeModal('vibeModal')" style="color:var(--muted);font-size:20px;padding:0 4px" aria-label="Close">✕</button></div>
@@ -841,6 +882,9 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div class="field"><label>Profile picture</label>
       <div style="display:flex;gap:12px;align-items:center"><div class="av a1" id="epAvPrev" style="width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font-size:24px;flex:none"></div>
       <input id="epAvatar" type="file" accept="image/png,image/jpeg,image/webp" style="padding:8px"></div></div>
+    <div class="field hidden" id="epLinksWrap"><label>Your links (shown on your public page)</label><div id="epLinks"></div>
+      <button class="ghost" id="epAddLink" onclick="epAddLink()" style="margin-top:6px">＋ Add a link</button>
+      <p style="font-size:12px;color:var(--muted);margin:4px 0 0">Up to 8 links, each starting with https://</p></div>
     <div class="field"><label>Cover photo</label><div class="cover" id="epCoverPrev" style="margin:0 0 8px;height:70px"></div>
       <input id="epCover" type="file" accept="image/png,image/jpeg,image/webp" style="padding:8px"></div>
     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:6px">Pick a photo, then drag and zoom it into the frame. Photos are re-saved in your browser, which also removes hidden data such as GPS location.</p>
@@ -1056,6 +1100,7 @@ async function doSignup(){
   if(pw.length<8) return err.textContent='Password must be at least 8 characters.';
   if(!dob) return err.textContent='Date of birth is required.';
   if((Date.now()-new Date(dob).getTime())/3.15576e10<18) return err.textContent='You must be 18 or older to join OverVibez.';
+  try{ const {data:free}=await sb.rpc('username_ok',{p_username:un}); if(free===false) return err.textContent='That username is taken or not allowed — please try another.'; }catch(e){}
   let invite=document.getElementById('suInvite').value.trim().toUpperCase();
   if(settings.invite_only){
     if(!invite) return err.textContent='You need an invite code — sign-up is by invitation.';
@@ -1893,6 +1938,154 @@ function openIntro(replay){
   introAt(7900,()=>show(2));
 }
 
+/* ═══════════ LINK PAGE, SWITCH KIT, BULK UPLOAD ═══════════ */
+const siteOrigin=()=>/^https?:$/.test(location.protocol)?location.origin:'https://www.overvibez.com';
+const pageLink=un=>siteOrigin()+'/'+un;
+/* Photos are re-drawn on a canvas and re-saved as JPEG: that drops hidden data (GPS, camera details) and keeps files small. GIFs are left alone. */
+function prepPhoto(file,max=2400){
+  return new Promise((res,rej)=>{
+    if(!/^image\/(png|jpeg|webp|gif)$/.test(file.type)) return rej(new Error('Please choose a PNG, JPG, WebP or GIF image'));
+    if(file.size>25*1024*1024) return rej(new Error('That photo is too large (max 25 MB)'));
+    if(file.type==='image/gif') return res({blob:file,type:'image/gif',ext:'gif'});
+    const url=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)), c=document.createElement('canvas'); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(url);
+      c.toBlob(b=>b?res({blob:b,type:'image/jpeg',ext:'jpg'}):rej(new Error('Could not process the photo')),'image/jpeg',0.88); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('That file could not be read as an image')); };
+    img.src=url;
+  });
+}
+/* --- links editor (inside Edit profile) --- */
+let epLinkRows=[];
+function renderEpLinks(){
+  document.getElementById('epLinks').innerHTML=epLinkRows.map((l,i)=>`<div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+    <input value="${esc(l.title)}" maxlength="40" placeholder="Title (e.g. Instagram)" oninput="epLinkRows[${i}].title=this.value" style="flex:1;min-width:0">
+    <input value="${esc(l.url)}" maxlength="255" placeholder="https://…" inputmode="url" oninput="epLinkRows[${i}].url=this.value" style="flex:1.4;min-width:0">
+    <button onclick="epLinkRows.splice(${i},1);renderEpLinks()" title="Remove" style="color:var(--muted);font-size:18px;padding:0 6px">✕</button></div>`).join('');
+  document.getElementById('epAddLink').classList.toggle('hidden',epLinkRows.length>=8);
+}
+function epAddLink(){ if(epLinkRows.length<8){ epLinkRows.push({title:'',url:'https://'}); renderEpLinks(); } }
+async function loadMyLinks(){ const {data}=await sb.rpc('get_my_links'); return Array.isArray(data)?data:[]; }
+/* --- Switch kit --- */
+let qrLib=null;
+function loadQr(){
+  if(qrLib) return Promise.resolve(qrLib); if(window.qrcode) return Promise.resolve(qrLib=window.qrcode);
+  return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js'; s.onload=()=>res(qrLib=window.qrcode); s.onerror=()=>rej(new Error('qr')); document.head.appendChild(s); });
+}
+async function qrCanvas(text,size){
+  const q=(await loadQr())(0,'M'); q.addData(text); q.make(); const n=q.getModuleCount(), cv=document.createElement('canvas'); cv.width=cv.height=size;
+  const x=cv.getContext('2d'), m=size/(n+8); x.fillStyle='#fff'; x.fillRect(0,0,size,size); x.fillStyle='#0E0A14';
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) x.fillRect(Math.floor((c+4)*m),Math.floor((r+4)*m),Math.ceil(m),Math.ceil(m));
+  return cv;
+}
+function loadImg(src){ return new Promise(res=>{ const i=new Image(); i.crossOrigin='anonymous'; i.onload=()=>res(i); i.onerror=()=>res(null); i.src=src; }); }
+async function announceCard(kind){        // kind: 'story' (1080x1920) or 'post' (1080x1350)
+  const u=me(), W=1080, H=kind==='story'?1920:1350, cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d');
+  try{ await document.fonts.load('900 80px Unbounded'); }catch(e){}
+  x.fillStyle='#0E0A14'; x.fillRect(0,0,W,H);
+  let g=x.createRadialGradient(W*.95,H*.04,0,W*.95,H*.04,W*.8); g.addColorStop(0,'rgba(255,61,138,.42)'); g.addColorStop(1,'rgba(255,61,138,0)'); x.fillStyle=g; x.fillRect(0,0,W,H);
+  g=x.createRadialGradient(W*.05,H*.97,0,W*.05,H*.97,W*.9); g.addColorStop(0,'rgba(139,92,246,.46)'); g.addColorStop(1,'rgba(139,92,246,0)'); x.fillStyle=g; x.fillRect(0,0,W,H);
+  const lg=x.createLinearGradient(0,0,W*.5,0); lg.addColorStop(0,'#FF3D8A'); lg.addColorStop(1,'#8B5CF6');
+  x.textAlign='center'; const F=(w,sz)=>w+' '+sz+'px Unbounded, system-ui, sans-serif', top=kind==='story'?330:150;
+  x.fillStyle=lg; x.font=F(900,76); x.fillText('OverVibez',W/2,top);
+  const R=130, cy=top+200; x.save(); x.beginPath(); x.arc(W/2,cy,R,0,7); x.closePath(); x.clip();
+  const av=u.avatarUrl?await loadImg(u.avatarUrl):null; if(av){ const k=Math.max(2*R/av.width,2*R/av.height); x.drawImage(av,W/2-av.width*k/2,cy-av.height*k/2,av.width*k,av.height*k); }
+  else { x.fillStyle='#1F1630'; x.fill(); x.fillStyle='#fff'; x.font=F(900,110); x.fillText('✦',W/2,cy+38); } x.restore();
+  x.lineWidth=8; x.strokeStyle=lg; x.beginPath(); x.arc(W/2,cy,R+4,0,7); x.stroke();
+  x.fillStyle='#EFEAF6'; x.font=F(900,64); x.fillText(u.name.length>22?u.name.slice(0,21)+'…':u.name,W/2,cy+R+110);
+  x.fillStyle='#A99BC4'; x.font='400 38px system-ui, sans-serif'; x.fillText('@'+u.username,W/2,cy+R+168);
+  x.fillStyle='#EFEAF6'; x.font=F(900,70); x.fillText("I'm on OverVibez",W/2,cy+R+330);
+  x.fillStyle='#A99BC4'; x.font='400 40px system-ui, sans-serif'; x.fillText('Follow me there — free to join',W/2,cy+R+400);
+  const qs=kind==='story'?420:360, qy=cy+R+450, qc=await qrCanvas(pageLink(u.username),qs);
+  x.save(); x.beginPath(); x.roundRect?x.roundRect(W/2-qs/2-14,qy-14,qs+28,qs+28,28):x.rect(W/2-qs/2-14,qy-14,qs+28,qs+28); x.fillStyle='#fff'; x.fill(); x.restore(); x.drawImage(qc,W/2-qs/2,qy);
+  x.fillStyle=lg; x.font=F(700,40); x.fillText(pageLink(u.username).replace(/^https?:\/\//,''),W/2,qy+qs+90);
+  x.fillStyle='#A99BC4'; x.font='400 28px system-ui, sans-serif'; x.fillText('18+ · UK · Scan to follow',W/2,qy+qs+150);
+  return new Promise(r=>cv.toBlob(r,'image/png'));
+}
+async function downloadCard(kind){
+  try{ const b=await announceCard(kind), a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='overvibez-'+me().username+'-'+kind+'.png'; document.body.appendChild(a); a.click(); a.remove(); toast('Saved — post it everywhere 📣'); }
+  catch(e){ toast('Could not make the image — please try again'); }
+}
+async function openSwitchKit(){
+  const u=me(); if(u.role!=='creator') return;
+  const body=document.getElementById('switchBody'); body.innerHTML='<p style="color:var(--muted)">Loading…</p>'; openModal('switchModal');
+  const links=await loadMyLinks(), n=store.posts.filter(p=>p.by===u.id).length, link=pageLink(u.username);
+  const steps=[[u.ageVerified,'Get your 18+ check done','needed before you can post',"closeModal('switchModal');openAgeRequest()"],
+    [!!u.avatarUrl,'Add a profile photo','',"closeModal('switchModal');openEditProfile()"],[!!u.coverUrl,'Add a cover photo','',"closeModal('switchModal');openEditProfile()"],
+    [!!u.bio,'Write a short bio','',"closeModal('switchModal');openEditProfile()"],[links.length>0,'Add your links','Instagram, TikTok, shop…',"closeModal('switchModal');openEditProfile()"],
+    [n>=3,'Add your first 3 posts','try Bulk upload',"openBulk()"]];
+  const done=steps.filter(x=>x[0]).length;
+  body.innerHTML=`<div class="chart-card" style="margin-bottom:12px"><h4>Your link</h4>
+      <div style="font-family:'Unbounded';font-size:15px;word-break:break-all;margin-bottom:10px">${esc(link.replace(/^https?:\/\//,''))}</div>
+      <button class="primary" style="margin:0 0 8px" onclick="copyText('${esc(link)}')">Copy my link</button>
+      <p style="font-size:12.5px;margin:0">Put this in your TikTok and Instagram bios. Visitors see your page, your links and a Follow button, and joining is free.</p></div>
+    <div class="chart-card" style="margin-bottom:12px"><h4>Setup · ${done} of ${steps.length} done</h4><div class="bulk-bar" style="margin:0 0 6px"><i style="width:${Math.round(done/steps.length*100)}%"></i></div>
+      ${steps.map(([ok,t,sub,act])=>`<div class="kit-step ${ok?'done':''}" ${ok?'':`onclick="${act}" style="cursor:pointer"`}><span class="ck">${ok?'✓':''}</span><div><b style="font-weight:600">${t}</b>${sub?`<br><span style="font-size:12px;color:var(--muted)">${sub}</span>`:''}</div>${ok?'':'<span class="go">Do it →</span>'}</div>`).join('')}
+      <button class="primary" style="margin:12px 0 0" onclick="openBulk()">📦 Bulk upload my old content</button></div>
+    <div class="chart-card" style="margin-bottom:12px"><h4>Tell your followers you've moved</h4>
+      <p style="font-size:12.5px;margin:0 0 10px">Ready-made images with your photo, name and a QR code. Post them to your story and feed.</p>
+      <div style="display:flex;gap:8px"><button class="ghost" style="margin:0" onclick="downloadCard('story')">⬇ Story (9:16)</button><button class="ghost" style="margin:0" onclick="downloadCard('post')">⬇ Post (4:5)</button></div></div>
+    ${links.length?`<div class="chart-card" style="margin-bottom:12px"><h4>Link clicks</h4>${links.map(l=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0"><span>${esc(l.title)}</span><b>${l.clicks}</b></div>`).join('')}</div>`:''}`;
+}
+function copyText(t){ (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Link copied 🔗')).catch(()=>prompt('Copy your link:',t)); }
+/* --- Bulk upload --- */
+let bulk=null;
+function openBulk(){
+  if(!me().ageVerified){ closeModal('switchModal'); toast('Get your 18+ check done first — Me → Identity & age verification'); return; }
+  bulk={items:[],busy:false,type:'free'}; document.getElementById('bulkFiles').value=''; document.getElementById('bulkErr').textContent=''; bulkType('free'); paintBulk();
+  closeModal('switchModal'); openModal('bulkModal');
+}
+function bulkType(t){ if(bulk) bulk.type=t; ['Free','Paid','Subs'].forEach(k=>document.getElementById('bk'+k).classList.toggle('on',k.toLowerCase()===t)); document.getElementById('bkPriceField').classList.toggle('hidden',t!=='paid'); }
+document.addEventListener('change',e=>{
+  if(!e.target||e.target.id!=='bulkFiles'||!bulk) return;
+  const err=document.getElementById('bulkErr'); err.textContent='';
+  for(const f of e.target.files){
+    if(bulk.items.length>=30){ err.textContent='30 files at a time — upload the rest in another batch'; break; }
+    const img=/^image\/(png|jpeg|webp|gif)$/.test(f.type), vid=/^video\/(mp4|quicktime|webm)$/.test(f.type); const it={file:f,caption:'',state:'ready',msg:''};
+    if(!img&&!vid){ it.state='bad'; it.msg='Not supported'; } else if(vid&&f.size>50*1024*1024){ it.state='bad'; it.msg='Over 50 MB'; } else if(img&&f.size>25*1024*1024){ it.state='bad'; it.msg='Over 25 MB'; }
+    it.thumb=img&&it.state==='ready'?URL.createObjectURL(f):null; bulk.items.push(it);
+  }
+  e.target.value=''; paintBulk();
+});
+function paintBulk(){
+  if(!bulk) return; const list=document.getElementById('bulkList'), ready=bulk.items.filter(i=>i.state==='ready'||i.state==='failed').length;
+  list.innerHTML=bulk.items.map((it,i)=>`<div class="bulk-row"><div class="th" ${it.thumb?`style="background-image:url('${it.thumb}')"`:''}>${it.thumb?'':(/^video/.test(it.file.type)?'🎬':'⚠️')}</div>
+    <input value="${esc(it.caption)}" maxlength="2200" placeholder="Caption (optional)" ${bulk.busy||it.state==='done'?'disabled':''} oninput="bulk.items[${i}].caption=this.value">
+    <span class="st ${it.state==='done'?'ok':(it.state==='bad'||it.state==='failed'?'bad':'')}">${{ready:'Ready',uploading:'Uploading…',done:'Done ✓',bad:esc(it.msg),failed:esc(it.msg||'Failed')}[it.state]}</span>
+    ${bulk.busy||it.state==='done'?'':`<button onclick="bulk.items.splice(${i},1);paintBulk()" style="color:var(--muted);font-size:16px;padding:0 4px">✕</button>`}</div>`).join('');
+  const b=document.getElementById('bulkGo'); b.disabled=bulk.busy||!ready; b.textContent=bulk.busy?'Uploading…':ready?`Upload ${ready} post${ready===1?'':'s'}`:'Upload';
+  document.getElementById('bulkClose').disabled=bulk.busy;
+}
+async function bulkStart(){
+  if(!bulk||bulk.busy) return; const u=me(), err=document.getElementById('bulkErr'); err.textContent='';
+  const type=bulk.type, price=Math.round(parseFloat(document.getElementById('bkPrice').value||'3')*100), incl=document.getElementById('bkIncluded').checked;
+  if(type==='paid'&&(isNaN(price)||price<99||price>49999)) return err.textContent='Price must be between £0.99 and £499.99';
+  if(type==='subs'&&!u.subPrice) return err.textContent='Set a subscription price first (Me → Edit profile)';
+  const todo=bulk.items.filter(i=>i.state==='ready'||i.state==='failed'); if(!todo.length) return;
+  bulk.busy=true; bulk.items.forEach(i=>{ if(i.state==='failed') i.state='ready'; }); paintBulk();
+  const bar=document.getElementById('bulkBar'); bar.classList.remove('hidden'); let doneN=0; const bi=document.getElementById('bulkBarI'); bi.style.width='0';
+  const paid=type!=='free', subsOnly=type==='subs', queue=todo.slice().reverse();      // first in the list ends up newest on your page
+  const one=async it=>{
+    it.state='uploading'; paintBulk();
+    try{
+      const isImg=it.file.type.startsWith('image'); const media=isImg?await prepPhoto(it.file):{blob:it.file,type:it.file.type,ext:(it.file.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')};
+      const id=crypto.randomUUID(), path=`${u.id}/${id}/${Date.now()}.${media.ext}`;
+      const {error}=await sb.from('posts').insert({id,creator_id:u.id,caption:it.caption.trim()||null,media_type:isImg?'image':'video',media_path:path,is_paid:paid,price_cents:paid&&!subsOnly?price:null,subs_only:subsOnly,sub_included:subsOnly||incl});
+      if(error) throw new Error(error.message);
+      const up=await sb.storage.from(paid?'paid-media':'public-media').upload(path,media.blob,{contentType:media.type});
+      if(up.error){ await sb.rpc('delete_post',{p_post:id}); throw new Error(/size|large|exceed/i.test(up.error.message)?'File too large':'Upload failed'); }
+      it.state='done';
+    }catch(e){ it.state='failed'; it.msg=(e.message||'Failed').slice(0,40); }
+    doneN++; bi.style.width=Math.round(doneN/todo.length*100)+'%'; paintBulk();
+  };
+  const worker=async()=>{ while(queue.length){ await one(queue.shift()); } };
+  await Promise.all([worker(),worker()]);
+  bulk.busy=false; bar.classList.add('hidden'); paintBulk();
+  const ok=todo.filter(i=>i.state==='done').length, bad=todo.length-ok;
+  await hydrate(); rerender(); toast(ok+' post'+(ok===1?'':'s')+' published ✨'+(bad?' · '+bad+' failed — tap Upload to retry':''));
+  if(!bad){ setTimeout(()=>{ if(bulk&&!bulk.busy) closeModal('bulkModal'); },900); }
+}
+
 /* ═══════════ MANUAL 18+ CHECK ═══════════
    By default OverVibez checks IDs by hand (admin → Age checks). The member only sends a request here; the ID itself is
    looked at outside the app and no image of it is stored. Stripe Identity can be switched on later by an admin. */
@@ -2316,12 +2509,12 @@ async function publishPost(){
   try{
     const id=crypto.randomUUID(), paid=postType!=='free', subsOnly=postType==='subs';
     const kind=f?(f.type.startsWith('video')?'video':'image'):'text';
-    const ext=f?(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,''):'';
-    const path=f?`${u.id}/${id}/${Date.now()}.${ext}`:null;
+    let media=null; if(f){ try{ media=kind==='image'?await prepPhoto(f):{blob:f,type:f.type,ext:(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'')}; }catch(e){ return toast(e.message); } }
+    const path=f?`${u.id}/${id}/${Date.now()}.${media.ext}`:null;
     const {error}=await sb.from('posts').insert({id,creator_id:u.id,caption:cap||null,media_type:kind,media_path:path,is_paid:paid,price_cents:paid&&!subsOnly?price:null,subs_only:subsOnly,sub_included:subsOnly||document.getElementById('postIncluded').checked});
     if(error) return toast(error.message);
     if(f){
-      const up=await sb.storage.from(paid?'paid-media':'public-media').upload(path,f,{contentType:f.type});
+      const up=await sb.storage.from(paid?'paid-media':'public-media').upload(path,media.blob,{contentType:media.type});
       if(up.error){ await sb.rpc('delete_post',{p_post:id}); return toast('Upload failed: '+up.error.message); }
     }
     await hydrate();
@@ -2591,7 +2784,9 @@ function renderMe(){
              <div class="row" onclick="payoutSetup()"><div class="r-ic">🏦</div>Payout method<span class="sub">${!features.payouts?'Coming soon':store.payout.payouts_enabled?'Ready ✓':store.payout.connected?'Finish setup →':'Set up →'}</span></div>`
            :`<div class="row" onclick="openTopup()"><div class="r-ic">◈</div>Wallet<span class="sub">${$$(u.wallet)}</span></div>`}
       ${u.staffRole?`<div class="row" onclick="go('admin')"><div class="r-ic">🛡️</div>${u.staffRole==='admin'?'Admin console':'Moderator tools'}<span class="sub">${u.staffRole}</span></div>`:''}
-      <div class="row" onclick="openEditProfile()"><div class="r-ic">✏️</div>Edit profile<span class="sub">Name, bio, photos</span></div>
+      <div class="row" onclick="openEditProfile()"><div class="r-ic">✏️</div>Edit profile<span class="sub">Name, bio, photos${isC?', links':''}</span></div>
+      ${isC?`<div class="row" onclick="copyText(pageLink(me().username))"><div class="r-ic">🔗</div>Your link page<span class="sub">${esc(pageLink(u.username).replace(/^https?:\/\//,''))}</span></div>
+      <div class="row" onclick="openSwitchKit()"><div class="r-ic">🚀</div>Switch kit<span class="sub">Bring your audience over</span></div>`:''}
       ${isStandalone()?'':`<div class="row" onclick="installApp()"><div class="r-ic">📲</div>Install the app<span class="sub">Home screen</span></div>`}
       <div class="row" onclick="toggleEmailNotif()"><div class="r-ic">✉️</div>Email notifications<span class="sub">${u.emailNotif?'On':'Off'}</span></div>
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
@@ -2645,6 +2840,8 @@ function openEditProfile(){
   document.getElementById('epCatWrap').classList.toggle('hidden',u.role!=='creator'); document.getElementById('epCat').value=u.category||'';
   const av=document.getElementById('epAvPrev'); av.className='av '+u.av; av.innerHTML=avInner(u);
   document.getElementById('epCoverPrev').style.backgroundImage=u.coverUrl?`url('${u.coverUrl}')`:'none';
+  epLinkRows=[]; const lw=document.getElementById('epLinksWrap'); lw.classList.toggle('hidden',u.role!=='creator');
+  if(u.role==='creator'){ renderEpLinks(); loadMyLinks().then(l=>{ epLinkRows=l.map(x=>({id:x.id,title:x.title,url:x.url})); renderEpLinks(); }); }
   openModal('editProfileModal');
 }
 /* Photo framing: the member drags and zooms the photo inside the exact frame it will appear in, and we save that crop. */
@@ -2717,6 +2914,7 @@ async function saveProfile(){
     if(pendingImg.avatar){ patch.avatar_url=await up(pendingImg.avatar,'avatar'); if(u.avatarPath) old.push(u.avatarPath); }
     if(pendingImg.cover){ patch.cover_url=await up(pendingImg.cover,'cover'); }
     const {error}=await sb.from('profiles').update(patch).eq('id',u.id); if(error) throw new Error(error.message);
+    if(u.role==='creator'){ const {error:le}=await sb.rpc('set_my_links',{p_links:epLinkRows.filter(l=>(l.title||'').trim()||((l.url||'').trim()&&(l.url||'').trim()!=='https://')).map(l=>({id:l.id||null,title:l.title,url:l.url}))}); if(le) throw new Error(le.message); }
     if(old.length) sb.storage.from('public-media').remove(old).then(()=>{});          // tidy the replaced picture
     pendingImg={}; closeModal('editProfileModal'); await hydrate(); rerender(); toast('Profile saved ✓');
   }catch(e){ toast(e.message||'Could not save your profile'); }
@@ -2746,7 +2944,7 @@ function rerender(){
   else if(vis==='studio')renderStudio(); else if(vis==='notifs'){} else if(vis==='me')renderMe(); else if(vis==='profile')renderProfile();
 }
 const refresh=rerender;
-function shareLink(un){ return location.href.split('#')[0]+'#'+un; }
+function shareLink(un){ const c=store.users.find(x=>x.username===un); return c&&c.role==='creator'?pageLink(un):location.href.split('#')[0]+'#'+un; }
 function sharePost(pid,un,mine){ if(!mine) sb.rpc('record_share',{p_post:pid}).then(()=>{},()=>{}); shareProfile(un); }
 /* views: a post counts once the member has had at least half of it on screen for a second (once per member per post, never your own) */
 const viewSeen=new Set(), viewQueue=new Set(), viewTimers=new Map();
