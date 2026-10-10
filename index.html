@@ -652,6 +652,15 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
         <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px;text-transform:none;letter-spacing:0"><input type="checkbox" id="postIncluded" checked style="width:auto"> Also included for my subscribers</label></div>
       <div class="field"><label>Caption</label><textarea id="postCap" rows="3" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none" placeholder="What are you dropping?"></textarea></div>
       <div class="field"><label>Attach photo or video (optional)</label><input id="postMedia" type="file" accept="image/*,video/*" style="padding:10px"></div>
+      <div class="field" id="collabField"><label>Collab with another creator (optional)</label>
+        <div id="collabPicked" class="hidden" style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--panel-2);border-radius:12px;padding:10px 12px;font-size:13.5px"></div>
+        <input id="collabQ" placeholder="Search creators by name or @username" oninput="collabSearch()" autocomplete="off">
+        <div id="collabResults"></div>
+        <div id="collabSplit" class="hidden" style="margin-top:10px">
+          <label style="text-transform:none;letter-spacing:0;font-size:13px">Their share: <b id="collabPctLbl">50%</b></label>
+          <input id="collabPct" type="range" min="10" max="90" step="5" value="50" oninput="collabPctChange()" style="width:100%">
+          <p id="collabMath" style="font-size:12px;color:var(--muted);line-height:1.5;margin:4px 0 0"></p>
+          <p style="font-size:12px;color:var(--muted);line-height:1.5;margin:4px 0 0">Hidden from everyone until they accept. Each of you keeps 85% of your own share.</p></div></div>
       <button class="primary" id="publishBtn" onclick="publishPost()">Publish</button>
     </div>
     <div id="createLiveSection" class="hidden">
@@ -998,7 +1007,7 @@ async function hydrate(){
   if(h&&!store.users.some(u=>u.username===h)){
     const {data}=await sb.from('profiles').select(PUB_COLS).eq('username',h).maybeSingle();
     if(data) store.users.push(mapUser(data,0)); }
-  await ensureUsers(postRows.map(p=>p.creator_id));
+  await ensureUsers(postRows.flatMap(p=>p.collab_user_id?[p.creator_id,p.collab_user_id]:[p.creator_id]));
   store.likes={}; (likes.data||[]).forEach(l=>store.likes[uid+l.post_id]=true);
   store.unlocks={}; (unl.data||[]).forEach(l=>store.unlocks[uid+l.post_id]=true);
   store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={};
@@ -1007,7 +1016,7 @@ async function hydrate(){
   const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
   store.posts=postRows.map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
     paid:p.is_paid,subsOnly:!!p.subs_only,subIncluded:p.sub_included!==false,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),at:p.created_at,
-    edited:!!p.edited_at,mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
+    collab:p.collab_user_id||null,collabPct:p.collab_pct||50,collabStatus:p.collab_status||null,edited:!!p.edited_at,mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
   // media URLs: free media is public; paid media needs a signed URL, issued only if storage RLS agrees
   const paidPaths=[];
   store.posts.forEach(p=>{ if(!p.mediaPath) return;
@@ -1522,6 +1531,8 @@ const notifInfo=n=>{
     case 'sub_renewed': return ['💜','Renewed your subscription to <b>'+esc(d.creator||'a creator')+'</b> — '+$$(d.cents)+' taken from your wallet'];
     case 'sub_renew_failed': return ['⚠️','Your wallet was too low to renew <b>'+esc(d.creator||'a creator')+'</b> ('+$$(d.cents)+') — add funds and we will try again within the hour'];
     case 'sub_ended': return ['💔','Your subscription to <b>'+esc(d.creator||'a creator')+'</b> has ended'];
+    case 'collab_invite': return ['🤝','<b>@'+esc(d.who||'a creator')+'</b> invited you to collab on a post — you would get '+(d.pct||50)+'% of every sale. Open Studio to answer'];
+    case 'collab_response': return ['🤝',d.left?'<b>@'+esc(d.who||'your collaborator')+'</b> left your collab post — it stays up and sales now come to you alone':'<b>@'+esc(d.who||'they')+'</b> '+(d.accepted?'accepted':'declined')+' your collab'+(d.accepted?' — the post is live':'')];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
     case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Me'];
@@ -1635,18 +1646,20 @@ function renderStories(){
 }
 function canView(p){
   const u=me();
-  return !p.paid || p.by===u.id || store.unlocks[u.id+p.id] || (store.subs[u.id+p.by]&&(p.subsOnly||p.subIncluded));
+  return !p.paid || p.by===u.id || (p.collab===u.id&&p.collabStatus==='accepted') || store.unlocks[u.id+p.id] || (store.subs[u.id+p.by]&&(p.subsOnly||p.subIncluded));
 }
 function postCard(p){
   const u=me(), c=user(p.by); if(!c) return '';
-  const mine=p.by===u.id, open=canView(p), liked=store.likes[u.id+p.id];
+  const owner=p.by===u.id, partner=p.collab===u.id, mine=owner||partner, open=canView(p), liked=store.likes[u.id+p.id], cb=p.collab?user(p.collab):null;
   return `<article class="card" data-pid="${p.id}" data-mine="${mine?1:0}">
     <div class="card-head">
       <div class="av ${c.av}" style="cursor:pointer" onclick="openProfile('${p.by}')">${avInner(c)}</div>
-      <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}${p.edited?' · edited':''}</span></div>
-      ${mine?`<span class="own-tag">${p.subsOnly?'💜 Subscribers only':(p.paid&&!p.subIncluded?'🔒 Pay-per-view only':'Your post')}</span>`:
+      <div class="who" style="cursor:pointer" onclick="openProfile('${p.by}')"><b>${esc(c.username)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>${p.ts||'now'}${p.edited?' · edited':''}${cb?` · 🤝 with <a style="color:var(--accent-2);cursor:pointer" onclick="event.stopPropagation();openProfile('${cb.id}')">@${esc(cb.username)}</a>`:''}</span></div>
+      ${mine?`<span class="own-tag">${partner?'🤝 Collab · you get '+p.collabPct+'%':p.subsOnly?'💜 Subscribers only':(p.paid&&!p.subIncluded?'🔒 Pay-per-view only':'Your post')}</span>`:
         `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?(store.subCanceled[p.by]?'Ends '+new Date(store.subEnds[p.by]).toLocaleDateString():'Subscribed'):'Subscribe '+$$(c.subPrice)}</button>`}
     </div>
+    ${p.collabStatus==='pending'&&(owner||partner)?`<div class="collab-note" style="background:var(--panel-2);padding:10px 14px;font-size:13px;line-height:1.5">${owner?`⏳ Waiting for <b>@${esc(cb?cb.username:'them')}</b> to accept — nobody else can see this yet.`:`🤝 <b>@${esc(c.username)}</b> wants to publish this with you. You would get <b>${p.collabPct}%</b> of every sale and tip.`}
+      ${partner?`<div style="margin-top:8px;display:flex;gap:8px"><button class="abtn" onclick="answerCollab('${p.id}',true)">Accept</button><button class="abtn danger" onclick="answerCollab('${p.id}',false)">Decline</button></div>`:''}</div>`:''}
     <div class="media ${open?'':'locked'}">
       ${p.mediaUrl&&open?(p.mediaKind==='video'
         ?`<video class="scene-media" src="${esc(p.mediaUrl)}" controls playsinline preload="metadata"></video>`
@@ -1663,7 +1676,7 @@ function postCard(p){
       <button class="act" onclick="openComments('${p.id}')">💬 ${p.comments||0}</button>
       <button class="act" onclick="sharePost('${p.id}','${esc(c.username)}',${mine?1:0})">↗</button>
       ${mine?'':`<button class="act" onclick="openReport('post','${p.id}')" title="Report">⚑</button>`}
-      ${mine?`<span class="act tip">earned ${$$(Math.round(p.earned*(1-FEE)))}</span>`:
+      ${owner?`<span class="act tip">earned ${$$(Math.round(p.earned*(1-FEE)))}</span>`:partner?'':
         `<button class="act tip" onclick="tip('${p.by}','${p.id}')">💰 Tip £2</button>`}
     </div>
     <div class="card-body"><div class="cap"><b style="cursor:pointer" onclick="openProfile('${p.by}')">${esc(c.username)}</b>${esc(p.cap)}</div></div>
@@ -2350,12 +2363,12 @@ function paintPostStats(){
       return `<div style="background:var(--panel-2);border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin:0 0 8px">📣 <b>Your reach:</b> on average <b>${avg}%</b> of your followers saw each of your last ${recent.length} post${recent.length===1?'':'s'}. Every post goes to every follower's Following feed, newest first. No algorithm decides who sees it.</div>`; })()}
     <div class="chiprow" style="padding:0 0 4px;overflow-x:auto">${chips}</div>
     ${rows.length?rows.map(x=>`<div class="pcard-row"><div class="top"><div class="sc ${me().av}">${thumb(x)}</div>
-        <div class="ttl"><b>${esc(x.caption)||'(media post)'}</b><span>${new Date(x.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · ${x.subs_only?'💜 Subscribers only':x.is_paid?'🔒 Pay-per-view '+$$(x.price_cents||0)+(x.sub_included===false?' (not in subscription)':''):'Free'}</span></div>
+        <div class="ttl"><b>${esc(x.caption)||'(media post)'}</b><span>${new Date(x.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}${x.collab_user_id&&x.collab_status==='accepted'?' · 🤝 '+(x.owner_id===me().id?'with @'+esc((user(x.collab_user_id)||{}).username||'creator')+' (they get '+(100-x.my_pct)+'%)':'with @'+esc((user(x.owner_id)||{}).username||'creator')+' (you get '+x.my_pct+'%)'):x.collab_status==='pending'?' · ⏳ collab pending':''} · ${x.subs_only?'💜 Subscribers only':x.is_paid?'🔒 Pay-per-view '+$$(x.price_cents||0)+(x.sub_included===false?' (not in subscription)':''):'Free'}</span></div>
         <span class="earn">${$$(Number(x.earned_cents))}</span></div>
       ${me().followers>0?`<div style="font-size:12px;color:var(--muted);margin:2px 0 6px">👁 Seen by <b style="color:var(--text)">${Number(x.follower_views||0)}</b> of ${me().followers} followers (${Math.min(100,Math.round(Number(x.follower_views||0)/me().followers*100))}%)</div>`:''}
       <div class="pm"><div><b>${fmtN(x.views)}</b>Views</div><div><b>${fmtN(x.likes)}</b>Likes</div><div><b>${fmtN(x.comments)}</b>Comments</div><div><b>${fmtN(x.shares)}</b>Shares</div></div>
       ${x.is_paid&&!x.subs_only||Number(x.tips)?`<div style="font-size:12px;color:var(--muted);margin:4px 0">${x.is_paid&&!x.subs_only?'🔓 '+x.unlocks+' unlock'+(Number(x.unlocks)===1?'':'s')+' · ':''}💰 ${x.tips} tip${Number(x.tips)===1?'':'s'}</div>`:''}
-      <div><button class="abtn" onclick="openEditPost('${x.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${x.id}')">Delete</button></div></div>`).join('')
+      ${!x.owner_id||x.owner_id===me().id?`<div><button class="abtn" onclick="openEditPost('${x.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${x.id}')">Delete</button></div>`:`<div><button class="abtn danger" onclick="answerCollab('${x.id}',false)">Leave collab</button></div>`}</div>`).join('')
       :'<p style="color:var(--muted);font-size:13px;padding:8px 0">No posts yet — hit ＋ to publish your first one.</p>'}
     <p style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5">Views count each member once per post, once they have scrolled it into view. "Seen by" counts only people who follow you. Shares count link shares from the post. Money is what you kept after the 15% fee, with refunds taken off.</p></div>`;
 }
@@ -2379,11 +2392,13 @@ function renderStudio(){
     ${u.bonus>0?`<div class="bonus-card"><div class="lbl">🎁 Bonus from OverVibez</div><div class="amt">${$$(u.bonus)}</div>
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team — no fee taken. Kept separate from your sales earnings.</div>
       <button class="primary" onclick="requestBonusPayout()">Withdraw bonus ${$$(u.bonus)}</button></div>`:''}
+    <div id="collabBox"></div>
     <div id="subsBox"></div>
     <div id="postsBox"></div>
     <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(u.earnings)}</button>
     <button class="ghost" style="margin-top:10px" onclick="go('money')">💳 Money &amp; receipts</button>`;
   paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
+  paintCollabInbox();
   paintPostStats(); if(!postStats.data||Date.now()-postStats.at>30000) loadPostStats();
   paintSubscribers(); loadSubscribers();
 }
@@ -2506,6 +2521,38 @@ function setPostType(t){ postType=t;
   document.getElementById('ctSubs').classList.toggle('on',t==='subs');
   document.getElementById('postTypeHelp').textContent=POST_HELP[t];
   document.getElementById('priceField').classList.toggle('hidden',t!=='paid'); }
+/* collab posts: pick a creator, choose their share; the database splits every sale */
+let collab={id:null,pct:50}, collabT=null;
+function collabClear(){ collab={id:null,pct:50}; const q=document.getElementById('collabQ'); if(q){ q.value=''; q.classList.remove('hidden'); }
+  ['collabPicked','collabSplit'].forEach(i=>document.getElementById(i).classList.add('hidden')); document.getElementById('collabResults').innerHTML=''; document.getElementById('collabPct').value=50; }
+function collabSearch(){
+  clearTimeout(collabT); const q=document.getElementById('collabQ').value.trim(), box=document.getElementById('collabResults');
+  if(q.length<2){ box.innerHTML=''; return; }
+  collabT=setTimeout(async()=>{
+    const {data}=await sb.rpc('search_people',{p_q:q}); if(document.getElementById('collabQ').value.trim()!==q) return;
+    (data||[]).forEach(p=>{ if(!user(p.id)) store.users.push(mapUser(p)); });
+    const list=(data||[]).filter(p=>p.account_type==='creator'&&p.id!==store.session&&!store.blocks.has(p.id)).slice(0,5);
+    box.innerHTML=list.length?list.map(p=>`<div class="pcard" onclick="collabPick('${p.id}')"><div class="av ${user(p.id).av}">${avInner(user(p.id))}</div><div class="tx"><b>${esc(user(p.id).name)}</b><span>@${esc(p.username)}</span></div></div>`).join(''):'<p style="font-size:12.5px;color:var(--muted)">No creators found.</p>';
+  },250);
+}
+function collabPick(id){ const c=user(id); if(!c) return; collab.id=id;
+  document.getElementById('collabQ').classList.add('hidden'); document.getElementById('collabResults').innerHTML='';
+  const pk=document.getElementById('collabPicked'); pk.classList.remove('hidden'); pk.innerHTML=`<span>🤝 With <b>@${esc(c.username)}</b></span><button class="abtn" onclick="collabClear()">Change</button>`;
+  document.getElementById('collabSplit').classList.remove('hidden'); collabPctChange(); }
+function collabPctChange(){ const v=+document.getElementById('collabPct').value; collab.pct=v;
+  document.getElementById('collabPctLbl').textContent=v+'%';
+  document.getElementById('collabMath').textContent='On a £10 sale they get £'+(10*v/100).toFixed(2)+' and you get £'+(10*(100-v)/100).toFixed(2)+', before the 15% fee on each share.'; }
+async function answerCollab(id,accept){
+  if(!accept&&!confirm('Decline or leave this collab?\n\nIf it was already live, the post stays up and future sales go to the creator who posted it.')) return;
+  if(await rpc('respond_collab',{p_post:id,p_accept:accept})){ toast(accept?'Collab accepted — the post is live 🤝':'Done'); postStats.at=0; await settled(); }
+}
+function paintCollabInbox(){
+  const box=document.getElementById('collabBox'); if(!box) return; const u=me();
+  const inv=store.posts.filter(p=>p.collab===u.id&&p.collabStatus==='pending');
+  box.innerHTML=inv.length?`<div class="chart-card"><h4>🤝 Collab requests <span style="color:var(--muted);font-weight:400">· ${inv.length}</span></h4>${inv.map(p=>{ const c=user(p.by);
+    return `<div class="pcard-row"><div style="font-size:13.5px;line-height:1.5"><b>@${esc(c?c.username:'creator')}</b> wants to post with you and give you <b>${p.collabPct}%</b> of every sale and tip.<br><span style="color:var(--muted)">${esc(p.cap)||'(media post)'}</span></div>
+      <div style="margin-top:8px;display:flex;gap:8px"><button class="abtn" onclick="answerCollab('${p.id}',true)">Accept</button><button class="abtn danger" onclick="answerCollab('${p.id}',false)">Decline</button></div></div>`; }).join('')}</div>`:'';
+}
 async function publishPost(){
   const u=me(), cap=document.getElementById('postCap').value.trim(), f=document.getElementById('postMedia').files[0];
   if(!cap&&!f) return toast('Add a caption or a photo/video first');
@@ -2513,22 +2560,23 @@ async function publishPost(){
   const price=Math.round(parseFloat(document.getElementById('postPrice').value||'3')*100);
   if(postType==='paid'&&(isNaN(price)||price<99||price>49999)) return toast('Price must be between £0.99 and £499.99');
   if(postType==='subs'&&!u.subPrice) return toast('Set a subscription price first (Me → Edit profile) so people can subscribe');
+  const collab0=collab.id?(user(collab.id)||{}).username:null;
   const btn=document.getElementById('publishBtn'); btn.disabled=true;
   try{
     const id=crypto.randomUUID(), paid=postType!=='free', subsOnly=postType==='subs';
     const kind=f?(f.type.startsWith('video')?'video':'image'):'text';
     let media=null; if(f){ try{ media=kind==='image'?await prepPhoto(f):{blob:f,type:f.type,ext:(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'')}; }catch(e){ return toast(e.message); } }
     const path=f?`${u.id}/${id}/${Date.now()}.${media.ext}`:null;
-    const {error}=await sb.from('posts').insert({id,creator_id:u.id,caption:cap||null,media_type:kind,media_path:path,is_paid:paid,price_cents:paid&&!subsOnly?price:null,subs_only:subsOnly,sub_included:subsOnly||document.getElementById('postIncluded').checked});
-    if(error) return toast(error.message);
+    const {error}=await sb.from('posts').insert({id,creator_id:u.id,caption:cap||null,media_type:kind,media_path:path,is_paid:paid,price_cents:paid&&!subsOnly?price:null,subs_only:subsOnly,sub_included:subsOnly||document.getElementById('postIncluded').checked,...(collab.id?{collab_user_id:collab.id,collab_pct:collab.pct}:{})});
+    if(error) return toast(friendly(error.message));
     if(f){
       const up=await sb.storage.from(paid?'paid-media':'public-media').upload(path,media.blob,{contentType:media.type});
       if(up.error){ await sb.rpc('delete_post',{p_post:id}); return toast('Upload failed: '+up.error.message); }
     }
     await hydrate();
     document.getElementById('postCap').value=''; document.getElementById('postMedia').value='';
-    closeModal('createModal'); go('home');
-    toast(paid?`Paid drop published 🔒 ${$$(price)} — you keep ${$$(Math.round(price*(1-FEE)))} per unlock`:'Post published ✨');
+    collabClear(); closeModal('createModal'); go('home');
+    if(collab0) toast('Collab sent — it goes live when @'+collab0+' accepts'); else toast(paid?`Paid drop published 🔒 ${$$(price)} — you keep ${$$(Math.round(price*(1-FEE)))} per unlock`:'Post published ✨');
   } finally { btn.disabled=false; }
 }
 
@@ -2998,7 +3046,7 @@ async function submitReport(){
 function renderProfile(){
   const c=user(currentProfile); if(!c) return go('home');
   const u=me(), isMe=c.id===u.id, subbed=store.subs[u.id+c.id];
-  const theirPosts=store.posts.filter(p=>p.by===c.id);
+  const theirPosts=store.posts.filter(p=>p.by===c.id||(p.collab===c.id&&p.collabStatus==='accepted'));
   document.getElementById('page-profile').innerHTML=`
     <button class="back-btn" onclick="go('home')" style="padding:14px 18px 0">← Home</button>
     <div class="me-head">
