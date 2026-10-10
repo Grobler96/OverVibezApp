@@ -532,6 +532,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div class="section-title">Explore</div>
     <div style="padding:0 14px 6px"><div class="field" style="margin-bottom:8px"><input id="exploreQ" type="search" placeholder="Search creators…" autocomplete="off" oninput="exploreTyped()"></div></div>
     <div class="chiprow" id="exploreChips"></div>
+    <div id="featuredBox"></div>
     <div id="exploreBody"></div>
   </div>
 
@@ -662,6 +663,10 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
           <input id="collabPct" type="range" min="10" max="90" step="5" value="50" oninput="collabPctChange()" style="width:100%">
           <p id="collabMath" style="font-size:12px;color:var(--muted);line-height:1.5;margin:4px 0 0"></p>
           <p style="font-size:12px;color:var(--muted);line-height:1.5;margin:4px 0 0">Hidden from everyone until they accept. Each of you keeps 85% of your own share.</p></div></div>
+      <div class="field"><label>When</label>
+        <div class="toggle-row"><button id="pwNow" class="on" onclick="setPostWhen('now')">Now</button><button id="pwLater" onclick="setPostWhen('later')">Schedule 🕒</button><button id="pwDraft" onclick="setPostWhen('draft')">Draft 📝</button></div>
+        <input id="postAt" type="datetime-local" class="hidden" style="margin-top:8px">
+        <p id="postWhenHelp" style="font-size:12px;color:var(--muted);line-height:1.5;margin:6px 0 0"></p></div>
       <button class="primary" id="publishBtn" onclick="publishPost()">Publish</button>
     </div>
     <div id="createLiveSection" class="hidden">
@@ -1534,6 +1539,7 @@ const notifInfo=n=>{
     case 'sub_ended': return ['💔','Your subscription to <b>'+esc(d.creator||'a creator')+'</b> has ended'];
     case 'collab_invite': return ['🤝','<b>@'+esc(d.who||'a creator')+'</b> invited you to collab on a post — you would get '+(d.pct||50)+'% of every sale. Open Studio to answer'];
     case 'collab_response': return ['🤝',d.left?'<b>@'+esc(d.who||'your collaborator')+'</b> left your collab post — it stays up and sales now come to you alone':'<b>@'+esc(d.who||'they')+'</b> '+(d.accepted?'accepted':'declined')+' your collab'+(d.accepted?' — the post is live':'')];
+    case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
     case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Me'];
@@ -2183,6 +2189,7 @@ function tileHtml(p,i){
 }
 async function renderExplore(reset){
   if(reset){ document.getElementById('exploreQ').value=''; }
+  loadFeatured();
   const chips=[['trending','🔥 Trending'],['new','🆕 New'],['live','🔴 Live']].concat(CATS.map(c=>[c[0],(c[1]?c[1]+' ':'')+c[2]]));
   document.getElementById('exploreChips').innerHTML=chips.map(([k,l])=>`<button class="chip ${exploreTab===k?'on':''}" onclick="setExploreTab('${k}')">${l}</button>`).join('');
   const body=document.getElementById('exploreBody'), q=document.getElementById('exploreQ').value.trim();
@@ -2364,6 +2371,7 @@ async function loadPostStats(){
 }
 function setPostSort(k){ postStats.sort=k; paintPostStats(); }
 function paintPostStats(){
+  paintInsights();
   const box=document.getElementById('postsBox'); if(!box) return;
   const d=postStats.data;
   if(!d){ box.innerHTML='<div class="chart-card"><h4>Your posts</h4><p style="color:var(--muted);font-size:13px">Loading…</p></div>'; return; }
@@ -2414,13 +2422,18 @@ function renderStudio(){
     ${u.bonus>0?`<div class="bonus-card"><div class="lbl">🎁 Bonus from OverVibez</div><div class="amt">${$$(u.bonus)}</div>
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team — no fee taken. Kept separate from your sales earnings.</div>
       <button class="primary" onclick="requestBonusPayout()">Withdraw bonus ${$$(u.bonus)}</button></div>`:''}
+    <div id="levelBox"></div>
+    <div id="schedBox"></div>
     <div id="collabBox"></div>
     <div id="cmtBox"></div>
     <div id="subsBox"></div>
+    <div id="insightsBox"></div>
+    <div id="timesBox"></div>
     <div id="postsBox"></div>
     <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(u.earnings)}</button>
     <button class="ghost" style="margin-top:10px" onclick="go('money')">💳 Money &amp; receipts</button>`;
   paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
+  paintLevel(); loadLevel(); paintSched(); if(!schedSet.data||Date.now()-schedSet.at>30000) loadSched(); paintTimes(); if(!timesSet.data) loadTimes();
   paintCollabInbox(); paintCommentSettings(); if(!cmtSet.data) loadCommentSettings();
   paintPostStats(); if(!postStats.data||Date.now()-postStats.at>30000) loadPostStats();
   paintSubscribers(); loadSubscribers();
@@ -2544,6 +2557,93 @@ function setPostType(t){ postType=t;
   document.getElementById('ctSubs').classList.toggle('on',t==='subs');
   document.getElementById('postTypeHelp').textContent=POST_HELP[t];
   document.getElementById('priceField').classList.toggle('hidden',t!=='paid'); }
+/* ═══ CREATOR TOOLS: scheduled posts, best time, insights, levels ═══ */
+const schedSet={data:null,at:0}, timesSet={data:null}, levelSet={};
+async function loadSched(){ const {data}=await sb.from('scheduled_posts').select('id,caption,media_type,media_path,is_paid,publish_at,failure,collab_user_id,created_at').order('created_at',{ascending:false}); schedSet.data=data||[]; schedSet.at=Date.now(); paintSched(); }
+function paintSched(){
+  const box=document.getElementById('schedBox'); if(!box) return; const d=schedSet.data;
+  if(!d||!d.length){ box.innerHTML=''; return; }
+  const fmt=t=>new Date(t).toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  box.innerHTML=`<div class="chart-card"><h4>🕒 Scheduled &amp; drafts <span style="color:var(--muted);font-weight:400">· ${d.length}</span></h4>${d.map(x=>`<div class="pcard-row"><div style="font-size:13.5px;line-height:1.5"><b>${esc((x.caption||'').slice(0,80))||'(media post)'}</b><br>
+      <span style="color:var(--muted);font-size:12.5px">${x.publish_at?'🕒 Goes live '+fmt(x.publish_at):'📝 Draft'}${x.is_paid?' · 🔒 paid':''}${x.collab_user_id?' · 🤝 collab':''}</span>
+      ${x.failure?`<br><span style="color:var(--live);font-size:12.5px">Could not publish: ${esc(x.failure)}</span>`:''}</div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="abtn" onclick="schedPublish('${x.id}')">Publish now</button><button class="abtn" onclick="schedTime('${x.id}')">${x.publish_at?'Change time':'Schedule'}</button><button class="abtn danger" onclick="schedDelete('${x.id}')">Delete</button></div></div>`).join('')}</div>`;
+}
+async function schedPublish(id){ if(await rpc('publish_scheduled_now',{p_id:id})){ toast('Published ✨'); schedSet.at=0; postStats.at=0; await settled(); } else { schedSet.at=0; loadSched(); } }
+async function schedTime(id){
+  const v=prompt('When should it go live? Use your local time, like 2026-12-24 18:30'); if(v===null) return;
+  const t=new Date(v.trim().replace(' ','T')); if(isNaN(t)||t<Date.now()+120e3||t>Date.now()+89*864e5) return toast('Enter a time between 2 minutes and 90 days from now');
+  const {error}=await sb.from('scheduled_posts').update({publish_at:t.toISOString()}).eq('id',id); if(error) return toast(friendly(error.message));
+  toast('Scheduled'); loadSched();
+}
+async function schedDelete(id){
+  const x=(schedSet.data||[]).find(q=>q.id===id); if(!x||!confirm('Delete this '+(x.publish_at?'scheduled post':'draft')+'?')) return;
+  const {error}=await sb.from('scheduled_posts').delete().eq('id',id); if(error) return toast(friendly(error.message));
+  if(x.media_path){ try{ await sb.storage.from(x.is_paid?'paid-media':'public-media').remove([x.media_path]); }catch(e){} }
+  loadSched();
+}
+async function loadTimes(){ const {data}=await sb.rpc('creator_best_times'); if(data){ timesSet.data=data; paintTimes(); } }
+const hourLbl=h=>{ const x=h%12===0?12:h%12; return x+(h<12?'am':'pm'); };
+function paintTimes(){
+  const box=document.getElementById('timesBox'); if(!box) return; const d=timesSet.data; if(!d){ box.innerHTML=''; return; }
+  if(d.total<20){ box.innerHTML=`<div class="chart-card"><h4>⏰ Best time to post</h4><p style="color:var(--muted);font-size:13px;line-height:1.5">We need a few more views to find when your audience is around (${d.total} so far, we need 20). Keep posting and this fills in by itself.</p></div>`; return; }
+  const top=d.hours.map((c,h)=>({h,c})).sort((a,b)=>b.c-a.c).slice(0,3).filter(x=>x.c>0), max=Math.max(1,...d.hours);
+  const DN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'], bd=d.days.indexOf(Math.max(...d.days));
+  box.innerHTML=`<div class="chart-card"><h4>⏰ Best time to post</h4>
+    <p style="font-size:13.5px;line-height:1.55;margin:0 0 8px">Your audience is most active around <b>${top.map(x=>hourLbl(x.h)+'–'+hourLbl((x.h+1)%24)).join(', ')}</b>, and <b>${DN[bd]}</b> is your busiest day. Times are UK time, from ${d.total} views in the last 90 days.</p>
+    <svg viewBox="0 0 240 56" width="100%" role="img" aria-label="Views by hour of day">${d.hours.map((c,h)=>`<rect x="${h*10}" y="${(44-c/max*40).toFixed(1)}" width="8" height="${(c/max*40).toFixed(1)}" rx="2" fill="var(--accent-2)" opacity="${top.some(t=>t.h===h)?1:.45}"><title>${hourLbl(h)}: ${c} views</title></rect>`).join('')}
+      <text x="0" y="55" font-size="7" fill="var(--muted)">12am</text><text x="120" y="55" font-size="7" fill="var(--muted)" text-anchor="middle">12pm</text><text x="240" y="55" font-size="7" fill="var(--muted)" text-anchor="end">11pm</text></svg></div>`;
+}
+/* "what worked": plain sums and averages over your own posts, no guesswork */
+function paintInsights(){
+  const box=document.getElementById('insightsBox'); if(!box) return; const d=postStats.data;
+  if(!d||d.length<3){ box.innerHTML=''; return; }
+  const avg=(a,k)=>a.length?a.reduce((s,x)=>s+Number(x[k]||0),0)/a.length:0, out=[];
+  const kinds={text:d.filter(x=>x.media_type==='text'),image:d.filter(x=>x.media_type==='image'),video:d.filter(x=>x.media_type==='video')}, KN={text:'text posts',image:'photo posts',video:'video posts'};
+  const ranked=Object.keys(kinds).filter(k=>kinds[k].length>=2).sort((a,b)=>avg(kinds[b],'likes')-avg(kinds[a],'likes'));
+  if(ranked.length>=2&&avg(kinds[ranked[ranked.length-1]],'likes')>0&&avg(kinds[ranked[0]],'likes')/avg(kinds[ranked[ranked.length-1]],'likes')>=1.3)
+    out.push(`📸 Your <b>${KN[ranked[0]]}</b> get about <b>${(avg(kinds[ranked[0]],'likes')/avg(kinds[ranked[ranked.length-1]],'likes')).toFixed(1)}×</b> more likes than your ${KN[ranked[ranked.length-1]]}.`);
+  const paid=d.filter(x=>x.is_paid&&!x.subs_only), free=d.filter(x=>!x.is_paid);
+  if(paid.length>=2){ const v=paid.reduce((s,x)=>s+Number(x.views),0), u=paid.reduce((s,x)=>s+Number(x.unlocks),0);
+    out.push(`💰 Your pay-per-view posts earned <b>${$$(paid.reduce((s,x)=>s+Number(x.earned_cents),0))}</b> from ${paid.length} posts${v>=10?` — about <b>${Math.round(u/v*100)}%</b> of people who saw them unlocked one`:''}.`); }
+  if(paid.length>=2&&free.length>=2&&avg(free,'views')>avg(paid,'views')*1.3) out.push(`👀 Free posts get <b>${(avg(free,'views')/Math.max(1,avg(paid,'views'))).toFixed(1)}×</b> more views than paid ones — a good way to bring people in before they unlock.`);
+  const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], byDay={};
+  d.forEach(x=>{ const k=new Date(x.created_at).getDay(); (byDay[k]=byDay[k]||[]).push(x); });
+  const days=Object.keys(byDay).filter(k=>byDay[k].length>=2).sort((a,b)=>avg(byDay[b],'views')+avg(byDay[b],'likes')-avg(byDay[a],'views')-avg(byDay[a],'likes'));
+  if(days.length>=2) out.push(`📅 Posts on <b>${DN[days[0]]}s</b> do best for you (about ${Math.round(avg(byDay[days[0]],'views'))} views each).`);
+  const best=d.slice().sort((a,b)=>Number(b.views)+Number(b.likes)*3+Number(b.earned_cents)/50-(Number(a.views)+Number(a.likes)*3+Number(a.earned_cents)/50))[0];
+  if(best&&(Number(best.views)>0||Number(best.likes)>0)) out.push(`🏆 Your best post: “${esc(best.caption||'(media post)').slice(0,60)}” — ${fmtN(best.views)} views, ${fmtN(best.likes)} likes${Number(best.earned_cents)?', '+$$(Number(best.earned_cents))+' earned':''}.`);
+  box.innerHTML=out.length?`<div class="chart-card"><h4>💡 What worked</h4>${out.map(t=>`<p style="font-size:13.5px;line-height:1.55;margin:0 0 8px">${t}</p>`).join('')}<p style="font-size:11.5px;color:var(--muted);margin:0">Worked out from your own posts. Small numbers can mislead, so treat these as hints.</p></div>`:'';
+}
+/* levels and badges */
+async function loadLevel(){ const id=store.session; if(!id) return; const {data}=await sb.rpc('creator_badges',{p_creator:id}); if(data){ levelSet[id]=data; paintLevel(); } }
+function badgeChips(b){ return (b.badges||[]).map(x=>`<span title="${esc(x.desc)}" style="display:inline-flex;gap:4px;align-items:center;background:var(--panel-2);border-radius:999px;padding:4px 10px;font-size:12px;margin:0 6px 6px 0">${x.emoji} ${esc(x.label)}</span>`).join(''); }
+function paintLevel(){
+  const box=document.getElementById('levelBox'); if(!box) return; const b=levelSet[store.session]; if(!b){ box.innerHTML=''; return; }
+  const next=b.next_at, pct=next?Math.min(100,Math.round(b.points/next*100)):100;
+  box.innerHTML=`<div class="chart-card"><h4>${b.emoji} Level: ${esc(b.level)} <span style="color:var(--muted);font-weight:400">· ${fmtN(b.points)} points</span></h4>
+    <div style="height:6px;border-radius:3px;background:var(--panel-2);margin:6px 0 4px"><div style="height:6px;border-radius:3px;background:var(--accent-2);width:${pct}%"></div></div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">${next?fmtN(next-b.points)+' points to the next level':'Top level reached 👑'} · points come from followers, posts, sales, likes and live streams</div>
+    <div>${badgeChips(b)||'<span style="font-size:12.5px;color:var(--muted)">Badges appear as you hit milestones.</span>'}</div></div>`;
+}
+/* Creator of the Week (picked by the team) */
+const featSet={data:undefined,at:0};
+async function loadFeatured(){ if(featSet.data!==undefined&&Date.now()-featSet.at<300e3) return paintFeatured(); const {data}=await sb.rpc('featured_creator'); featSet.data=data||null; featSet.at=Date.now(); paintFeatured(); }
+function paintFeatured(){
+  const box=document.getElementById('featuredBox'); if(!box) return; const f=featSet.data;
+  if(!f||document.getElementById('exploreQ').value.trim().length>=2){ box.innerHTML=''; return; }
+  if(!user(f.id)) store.users.push(mapUser({id:f.id,username:f.username,display_name:f.display_name,avatar_url:f.avatar_url,account_type:'creator',follower_count:f.follower_count}));
+  const c=user(f.id);
+  box.innerHTML=`<div class="pcard" style="margin:0 14px 10px;border:1px solid var(--accent-2);border-radius:16px;background:var(--panel)" onclick="openProfile('${f.id}')"><div class="av ${c.av}">${avInner(c)}</div>
+    <div class="tx"><span style="font-size:11px;letter-spacing:.06em;color:var(--accent-2);font-weight:700">⭐ CREATOR OF THE WEEK</span><b>${esc(c.name)}</b><span>@${esc(c.username)} · ${fmtN(c.followers)} followers</span>${f.note?`<span>“${esc(f.note)}”</span>`:''}</div></div>`;
+}
+/* admin: pick the Creator of the Week */
+async function admFeature(id){
+  const note=prompt('A short line to show under their name (optional):'); if(note===null) return;
+  if(!confirm('Feature this creator as Creator of the Week? It replaces the current one and they get a notification.')) return;
+  const {error}=await admCall('admin_feature_creator',{p_creator:id,p_note:note.trim()}); if(!error){ featSet.at=0; toast('Featured ⭐'); }
+}
+
 /* collab posts: pick a creator, choose their share; the database splits every sale */
 let collab={id:null,pct:50}, collabT=null;
 function collabClear(){ collab={id:null,pct:50}; const q=document.getElementById('collabQ'); if(q){ q.value=''; q.classList.remove('hidden'); }
@@ -2595,6 +2695,14 @@ function paintCollabInbox(){
     return `<div class="pcard-row"><div style="font-size:13.5px;line-height:1.5"><b>@${esc(c?c.username:'creator')}</b> wants to post with you and give you <b>${p.collabPct}%</b> of every sale and tip.<br><span style="color:var(--muted)">${esc(p.cap)||'(media post)'}</span></div>
       <div style="margin-top:8px;display:flex;gap:8px"><button class="abtn" onclick="answerCollab('${p.id}',true)">Accept</button><button class="abtn danger" onclick="answerCollab('${p.id}',false)">Decline</button></div></div>`; }).join('')}</div>`:'';
 }
+/* scheduling: publish now, at a chosen time, or keep as a draft */
+let postWhen='now';
+function setPostWhen(w){ postWhen=w;
+  ['Now','Later','Draft'].forEach(k=>document.getElementById('pw'+k).classList.toggle('on',(k==='Now'&&w==='now')||(k==='Later'&&w==='later')||(k==='Draft'&&w==='draft')));
+  const at=document.getElementById('postAt'); at.classList.toggle('hidden',w!=='later');
+  if(w==='later'&&!at.value){ const d=new Date(Date.now()+3600e3); d.setMinutes(0,0,0); d.setHours(d.getHours()+1); at.value=new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16); }
+  document.getElementById('postWhenHelp').textContent={now:'',later:'It publishes by itself at that time (your local time).',draft:'Only you can see a draft. Publish it from Studio whenever you are ready.'}[w];
+  document.getElementById('publishBtn').textContent={now:'Publish',later:'Schedule',draft:'Save draft'}[w]; }
 async function publishPost(){
   const u=me(), cap=document.getElementById('postCap').value.trim(), f=document.getElementById('postMedia').files[0];
   if(!cap&&!f) return toast('Add a caption or a photo/video first');
@@ -2603,20 +2711,27 @@ async function publishPost(){
   if(postType==='paid'&&(isNaN(price)||price<99||price>49999)) return toast('Price must be between £0.99 and £499.99');
   if(postType==='subs'&&!u.subPrice) return toast('Set a subscription price first (Me → Edit profile) so people can subscribe');
   const collab0=collab.id?(user(collab.id)||{}).username:null;
+  let when=null;
+  if(postWhen==='later'){ when=new Date(document.getElementById('postAt').value);
+    if(isNaN(when)||when<Date.now()+120e3) return toast('Pick a time at least a couple of minutes from now');
+    if(when>Date.now()+89*864e5) return toast('You can schedule up to 90 days ahead'); }
   const btn=document.getElementById('publishBtn'); btn.disabled=true;
   try{
     const id=crypto.randomUUID(), paid=postType!=='free', subsOnly=postType==='subs';
     const kind=f?(f.type.startsWith('video')?'video':'image'):'text';
     let media=null; if(f){ try{ media=kind==='image'?await prepPhoto(f):{blob:f,type:f.type,ext:(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'')}; }catch(e){ return toast(e.message); } }
     const path=f?`${u.id}/${id}/${Date.now()}.${media.ext}`:null;
-    const {error}=await sb.from('posts').insert({id,creator_id:u.id,caption:cap||null,media_type:kind,media_path:path,is_paid:paid,price_cents:paid&&!subsOnly?price:null,subs_only:subsOnly,sub_included:subsOnly||document.getElementById('postIncluded').checked,...(collab.id?{collab_user_id:collab.id,collab_pct:collab.pct}:{})});
+    const later=postWhen!=='now';
+    const {error}=await sb.from(later?'scheduled_posts':'posts').insert({id,creator_id:u.id,caption:cap||null,media_type:kind,media_path:path,is_paid:paid,price_cents:paid&&!subsOnly?price:null,subs_only:subsOnly,sub_included:subsOnly||document.getElementById('postIncluded').checked,...(collab.id?{collab_user_id:collab.id,collab_pct:collab.pct}:{}),...(postWhen==='later'?{publish_at:when.toISOString()}:{})});
     if(error) return toast(friendly(error.message));
     if(f){
       const up=await sb.storage.from(paid?'paid-media':'public-media').upload(path,media.blob,{contentType:media.type});
-      if(up.error){ await sb.rpc('delete_post',{p_post:id}); return toast('Upload failed: '+up.error.message); }
+      if(up.error){ if(later) await sb.from('scheduled_posts').delete().eq('id',id); else await sb.rpc('delete_post',{p_post:id}); return toast('Upload failed: '+up.error.message); }
     }
-    await hydrate();
     document.getElementById('postCap').value=''; document.getElementById('postMedia').value='';
+    if(later){ collabClear(); closeModal('createModal'); setPostWhen('now'); schedSet.at=0; go('studio');
+      return toast(postWhen==='later'?'Scheduled for '+when.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🕒':'Saved to your drafts 📝'); }
+    await hydrate();
     collabClear(); closeModal('createModal'); go('home');
     if(collab0) toast('Collab sent — it goes live when @'+collab0+' accepts'); else toast(paid?`Paid drop published 🔒 ${$$(price)} — you keep ${$$(Math.round(price*(1-FEE)))} per unlock`:'Post published ✨');
   } finally { btn.disabled=false; }
@@ -3085,8 +3200,12 @@ async function submitReport(){
   btn.disabled=false; closeModal('reportModal');
   toast(error?error.message:'Report submitted — thank you');
 }
+function profBadges(b){ return `<div style="font-size:13px;margin-bottom:6px">${b.emoji} <b>${esc(b.level)}</b></div>${badgeChips(b)}`; }
+async function loadProfBadges(id){ if(levelSet[id]&&Date.now()-(levelSet[id].at||0)<120e3) return; const {data}=await sb.rpc('creator_badges',{p_creator:id}); if(!data) return; data.at=Date.now(); levelSet[id]=data;
+  const el=document.getElementById('profBadges'); if(el&&currentProfile===id) el.innerHTML=profBadges(data); }
 function renderProfile(){
   const c=user(currentProfile); if(!c) return go('home');
+  if(c.role==='creator') loadProfBadges(c.id);
   const u=me(), isMe=c.id===u.id, subbed=store.subs[u.id+c.id];
   const theirPosts=store.posts.filter(p=>p.by===c.id||(p.collab===c.id&&p.collabStatus==='accepted'));
   document.getElementById('page-profile').innerHTML=`
@@ -3096,6 +3215,7 @@ function renderProfile(){
       <div class="av ${c.av}">${avInner(c)}</div>
       <h2>${esc(c.name)} ${c.verified?'<span class="verified">✔</span>':''} ${c.role==='creator'?'<span class="role-badge">✦ CREATOR</span>':'<span class="role-badge f">♥ FOLLOWER</span>'}</h2>
       <div class="u">@${esc(c.username)}${c.bio?' · '+esc(c.bio):''}</div>
+      ${c.role==='creator'?`<div id="profBadges" style="margin:8px 0 2px">${levelSet[c.id]?profBadges(levelSet[c.id]):''}</div>`:''}
       <div class="me-stats">
         <div><b>${fmtN(c.followers)}</b><span>Followers</span></div>
         <div><b>${theirPosts.length}</b><span>Drops</span></div>
@@ -3296,7 +3416,7 @@ async function admOpenUser(id){
      <div>${d.is_banned?`<button class="abtn ok" onclick="admBan('${d.id}',false)">Unban</button>`:`<button class="abtn danger" onclick="admBan('${d.id}',true)">Ban user</button>`}
        ${adm?`<button class="abtn" onclick="admFlag('${d.id}',{p_age_verified:${!d.age_verified}})">${d.age_verified?'Remove 18+ verification':'Mark 18+ verified'}</button>
        <button class="abtn" onclick="admFlag('${d.id}',{p_verified:${!d.is_verified}})">${d.is_verified?'Remove badge':'Give verified badge'}</button>
-       ${d.account_type==='creator'?`<button class="abtn" onclick="admBonus('${d.id}')">Pay creator a bonus</button>`:''}
+       ${d.account_type==='creator'?`<button class="abtn" onclick="admBonus('${d.id}')">Pay creator a bonus</button><button class="abtn" onclick="admFeature('${d.id}')">⭐ Creator of the Week</button>`:''}
        <button class="abtn" onclick="admTransactions('${d.id}')">Transactions &amp; refunds</button>
        <button class="abtn" onclick="admRole('${d.id}')">Set staff role</button>`:''}</div></div>
    <div class="section-title" style="padding:6px 0">Moderation history</div>
@@ -3398,7 +3518,13 @@ async function admStats(){
     ['Gross sales',admMoney(s.gross_cents)],['Platform fees (15%)',admMoney(s.platform_fees_cents)],['Raffle revenue',admMoney(s.raffle_revenue_cents)],
     ['Owed to creators',admMoney(s.creator_earnings_owed_cents)],['User wallet balances',admMoney(s.wallet_liability_cents)],['Pending payouts',admMoney(s.pending_payouts_cents)+' ('+s.pending_payouts+')'],['Bonuses paid (your cost)',admMoney(s.bonuses_paid_cents)],['Bonuses not yet withdrawn',admMoney(s.bonus_owed_cents)]];
   admBody().innerHTML=`<div class="admin-grid">${items.map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+   <div id="cotwBox"></div>
    <p class="admin-pad" style="font-size:12px;color:var(--muted);line-height:1.5">Wallet balances and creator earnings are money you hold on behalf of users, so they are liabilities, not revenue. Bonuses are a cost to you: they are paid out of your own funds when creators withdraw.</p>`;
+  admCotw();
+}
+async function admCotw(){
+  const {data}=await admCall('admin_cotw_candidates'); const box=document.getElementById('cotwBox'); if(!box||!data) return;
+  box.innerHTML=`<div class="chart-card" style="margin:10px 14px"><h4>⭐ Creator of the Week — most new followers this week</h4>${data.length?data.map(c=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;font-size:13.5px"><span>@${esc(c.username)} · +${c.new_followers} followers · ${c.posts_7d} posts</span><button class="abtn" onclick="admFeature('${c.id}')">Feature</button></div>`).join(''):'<p style="font-size:13px;color:var(--muted)">No new followers this week yet.</p>'}</div>`;
 }
 async function admPayouts(){
   const {data,error}=await admCall('admin_list_payouts',{p_status:'pending'}); if(error) return;

@@ -180,3 +180,9 @@ Two creators can publish a post together. The creator who posts picks a collabor
 
 ### 035 — comment protection
 Creators choose who can comment on their posts (everyone / followers & subscribers / subscribers only / off) and keep a private list of blocked words and phrases (whole-word, case-insensitive; also applied to live chat). Enforced by database triggers on `comments` and `live_comments`, so the app cannot be bypassed. Tables/functions: `creator_comment_settings` (no direct access), `get_comment_settings`, `set_comment_settings`, `post_comment_rules`, `creator_delete_comment`. Blocking a person already stops them commenting (013). The watermark on paid media (viewer's username) is client-side only — a deterrent, not DRM.
+
+### 036 — creator tools
+* **Scheduled posts and drafts** live in a private table (`scheduled_posts`, creator-only). A job (`publish-scheduled-posts`, every minute) publishes due ones by inserting into `posts` exactly like a normal publish, so all existing rules apply. If publishing fails (e.g. the collaborator was blocked) it becomes a draft with the reason shown. Up to 50 per creator, up to 90 days ahead. Functions: `publish_due_posts`, `publish_scheduled_now`.
+* **Best time to post** (`creator_best_times`): the creator's own views by UK hour/weekday over 90 days. "What worked" insights are worked out in the app from `creator_post_stats`.
+* **Levels and badges** (`creator_badges`): computed live from real activity; nothing to maintain.
+* **Creator of the Week**: admin picks (`admin_feature_creator`, candidates from `admin_cotw_candidates`); shown on Explore for 7 days (`featured_creator`).
