@@ -169,3 +169,8 @@ Viewers can send animated "vibes" (gifts) to a creator during a live stream. `vi
 - **Switch kit** (Me → Switch kit, creators): copyable link, setup checklist, link click counts, and downloadable "I'm on OverVibez" story and post images with a QR code (made in the browser).
 - **Bulk upload**: up to 30 photos/videos at once, each its own post (free, pay-per-view or subscribers-only). Photos (bulk and single posts) are re-saved in the browser, which strips hidden GPS and camera data.
 - `sw.js` now only keeps the app itself as its offline page (it used to remember whichever page was opened last).
+
+### 033 — reach and the moderation promise
+- `following_posts()` returns every post from creators you follow (and your own), newest first, so the Following feed never misses a post even when the general recent-posts list is full of other people's. The Following tab says "Every post from creators you follow, newest first. No algorithm decides."
+- `creator_post_stats()` now includes `follower_views`: Studio shows "Seen by X of Y followers" on each post and a reach summary (average % of followers who saw each of the last 10 posts). Views are counted once per member per post, once it has been scrolled into view.
+- Moderation promise (guidelines page + appeal screen): you are told what and why; no secret hiding; a person aims to reply to appeals within 48 hours. `admin_appeal_counts()` drives an "overdue" warning in the admin Appeals tab (oldest first, ⏰ on anything over 48h).
