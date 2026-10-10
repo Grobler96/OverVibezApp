@@ -159,3 +159,6 @@ Adds `profiles.intro_seen` (existing accounts are marked as seen), `mark_intro_s
 - **Live tickets:** subscribers pay half (rounded up) via `buy_live_ticket`.
 - **Studio:** a "Your subscribers" card (count, monthly value, who renews when); creators see a 💜 subscriber tag next to subscribers' comments. Subscribers are not shown publicly.
 - `tests/comments.test.js` fails if a block comment is left open (that once disabled "publish a post").
+
+### 031 — Sending Vibez
+Viewers can send animated "vibes" (gifts) to a creator during a live stream. `vibe_types` is the menu (✨ Spark £1, 💜 Love £2, 🔥 Fire £5, 🚀 Rocket £10, 👑 Crown £25, 🌌 Galaxy £50; edit the rows to change prices or add vibes). `send_vibe(stream, vibe, qty)` charges the wallet through `_settle` (creator keeps 85%, transaction type `vibe`), records the gift in `live_vibes` (realtime, so everyone in the room sees it) and only works while the stream is live and the sender could watch it. `live_vibe_summary` gives the room the vibe count and top three senders (names only) and gives the creator their earnings so far. The stream-ended summary and Studio analytics include vibes; admin "Gross sales" now also counts live tickets and vibes. Vibes are not refundable once sent (Terms and Refunds pages updated).

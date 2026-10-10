@@ -307,7 +307,26 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .live-bottom{position:absolute;left:0;right:0;bottom:0;display:flex;gap:8px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.6));z-index:6}
 .live-bottom input{flex:1;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:11px 16px;color:#fff;font-size:13.5px;outline:none}
 .live-bottom button{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);font-size:18px;flex:none}
-#floatLayer{position:absolute;right:22px;bottom:90px;width:60px;height:55%;pointer-events:none;z-index:5}
+#floatLayer{position:absolute;right:14px;bottom:80px;width:70px;height:60%;pointer-events:none;z-index:5;overflow:visible}
+.vfly{position:absolute;bottom:0;left:50%;line-height:1;will-change:transform,opacity;animation:vflyUp 3.4s cubic-bezier(.2,.7,.3,1) forwards;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+@keyframes vflyUp{0%{transform:translate(-50%,0) scale(.4);opacity:0}10%{opacity:1;transform:translate(-50%,-30px) scale(1.15)}40%{transform:translate(calc(-50% + var(--sw)),-30vh) scale(1)}100%{transform:translate(calc(-50% - var(--sw)),-56vh) scale(.9);opacity:0}}
+.vbanner{position:absolute;left:12px;right:12px;top:118px;z-index:7;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:18px;color:#fff;font-size:15px;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,61,138,.92),rgba(139,92,246,.92));box-shadow:0 10px 40px rgba(255,61,138,.45);animation:vbanner 3.6s ease forwards}
+.vbanner .e{font-size:38px;line-height:1}
+@keyframes vbanner{0%{transform:translateY(-30px) scale(.9);opacity:0}10%{transform:none;opacity:1}85%{transform:none;opacity:1}100%{transform:translateY(-20px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.vfly{animation:vfade 2s forwards;transform:translate(-50%,-40px)}.vbanner{animation:vfade 3s forwards}@keyframes vfade{0%{opacity:0}15%{opacity:1}85%{opacity:1}100%{opacity:0}}}
+.vibe-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:10px 0 4px}
+.vibe-btn{background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:10px 2px 8px;text-align:center;color:var(--text);min-width:0}
+.vibe-btn:active{transform:scale(.96)}
+.vibe-btn .em{font-size:26px;display:block;line-height:1.1}
+.vibe-btn b{display:block;font-size:10.5px;margin-top:3px;overflow:hidden;text-overflow:ellipsis}
+.vibe-btn span{font-size:11px;color:var(--money);font-weight:700}
+#vibeModal{z-index:135;background:transparent;backdrop-filter:none;pointer-events:none}
+#vibeModal .sheet{pointer-events:auto;padding:16px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -10px 40px rgba(0,0,0,.5)}
+#vibeModal .sheet h3{font-size:14px;margin-bottom:2px}
+#vibeModal .sheet p{margin-bottom:8px;font-size:12.5px}
+body.vibe-open #floatLayer{bottom:215px}
+#topupModal{z-index:136}
 .fl{position:absolute;bottom:0;left:50%;font-size:24px;animation:flup 2.6s ease-out forwards}
 @keyframes flup{0%{transform:translate(-50%,0) scale(.7);opacity:0}12%{opacity:1}100%{transform:translate(calc(-50% + 18px),-320px) scale(1.25);opacity:0}}
 .live-summary{margin:auto;width:min(420px,92%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;color:var(--text)}
@@ -641,20 +660,34 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 <div class="live-overlay" id="liveOverlay">
   <div class="live-stage" id="lvStage">
     <div id="liveVideoWrap"></div>
+    <div id="floatLayer"></div>
     <div class="live-top">
       <span class="live-pill red">● LIVE <b id="lvTime">00:00</b></span>
       <span class="live-pill">👁 <b id="lvViewers">0</b></span>
+      <span class="live-pill gold" id="lvVibes" title="Vibes">✨ <b id="lvVibesN">0</b></span>
       <button class="live-end" id="lvEndBtn" onclick="liveLeave()">Leave</button>
     </div>
     <div class="live-title-bar"><b id="lvTitle"></b><span id="lvSub"></span></div>
+    <div id="lvTop" class="live-title-bar" style="top:96px;font-size:12px;opacity:.95"></div>
     <div class="lchat" id="lvChat"></div>
     <div class="live-bottom">
       <input id="lvInput" placeholder="Say something…" maxlength="300" onkeydown="if(event.key==='Enter')liveSend()">
+      <button id="lvVibeBtn" onclick="openVibes()" title="Send a vibe" style="background:linear-gradient(135deg,#FF3D8A,#8B5CF6)">✨</button>
       <button id="lvTipBtn" onclick="liveTip()" title="Tip £2">💰</button>
       <button id="lvReportBtn" onclick="liveReport()" title="Report">⚑</button>
     </div>
   </div>
   <div id="lvSummary" class="live-summary hidden"></div>
+</div>
+
+<div class="overlay" id="vibeModal" onclick="if(event.target===this)closeModal('vibeModal')">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h3>Send a vibe ✨</h3><button onclick="closeModal('vibeModal')" style="color:var(--muted);font-size:20px;padding:0 4px" aria-label="Close">✕</button></div>
+    <p id="vibeSub">Your vibe pops up on the stream for everyone to see. The creator keeps 85%.</p>
+    <div class="pay-row" style="padding:8px 0"><span>Your wallet</span><span id="vibeWallet"></span></div>
+    <div class="vibe-grid" id="vibeGrid"></div>
+    <p style="font-size:11px;margin:6px 0 0">Vibes are digital gifts, delivered instantly, and cannot be refunded once sent.</p>
+  </div>
 </div>
 
 <div class="overlay" id="topupModal" onclick="if(event.target===this)closeModal('topupModal')">
@@ -1204,8 +1237,8 @@ function helpContact(){
 /* ═══════════ MONEY HISTORY + RECEIPTS ═══════════ */
 let moneyRows=[], moneyFilter='all', moneyDone=false, receiptText='';
 const EARN_TYPES=['subscription','post_unlock','tip','live_entry'];
-const TX_NAMES={refund:'Refund',subscription:'Subscription',post_unlock:'Post unlock',tip:'Tip',live_entry:'Live ticket',raffle_entry:'Raffle entries',payout:'Payout',wallet_topup:'Added funds',admin_credit:'Credit from OverVibez',admin_bonus:'Bonus from OverVibez'};
-const TX_ICONS={refund:'↩️',subscription:'💜',post_unlock:'🔓',tip:'💰',live_entry:'🎟️',raffle_entry:'🎲',payout:'🏦',wallet_topup:'◈',admin_credit:'🎁',admin_bonus:'🎁'};
+const TX_NAMES={refund:'Refund',subscription:'Subscription',post_unlock:'Post unlock',tip:'Tip',live_entry:'Live ticket',raffle_entry:'Raffle entries',payout:'Payout',wallet_topup:'Added funds',admin_credit:'Credit from OverVibez',admin_bonus:'Bonus from OverVibez',vibe:'Vibe'};
+const TX_ICONS={refund:'↩️',subscription:'💜',post_unlock:'🔓',tip:'💰',live_entry:'🎟️',raffle_entry:'🎲',payout:'🏦',wallet_topup:'◈',admin_credit:'🎁',admin_bonus:'🎁',vibe:'✨'};
 function txInfo(t){
   const me_=store.session, mine=t.payer_id===me_, other=user(mine?t.payee_id:t.payer_id), who=other?'@'+other.username:(mine?'OverVibez':'a member');
   const name=TX_NAMES[t.type]||t.type;
@@ -2159,7 +2192,7 @@ async function loadAnalytics(days){
   if(error) return; studioAn.data=data; studioAn.at=Date.now(); paintAnalytics();
 }
 const dayLabel=(d,o)=>new Date(d+'T12:00:00').toLocaleDateString('en-GB',o||{day:'numeric',month:'short'});
-const TYPE_LABEL={subscription:'Subscriptions',post_unlock:'Post unlocks',tip:'Tips',live_entry:'Live tickets'};
+const TYPE_LABEL={subscription:'Subscriptions',post_unlock:'Post unlocks',tip:'Tips',live_entry:'Live tickets',vibe:'Vibes'};
 function paintAnalytics(){
   const box=document.getElementById('anBox'); if(!box) return;
   const d=studioAn.data;
@@ -2389,7 +2422,8 @@ async function connectLive(streamId,role,meta){
   document.getElementById('lvTitle').textContent=meta.title;
   document.getElementById('lvSub').textContent=meta.price?$$(meta.price)+' entry':'Free entry';
   document.getElementById('lvEndBtn').textContent=role==='broadcaster'?'End':'Leave';
-  document.getElementById('lvTipBtn').classList.toggle('hidden',role==='broadcaster');
+  document.getElementById('lvTipBtn').classList.toggle('hidden',role==='broadcaster'); document.getElementById('lvVibeBtn').classList.toggle('hidden',role==='broadcaster');
+  document.getElementById('lvVibesN').textContent=role==='broadcaster'?'£0.00':'0'; document.getElementById('lvTop').innerHTML=''; document.getElementById('floatLayer').innerHTML='';
   document.getElementById('lvReportBtn').classList.toggle('hidden',role==='broadcaster');
   document.getElementById('lvChat').innerHTML=''; document.getElementById('lvSummary').classList.add('hidden'); document.getElementById('lvStage').classList.remove('hidden');
   document.getElementById('lvViewers').textContent='0'; document.getElementById('lvTime').textContent='00:00';
@@ -2422,8 +2456,11 @@ async function liveChatStart(streamId){
   liveSeen=new Set();
   const {data}=await sb.from('live_comments').select('id,user_id,body,created_at').eq('stream_id',streamId).order('created_at',{ascending:false}).limit(7);
   if(data&&data.length){ await ensureUsers(data.map(x=>x.user_id)); data.reverse().forEach(c=>liveChatAdd(c)); }
+  await loadVibeTypes(); liveVibeSync(); clearInterval(vibePollT); vibePollT=setInterval(liveVibeSync,10000);   // safety net if the live connection hiccups
   liveChannel=sb.channel('live-'+streamId).on('postgres_changes',{event:'INSERT',schema:'public',table:'live_comments',filter:'stream_id=eq.'+streamId},async p=>{
-    await ensureUsers([p.new.user_id]); liveChatAdd(p.new,p.new.body.startsWith('💰')); }).subscribe();
+    await ensureUsers([p.new.user_id]); liveChatAdd(p.new,p.new.body.startsWith('💰')); })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'live_vibes',filter:'stream_id=eq.'+streamId},async p=>{
+    await ensureUsers([p.new.sender_id]); vibeArrived(p.new); }).subscribe();
 }
 async function liveSend(){
   const inp=document.getElementById('lvInput'), body=inp.value.trim(); if(!body||!liveState) return;
@@ -2431,6 +2468,53 @@ async function liveSend(){
   const {data,error}=await sb.from('live_comments').insert({stream_id:liveState.id,user_id:store.session,body}).select('id,user_id,body').single();
   if(error){ inp.value=body; return toast(error.message); }
   liveChatAdd(data);
+}
+/* ═══ SENDING VIBEZ ═══ viewers send gifts during a stream; each one is charged to their wallet (85% to the creator) and everyone in the room sees it. */
+let vibeTypes=null, vibeSyncT=null, vibePollT=null;
+async function loadVibeTypes(){
+  if(vibeTypes) return vibeTypes;
+  const {data}=await sb.from('vibe_types').select('key,label,emoji,price_cents').eq('active',true).order('sort');
+  vibeTypes=data||[]; return vibeTypes;
+}
+async function openVibes(){
+  if(!liveState||liveState.role==='broadcaster') return;
+  const vt=await loadVibeTypes(), c=user(liveState.creator);
+  document.getElementById('vibeSub').textContent='Your vibe pops up on the stream for everyone to see. '+(c?c.username+' keeps':'The creator keeps')+' 85%.';
+  document.getElementById('vibeWallet').textContent=$$(me().wallet);
+  document.getElementById('vibeGrid').innerHTML=vt.map(v=>`<button class="vibe-btn" onclick="sendVibe('${v.key}')"><span class="em">${v.emoji}</span><b>${esc(v.label)}</b><span>${$$(v.price_cents)}</span></button>`).join('');
+  document.body.classList.add('vibe-open'); openModal('vibeModal');
+}
+async function sendVibe(key){
+  if(!liveState) return; const u=me(), v=(vibeTypes||[]).find(x=>x.key===key); if(!v) return;
+  if(u.wallet<v.price_cents){ closeModal('vibeModal'); toast('Your wallet is too low for this vibe — add funds first'); return openTopup&&openTopup(); }
+  if(v.price_cents>=1000&&!confirm('Send a '+v.label+' '+v.emoji+' for '+$$(v.price_cents)+'?')) return;
+  const {data,error}=await sb.rpc('send_vibe',{p_stream:liveState.id,p_vibe:key,p_qty:1});
+  if(error) return toast(friendly(error.message));
+  u.wallet=Math.max(0,u.wallet-v.price_cents); updateWallet(); document.getElementById('vibeWallet').textContent=$$(u.wallet);
+  vibeArrived({id:data.id,sender_id:store.session,vibe_key:key,qty:1,cents:data.cents});
+}
+function vibeFly(v,qty){
+  const layer=document.getElementById('floatLayer'); if(!layer) return;
+  const size=v.price_cents>=1000?64:v.price_cents>=500?52:v.price_cents>=200?42:34;
+  for(let i=0;i<Math.min(qty,6);i++) setTimeout(()=>{ if(!liveState) return; const el=document.createElement('span'); el.className='vfly'; el.textContent=v.emoji;
+    el.style.fontSize=size+'px'; el.style.setProperty('--sw',(Math.random()*34-17)+'px'); el.style.marginLeft=(Math.random()*30-15)+'px';
+    layer.appendChild(el); setTimeout(()=>el.remove(),3600); },i*180);
+}
+function vibeArrived(ev){
+  if(!liveState||liveSeen.has('v'+ev.id)) return; liveSeen.add('v'+ev.id);
+  const v=(vibeTypes||[]).find(x=>x.key===ev.vibe_key); if(!v) return; const a=user(ev.sender_id)||{username:'someone'};
+  vibeFly(v,ev.qty);
+  liveChatAdd({user_id:ev.sender_id,body:'sent '+v.emoji+' '+v.label+(ev.qty>1?' ×'+ev.qty:'')},true);
+  if(ev.cents>=1000){ const st=document.getElementById('lvStage'), b=document.createElement('div'); b.className='vbanner';
+    b.innerHTML=`<span class="e">${v.emoji}</span><span><b>@${esc(a.username)}</b> sent a ${esc(v.label)}${ev.qty>1?' ×'+ev.qty:''}!</span>`; st.appendChild(b); setTimeout(()=>b.remove(),3700); }
+  clearTimeout(vibeSyncT); vibeSyncT=setTimeout(liveVibeSync,1200);     // refresh the count, top vibers and (for the creator) earnings from the server
+}
+async function liveVibeSync(){
+  if(!liveState) return; const id=liveState.id;
+  const {data}=await sb.rpc('live_vibe_summary',{p_stream:id}); if(!data||!liveState||liveState.id!==id) return;
+  document.getElementById('lvVibesN').textContent=liveState.role==='broadcaster'&&data.earned_cents!=null?$$(Number(data.earned_cents)):Number(data.count||0);
+  const top=data.top||[]; await ensureUsers(top);
+  document.getElementById('lvTop').innerHTML=top.length?'🏆 '+top.map((u,i)=>['🥇','🥈','🥉'][i]+' @'+esc((user(u)||{username:'viewer'}).username)).join(' &nbsp; '):'';
 }
 async function liveTip(){
   if(!liveState) return;
@@ -2443,7 +2527,7 @@ function liveReport(){ if(liveState) openReport('stream',liveState.id); }
 
 /* leaving / ending */
 function liveCleanup(){
-  clearInterval(liveTimer); clearInterval(liveBeat); clearInterval(livePollT); liveTimer=liveBeat=livePollT=null;
+  clearInterval(liveTimer); clearInterval(liveBeat); clearInterval(livePollT); clearInterval(vibePollT); clearTimeout(vibeSyncT); liveTimer=liveBeat=livePollT=null;
   if(liveChannel){ sb.removeChannel(liveChannel); liveChannel=null; }
   if(liveRoom){ try{ liveRoom.disconnect(); }catch(e){} liveRoom=null; }
   document.getElementById('liveVideoWrap').innerHTML='';
@@ -2468,6 +2552,8 @@ async function liveLeave(){
       <div class="pay-row"><span>Peak viewers</span><span>${peak}</span></div>
       <div class="pay-row"><span>Tickets sold</span><span>${data?Number(data.tickets):0}</span></div>
       <div class="pay-row"><span>Ticket revenue (you keep 85%)</span><span style="color:var(--money);font-weight:700">${$$(Math.round(gross*(1-FEE)))}</span></div>
+      <div class="pay-row"><span>Vibes received</span><span>${data?Number(data.vibes):0}</span></div>
+      <div class="pay-row"><span>Vibe earnings (you keep 85%)</span><span style="color:var(--money);font-weight:700">${$$(Math.round((data?Number(data.vibe_gross_cents):0)*(1-FEE)))}</span></div>
       <p style="color:var(--muted);font-size:12px;margin:10px 0">Tips are added to your earnings separately.</p>
       <button class="primary" onclick="liveClose()">Done</button>`;
     if(error) toast(error.message);
@@ -3166,7 +3252,7 @@ async function admAudit(){
 
 /* ═══════════ UTIL ═══════════ */
 function openModal(id){document.getElementById(id).classList.add('open')}
-function closeModal(id){document.getElementById(id).classList.remove('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open'); if(id==='vibeModal') document.body.classList.remove('vibe-open')}
 function toggleTheme(){ const h=document.documentElement,d=h.dataset.theme==='dark';
   h.dataset.theme=d?'light':'dark';
   const b=document.getElementById('themeBtn'); if(b)b.textContent=d?'☀️':'🌙'; }
