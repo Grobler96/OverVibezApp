@@ -291,6 +291,7 @@ input,textarea,select{font-family:inherit;color:var(--text)}
   color:var(--text);padding:12px 20px;border-radius:999px;font-size:13.5px;box-shadow:var(--shadow);opacity:0;transition:all .3s;z-index:150;pointer-events:none;white-space:nowrap;max-width:92vw;overflow:hidden;text-overflow:ellipsis}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* ═══════════ LIVE STREAMING ═══════════ */
+.wm{position:absolute;inset:0;pointer-events:none;user-select:none;background-repeat:repeat;z-index:2}
 .scene-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
 .live-banner{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,#FF4757,#8B5CF6);border-radius:16px;padding:12px 14px;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(255,71,87,.3)}
 .live-overlay{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;z-index:120;background:#0A0712;display:none;flex-direction:column;color:#fff}
@@ -1644,6 +1645,12 @@ function renderStories(){
       <div class="ring"><div class="av ${c.av}">${avInner(c)}</div>${l?'<span class="live-tag">LIVE</span>':''}</div>
       <span class="name">${esc(c.username)}</span></div>`; }).join('');
 }
+/* Paid media is stamped with the viewer's own username. It cannot stop a screenshot, but anything that leaks says who it came from. */
+function wmStyle(name){
+  const n=String(name).replace(/[^a-z0-9_.]/gi,''), w=Math.max(150,n.length*10+50);
+  const svg=`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='100'><text x='${w/2}' y='54' transform='rotate(-24 ${w/2} 50)' text-anchor='middle' font-family='sans-serif' font-size='15' font-weight='700' fill='white' fill-opacity='.4' stroke='black' stroke-opacity='.28' stroke-width='.6'>@${n}</text></svg>`;
+  return `background-image:url('data:image/svg+xml,${encodeURIComponent(svg).replace(/'/g,'%27')}')`;
+}
 function canView(p){
   const u=me();
   return !p.paid || p.by===u.id || (p.collab===u.id&&p.collabStatus==='accepted') || store.unlocks[u.id+p.id] || (store.subs[u.id+p.by]&&(p.subsOnly||p.subIncluded));
@@ -1662,9 +1669,10 @@ function postCard(p){
       ${partner?`<div style="margin-top:8px;display:flex;gap:8px"><button class="abtn" onclick="answerCollab('${p.id}',true)">Accept</button><button class="abtn danger" onclick="answerCollab('${p.id}',false)">Decline</button></div>`:''}</div>`:''}
     <div class="media ${open?'':'locked'}">
       ${p.mediaUrl&&open?(p.mediaKind==='video'
-        ?`<video class="scene-media" src="${esc(p.mediaUrl)}" controls playsinline preload="metadata"></video>`
-        :`<img class="scene-media" src="${esc(p.mediaUrl)}" alt="">`)
+        ?`<video class="scene-media" src="${esc(p.mediaUrl)}" controls playsinline preload="metadata"${p.paid?' controlsList="nodownload noremoteplayback" disablePictureInPicture oncontextmenu="return false"':''}></video>`
+        :`<img class="scene-media" src="${esc(p.mediaUrl)}" alt=""${p.paid?' draggable="false" oncontextmenu="return false"':''}>`)
         :`<div class="scene ${c.av}">${p.scene}</div>`}
+      ${p.mediaUrl&&open&&p.paid&&!mine?`<div class="wm" style="${wmStyle(u.username)}"></div>`:''}
       ${open?'':`<div class="lockglass"><div class="lock-ic">🔒</div>
         ${p.subsOnly
           ?`<button class="unlock-btn" onclick="subscribe('${p.by}')">💜 Subscribers only · ${$$(c.subPrice)}/month</button><span class="lock-note">Subscribe to see this and every subscriber post</span>`
@@ -1761,13 +1769,20 @@ async function likePost(id){
 }
 
 /* ═══════════ COMMENTS ═══════════ */
-let commentPost=null;
+let commentPost=null, commentRules={allowed:true};
 function openComments(pid){
   commentPost=pid;
   document.getElementById('commentList').innerHTML='<p style="color:var(--muted);text-align:center;padding:20px;font-size:13px">Loading…</p>';
   document.getElementById('commentInput').value='';
   if(me()&&me().role==='creator') loadSubscribers();
+  commentRules={allowed:true}; paintCommentBox();
   openModal('commentsModal'); loadComments();
+  sb.rpc('post_comment_rules',{p_post:pid}).then(({data})=>{ if(pid===commentPost&&data){ commentRules=data; paintCommentBox(); } });
+}
+function paintCommentBox(){
+  const inp=document.getElementById('commentInput'), ok=commentRules.allowed!==false;
+  inp.disabled=!ok; inp.placeholder=ok?'Add a comment…':(commentRules.reason||'Comments are off');
+  inp.parentElement.style.opacity=ok?1:.55;
 }
 async function loadComments(){
   const pid=commentPost;
@@ -1778,12 +1793,13 @@ async function loadComments(){
   const p=store.posts.find(x=>x.id===pid); if(p&&data.length<200) p.comments=data.length;
   const el=document.getElementById('commentList'), myId=store.session;
   data.splice(0,data.length,...data.filter(c=>!store.blocks.has(c.user_id)));
+  const ownsPost=!!p&&(p.by===myId||(p.collab===myId&&p.collabStatus==='accepted'));
   el.innerHTML=data.length?data.map(c=>{ const a=user(c.user_id)||{username:'user',em:'🫧',av:'a1'};
     return `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:flex-start">
       <div class="av ${a.av}" style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;flex:none">${avInner(a)}</div>
       <div style="flex:1;min-width:0;font-size:13.5px;line-height:1.45;word-break:break-word"><b>${esc(a.username)}</b>${store.subscriberIds&&store.subscriberIds.has(c.user_id)?' <span title="Subscriber" style="font-size:11px">💜 subscriber</span>':''} <span style="color:var(--muted);font-size:11.5px">${ago(c.created_at)}</span><br>${esc(c.body)}</div>
       ${c.user_id===myId?`<button onclick="deleteComment('${c.id}')" title="Delete" style="color:var(--muted);font-size:15px;padding:2px 6px">✕</button>`
-      :`<button onclick="closeModal('commentsModal');openReport('comment','${c.id}')" title="Report" style="color:var(--muted);font-size:14px;padding:2px 6px">⚑</button>`}
+      :`${ownsPost?`<button onclick="creatorDeleteComment('${c.id}')" title="Delete this comment" style="color:var(--muted);font-size:15px;padding:2px 6px">✕</button><button onclick="closeModal('commentsModal');toggleBlock('${c.user_id}','block')" title="Block this person" style="color:var(--muted);font-size:14px;padding:2px 6px">🚫</button>`:''}<button onclick="closeModal('commentsModal');openReport('comment','${c.id}')" title="Report" style="color:var(--muted);font-size:14px;padding:2px 6px">⚑</button>`}
     </div>`; }).join('')
     :'<p style="color:var(--muted);text-align:center;padding:24px 10px;font-size:13.5px">No comments yet — be the first.</p>';
   rerender();
@@ -1793,7 +1809,13 @@ async function sendComment(){
   const inp=document.getElementById('commentInput'), body=inp.value.trim(); if(!body||!commentPost) return;
   inp.value='';
   const {error}=await sb.from('comments').insert({post_id:commentPost,user_id:store.session,body});
-  if(error){ inp.value=body; return toast(error.message); }
+  if(error){ inp.value=body; return toast(friendly(error.message)); }
+  loadComments();
+}
+async function creatorDeleteComment(id){
+  if(!confirm('Delete this comment from your post?')) return;
+  const {error}=await sb.rpc('creator_delete_comment',{p_comment:id});
+  if(error) return toast(friendly(error.message));
   loadComments();
 }
 async function deleteComment(id){
@@ -2393,12 +2415,13 @@ function renderStudio(){
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team — no fee taken. Kept separate from your sales earnings.</div>
       <button class="primary" onclick="requestBonusPayout()">Withdraw bonus ${$$(u.bonus)}</button></div>`:''}
     <div id="collabBox"></div>
+    <div id="cmtBox"></div>
     <div id="subsBox"></div>
     <div id="postsBox"></div>
     <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(u.earnings)}</button>
     <button class="ghost" style="margin-top:10px" onclick="go('money')">💳 Money &amp; receipts</button>`;
   paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
-  paintCollabInbox();
+  paintCollabInbox(); paintCommentSettings(); if(!cmtSet.data) loadCommentSettings();
   paintPostStats(); if(!postStats.data||Date.now()-postStats.at>30000) loadPostStats();
   paintSubscribers(); loadSubscribers();
 }
@@ -2545,6 +2568,25 @@ function collabPctChange(){ const v=+document.getElementById('collabPct').value;
 async function answerCollab(id,accept){
   if(!accept&&!confirm('Decline or leave this collab?\n\nIf it was already live, the post stays up and future sales go to the creator who posted it.')) return;
   if(await rpc('respond_collab',{p_post:id,p_accept:accept})){ toast(accept?'Collab accepted — the post is live 🤝':'Done'); postStats.at=0; await settled(); }
+}
+/* who may comment on my posts + my blocked words */
+const cmtSet={data:null};
+const CMT_MODES=[['everyone','Everyone'],['followers','Followers & subscribers'],['subscribers','Subscribers only'],['off','Off']];
+async function loadCommentSettings(){ const {data}=await sb.rpc('get_comment_settings'); if(data){ cmtSet.data=data; paintCommentSettings(); } }
+function paintCommentSettings(){
+  const box=document.getElementById('cmtBox'); if(!box) return; const d=cmtSet.data;
+  if(!d){ box.innerHTML=''; return; }
+  box.innerHTML=`<div class="chart-card"><h4>🛡️ Comment controls</h4>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Who can comment on your posts</div>
+    <div class="chiprow" style="padding:0 0 10px;flex-wrap:wrap">${CMT_MODES.map(([k,l])=>`<button class="chip ${d.mode===k?'on':''}" onclick="cmtSet.data.mode='${k}';paintCommentSettings()">${l}</button>`).join('')}</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">Blocked words and phrases — one per line. Comments and live chat containing them are refused. Only you can see this list.</div>
+    <textarea id="cmtWords" rows="4" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13.5px;outline:none;resize:vertical">${esc((d.words||[]).join('\n'))}</textarea>
+    <button class="primary" style="margin-top:10px" onclick="saveCommentSettings()">Save</button>
+    <p style="font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:8px">You can also delete any comment on your posts, and blocking someone stops them commenting.</p></div>`;
+}
+async function saveCommentSettings(){
+  const words=document.getElementById('cmtWords').value.split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
+  if(await rpc('set_comment_settings',{p_mode:cmtSet.data.mode,p_words:words})){ cmtSet.data.words=words.map(w=>w.toLowerCase()); toast('Comment controls saved'); paintCommentSettings(); }
 }
 function paintCollabInbox(){
   const box=document.getElementById('collabBox'); if(!box) return; const u=me();
