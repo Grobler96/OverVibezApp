@@ -186,3 +186,6 @@ Creators choose who can comment on their posts (everyone / followers & subscribe
 * **Best time to post** (`creator_best_times`): the creator's own views by UK hour/weekday over 90 days. "What worked" insights are worked out in the app from `creator_post_stats`.
 * **Levels and badges** (`creator_badges`): computed live from real activity; nothing to maintain.
 * **Creator of the Week**: admin picks (`admin_feature_creator`, candidates from `admin_cotw_candidates`); shown on Explore for 7 days (`featured_creator`).
+
+### 037 — staff content review
+Moderators and admins can see everything on the platform, including paid and subscriber-only media, and every look at protected media is recorded. Staff open a post through `admin_open_post_media()`, which writes an audit entry (`view_protected_media`) and starts a 10-minute viewing window (`staff_media_access`); the storage policy `paid_media_staff_review` only lets staff read paid files while a window is open, so there is no unlogged way in. Admin → Content → **Review queue** (`admin_review_queue`) lists every media post nobody has checked, oldest first; `admin_mark_reviewed` records "looks fine" (`post_reviews`). Creators are told in the Guidelines, Terms and Privacy pages. Direct messages are not part of this: they are only seen if reported.
