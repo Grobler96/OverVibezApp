@@ -204,3 +204,6 @@ If someone's confirmation email never arrives, the "Check your email" screen has
 
 ### Email links on our own domain
 The branded Confirm signup / Reset password templates (`supabase/email-templates/`) link to `https://www.overvibez.com/?token_hash={{ .TokenHash }}&type=signup|recovery` instead of supabase.co (a link domain that does not match the sender domain is a spam signal, and Resend flagged it). The app confirms the token itself on load (`emailLink()` in `index.html`, `verifyOtp` with `token_hash`). Old-style supabase.co links keep working.
+
+### 042 — log in with a username
+The login box takes an email or a username. For a username the app calls `resolve_login(name, password)`, which returns the account's email only if the password matches the stored hash (pgcrypto `crypt`), otherwise null, so it never reveals whether a username has an account; the app then signs in with that email as before. This check skips the normal sign-in rate limit, so it has its own: 8 tries per name per 15 minutes and 300 overall (`login_attempts`, no direct access, tidied hourly). Typing an email works exactly as before.
