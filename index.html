@@ -493,6 +493,20 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div class="err" id="liErr"></div>
   </div>
 
+  <!-- CHECK YOUR EMAIL (shown after signing up, until the address is confirmed) -->
+  <div id="checkEmail" class="hidden" style="text-align:center">
+    <div style="font-size:48px;margin:6px 0">📬</div>
+    <h3 style="margin:0 0 8px">Check your email</h3>
+    <p style="font-size:14px;line-height:1.55;margin:0 0 12px">We sent a confirmation link to<br><b id="ceAddr" style="word-break:break-all"></b></p>
+    <p style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Tap the link in that email, then come back here and log in.</p>
+    <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.55;text-align:left;margin-bottom:14px">
+      <b>Can't see it?</b> Open your <b>Junk / Spam</b> folder. Outlook, Hotmail and Live often put new senders there. Tap <b>Not junk</b> so you get our emails in future.</div>
+    <button class="primary" id="ceResend" onclick="resendConfirm()">Resend the email</button>
+    <button class="ghost" onclick="authTab('login')">I've confirmed it — log in</button>
+    <button class="ghost" onclick="authTab('signup')">Wrong email? Go back</button>
+    <div class="err" id="ceMsg"></div>
+  </div>
+
   <!-- SIGNUP -->
   <div id="signupForm" class="hidden">
     <div class="role-cards">
@@ -1254,6 +1268,27 @@ function authTab(t){
   document.getElementById('tabSignup').classList.toggle('on',t==='signup');
   document.getElementById('loginForm').classList.toggle('hidden',t!=='login');
   document.getElementById('signupForm').classList.toggle('hidden',t!=='signup');
+  document.getElementById('checkEmail').classList.toggle('hidden',t!=='check');
+  document.querySelector('#authScreen .tabs, #authScreen .auth-tabs')?.classList.toggle('hidden',t==='check');
+}
+/* confirmation emails: show a proper "check your email" screen, and let people resend it */
+let confirmEmail='', resendTimer=null;
+function showCheckEmail(em){
+  confirmEmail=em; document.getElementById('ceAddr').textContent=em; document.getElementById('ceMsg').textContent=''; authTab('check'); resendCooldown(60);
+}
+function resendCooldown(sec){
+  const b=document.getElementById('ceResend'); clearInterval(resendTimer); let n=sec; b.disabled=true;
+  const tick=()=>{ if(n<=0){ clearInterval(resendTimer); b.disabled=false; b.textContent='Resend the email'; } else b.textContent='Resend the email ('+n--+'s)'; };
+  tick(); resendTimer=setInterval(tick,1000);
+}
+async function resendConfirm(em){
+  em=em||confirmEmail; if(!em) return;
+  const msg=document.getElementById('ceMsg'), liErr=document.getElementById('liErr');
+  if(document.getElementById('checkEmail').classList.contains('hidden')) showCheckEmail(em);
+  msg.style.color=''; msg.textContent='Sending…';
+  const {error}=await sb.auth.resend({type:'signup',email:em,options:{emailRedirectTo:location.origin+location.pathname}});
+  if(error){ msg.textContent=/rate|seconds|too many/i.test(error.message)?'Please wait a minute before asking for another email.':error.message; return; }
+  msg.style.color='var(--ok)'; msg.textContent='Sent! It can take a minute to arrive — check Junk / Spam too.'; resendCooldown(60);
 }
 function pickRole(r){
   signupRole=r;
@@ -1272,7 +1307,7 @@ async function doSignup(){
   if(pw.length<8) return err.textContent='Password must be at least 8 characters.';
   if(!dob) return err.textContent='Date of birth is required.';
   if((Date.now()-new Date(dob).getTime())/3.15576e10<18) return err.textContent='You must be 18 or older to join OverVibez.';
-  try{ const {data:free}=await sb.rpc('username_ok',{p_username:un}); if(free===false) return err.textContent='That username is taken or not allowed — please try another.'; }catch(e){}
+  try{ const {data:free}=await sb.rpc('username_ok',{p_username:un}); if(free===false) return err.innerHTML='That username is taken or not allowed — please try another.<br><span style="color:var(--muted)">Already signed up with it? <a href="#" onclick="authTab(\'login\');return false" style="color:var(--accent-2)">Log in</a> — if it says your email isn\'t confirmed you can resend the link.</span>'; }catch(e){}
   let invite=document.getElementById('suInvite').value.trim().toUpperCase();
   if(settings.invite_only){
     if(!invite) return err.textContent='You need an invite code — sign-up is by invitation.';
@@ -1281,12 +1316,12 @@ async function doSignup(){
   }
   err.textContent='Creating account…';
   const {data:taken}=await sb.from('profiles').select('id').eq('username',un).maybeSingle();
-  if(taken) return err.textContent='That username is taken.';
+  if(taken) return err.innerHTML='That username is taken.<br><span style="color:var(--muted)">Already signed up with it? <a href="#" onclick="authTab(\'login\');return false" style="color:var(--accent-2)">Log in</a>.</span>';
   const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,display_name:un,account_type:signupRole,invite_code:invite}}});
   if(error) return err.textContent=/Database error saving new user/i.test(error.message)?'Could not create the account — the invite code may have just been used up, or that username/email is taken.':error.message;
   if(/[?&](invite|campaign)=/.test(location.search)) history.replaceState(null,'',location.pathname+location.hash);
   err.textContent='';
-  if(!data.session){ authTab('login'); document.getElementById('liErr').textContent='Check your email to confirm your account, then log in.'+(campaignName?' Your free giveaway entries are waiting for you 🎁':''); }
+  if(!data.session){ showCheckEmail(em); if(campaignName) document.getElementById('ceMsg').textContent='Your free giveaway entries are waiting for you 🎁'; }
 }
 async function doLogin(){
   const err=document.getElementById('liErr');
@@ -1295,7 +1330,11 @@ async function doLogin(){
   if(!em||!pw) return err.textContent='Enter your email and password.';
   err.textContent='';
   const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
-  if(error) err.textContent=error.message;
+  if(error){
+    if(/not confirmed/i.test(error.message)){ confirmEmail=em;
+      err.innerHTML='Your email isn\'t confirmed yet. We sent a link to <b>'+esc(em)+'</b> — check your inbox <b>and Junk / Spam</b>.<br><a href="#" onclick="resendConfirm(confirmEmail);return false" style="color:var(--accent-2);font-weight:700">Resend the email</a>'; }
+    else err.textContent=error.message;
+  }
 }
 async function doForgot(){
   const err=document.getElementById('liErr');
