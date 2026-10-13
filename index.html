@@ -1269,6 +1269,49 @@ function paintPushPrompt(){
     <div style="font-size:22px">🔔</div><div style="flex:1;min-width:0;font-size:13px;line-height:1.45"><b>Never miss a thing</b><br><span style="color:var(--muted)">${me()&&me().role==='creator'?'Get pinged for new followers, sales and tips.':'Get pinged for replies, live shows and giveaways.'}</span></div>
     <button class="abtn" onclick="enablePush()">Turn on</button><button onclick="localStorage.setItem('ov_pushno',Date.now());paintPushPrompt()" title="Not now" style="color:var(--muted);font-size:16px;padding:2px 6px">✕</button></div>`;
 }
+/* ═══════════ REFERRAL REWARDS (opt-in) ═══════════ */
+let refSet={data:null,at:0};
+(function captureRef(){ try{ const q=new URLSearchParams(location.search), c=q.get('ref'); if(c&&/^[A-Za-z0-9]{6,16}$/.test(c)){ localStorage.setItem('ov_ref',c.toLowerCase()); history.replaceState(null,'',location.pathname+location.hash); } }catch(e){} })();
+async function showRefBanner(){      /* on the sign-up screen: "You were invited by @name" */
+  try{ const code=localStorage.getItem('ov_ref'); if(!code||!sb) return; const {data}=await sb.rpc('referral_info',{p_code:code}); const tag=document.querySelector('.auth .tag'); if(!data||!tag||document.getElementById('refBanner')) return;
+    tag.insertAdjacentHTML('afterend',`<div id="refBanner" style="background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:16px;font-size:13px;line-height:1.5">💜 You were invited by <b>@${esc(data)}</b>. Create your free account to follow them.</div>`); }catch(e){}
+}
+async function handleRef(){
+  const code=localStorage.getItem('ov_ref'); if(!code||!store.session) return;
+  localStorage.removeItem('ov_ref');                                  // one try only: the database decides whether it counts
+  const {data}=await sb.rpc('claim_referral',{p_code:code}); if(!data) return;
+  await ensureUsers([data]); toast('Welcome! Follow them to get started 💜'); openProfile(data);
+}
+async function loadRef(){ refSet.at=Date.now(); const {data}=await sb.rpc('my_referral'); if(data){ refSet.data=data; paintRef(); } }
+function paintRef(){
+  const el=document.getElementById('refBox'); if(!el) return; const u=me(); if(!u||u.role!=='creator'){ el.innerHTML=''; return; }
+  const r=refSet.data; if(!r){ el.innerHTML=''; return; }
+  if(r.removed){ el.innerHTML=''; return; }
+  if(!r.member){
+    el.innerHTML=`<div class="chart-card"><h4 style="margin:0 0 4px;font-size:15px">🎁 Referral rewards (optional)</h4>
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:0 0 8px">Bring real followers to OverVibez and earn ${$$(r.reward_cents)} for every ${fmtN(r.unit)} who count. It is your choice: nothing starts until you join.</p>
+      <button class="abtn ok" onclick="joinRef()">Find out more and join</button></div>`; return; }
+  const pct=Math.min(100,Math.round((r.qualified%r.unit)/r.unit*100)), link=pageLink(u.username)+'?ref='+r.code;
+  el.innerHTML=`<div class="chart-card"><div style="display:flex;align-items:center;gap:8px"><h4 style="flex:1;margin:0;font-size:15px">🎁 Referral rewards</h4>${r.active?'':'<span style="font-size:12px;color:var(--muted)">Paused</span>'}</div>
+    <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:6px 0">Share your link. Someone counts once they have followed you, confirmed their email${r.require_age?', passed the 18+ check':''}, been a member for ${r.min_age_days} days and been active on ${r.min_active_days} different days. Every ${fmtN(r.unit)} who count earns you ${$$(r.reward_cents)}, paid to your bonus balance after our team has checked the accounts.</p>
+    <div style="display:flex;gap:8px;margin:8px 0"><div class="stat" style="flex:1"><b>${fmtN(r.signed_up)}</b><span>Signed up</span></div><div class="stat" style="flex:1"><b>${fmtN(r.qualified)}</b><span>Counting</span></div></div>
+    <div style="height:6px;border-radius:6px;background:var(--panel-2);overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#FF3D8A,#8B5CF6)"></div></div>
+    <div style="font-size:12px;color:var(--muted);margin:4px 0 10px">${fmtN(r.next_at-r.qualified)} more to reach ${fmtN(r.next_at)}</div>
+    <button class="abtn ok" onclick="copyText('${esc(link)}')">Copy my link</button> <button class="abtn" onclick="leaveRef()">${r.active?'Leave the programme':'Rejoin'}</button>
+    ${(r.rewards||[]).length?`<div style="margin-top:10px;font-size:12.5px">${r.rewards.map(w=>`<div style="padding:6px 0;border-top:1px solid var(--line)">${$$(w.amount_cents)} for ${fmtN(w.milestone*r.unit)} · <b>${w.status==='paid'?'Paid ✓':w.status==='pending'?'Waiting for our check':'Not approved'}</b></div>`).join('')}</div>`:''}</div>`;
+}
+async function joinRef(){
+  const r=refSet.data||{};
+  if(!confirm('Referral rewards: the rules\n\n• Share your personal link. Only people who sign up through it can count.\n• Someone counts once they follow you, have a confirmed email'+(r.require_age?', have passed the 18+ check':'')+', have been a member for '+r.min_age_days+' days and have been active on '+r.min_active_days+' different days.\n• Every '+r.unit+' people who count earns you '+$$(r.reward_cents)+', paid into your bonus balance after our team has checked the accounts.\n• Rewards are never automatic. We can refuse or withdraw a reward and remove you from the programme if accounts look fake, bought or swapped.\n• You can leave at any time.\n\nJoin the programme?')) return;
+  const {error}=await sb.rpc('join_referral_program',{p_accept:true}); if(error) return toast(friendly(error.message));
+  toast('You are in 🎁'); loadRef();
+}
+async function leaveRef(){
+  const r=refSet.data||{};
+  if(r.active&&!confirm('Leave the referral programme? Your link stops counting new sign-ups. You can rejoin later.')) return;
+  const {error}=r.active?await sb.rpc('leave_referral_program'):await sb.rpc('join_referral_program',{p_accept:true}); if(error) return toast(friendly(error.message)); loadRef();
+}
+
 /* ═══════════ GET STARTED CHECKLIST, CREATORS TO FOLLOW, STREAKS ═══════════ */
 let startState=null, startAt=0, suggestIds=null, suggestAt=0;
 const clKey=()=>'ov_cl_'+(store.session||'');
@@ -1572,17 +1615,18 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); loadSecurity().then(()=>{ if(store.session){ refresh(); maybeIntro(); loadStart(true); touchStreak(); } }); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
+  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); loadSecurity().then(()=>{ if(store.session){ refresh(); maybeIntro(); loadStart(true); touchStreak(); handleRef(); } }); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
   store.session=null; store.sec=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  startState=null; suggestIds=null; store.streak=null; payBal={data:null,at:0}; store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
+  startState=null; suggestIds=null; store.streak=null; payBal={data:null,at:0}; refSet={data:null,at:0}; store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
   document.getElementById('authScreen').classList.remove('hidden');
 }
+setTimeout(showRefBanner,600);
 if(sb) sb.auth.onAuthStateChange((ev,session)=>{
   if(ev==='PASSWORD_RECOVERY') recoveryMode=true;
   setTimeout(()=>{ if(session&&session.user) startSession(session.user.id); else { document.documentElement.classList.remove('booting'); if(store.session) clearSession(); } },0);
@@ -1900,6 +1944,7 @@ const notifInfo=n=>{
     case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+'. It is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done. You can now post, go live and add money'];
+    case 'referral_reward': return ['🎁','@'+esc(d.username||'a creator')+' reached '+fmtN(d.milestone||0)+' qualified followers. Review it in Admin → Referrals'];
     case 'age_nudge': return ['🪪','Finish your 18+ check to start posting. Tap Profile, then Identity & age verification'];
     case 'weekly_summary': return d.role==='creator'?['📈','Your week: '+(d.followers||0)+' new follower'+((d.followers||0)===1?'':'s')+' and '+$$(d.earned_cents||0)+' earned']:['📰','This week: '+(d.posts||0)+' new post'+((d.posts||0)===1?'':'s')+' from creators you follow'+(d.giveaways?' and '+d.giveaways+' free giveaway'+(d.giveaways===1?'':'s')+' open':'')];
     case 'feedback': return [d.kind==='bug'?'🐞':d.kind==='idea'?'💡':'💬','@'+esc(d.username||'someone')+' sent feedback. See Admin → Feedback'];
@@ -2797,6 +2842,7 @@ function renderStudio(){
     ${u.bonus>0?`<div class="bonus-card"><div class="lbl">🎁 Bonus from OverVibez</div><div class="amt">${$$(u.bonus)}</div>
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team, no fee taken. Kept separate from your sales earnings.</div>
       <button class="primary" onclick="requestBonusPayout()">Withdraw bonus ${$$(u.bonus)}</button></div>`:''}
+    <div id="refBox"></div>
     <div id="levelBox"></div>
     <div id="schedBox"></div>
     <div id="collabBox"></div>
@@ -2807,6 +2853,7 @@ function renderStudio(){
     <div id="postsBox"></div>
     <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(avail)}</button>
     <button class="ghost" style="margin-top:10px" onclick="go('money')">💳 Money &amp; receipts</button>`;
+  paintRef(); if(!refSet.data||Date.now()-refSet.at>30000) loadRef();
   paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
   paintLevel(); loadLevel(); paintSched(); if(!schedSet.data||Date.now()-schedSet.at>30000) loadSched(); paintTimes(); if(!timesSet.data) loadTimes();
   paintCollabInbox(); paintCommentSettings(); if(!cmtSet.data) loadCommentSettings();
@@ -3675,7 +3722,7 @@ const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
   if(!adminSeen){ adminSeen=true; if(isAdmin()) adminTab='overview'; }
-  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['overview','Overview'],['age','Age checks'],['feedback','Feedback'],['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['overview','Overview'],['referrals','Referrals'],['age','Age checks'],['feedback','Feedback'],['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -3685,7 +3732,7 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({overview:admOverview,reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,feedback:admFeedback,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({overview:admOverview,reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,feedback:admFeedback,referrals:admReferrals,audit:admAudit})[adminTab](); }
 
 /* --- manual 18+ checks --- */
 async function admAge(){
@@ -3832,7 +3879,8 @@ async function admRestore(kind,id){
 /* --- overview: what needs attention, growth and money in one place (admin only) --- */
 async function admOverview(){
   const {data:o,error}=await admCall('admin_overview'); if(error||!o) return;
-  const todo=[['reports','🚩','Open reports',o.open_reports,0],['appeals','⚖️','Open appeals',o.open_appeals,o.overdue_appeals],['age','🪪','18+ checks waiting',o.age_pending,o.age_overdue],
+  try{ const {data:rr}=await sb.rpc('admin_list_referral_rewards',{p_status:'pending'}); o.referral_pending=(rr||[]).length; }catch(e){ o.referral_pending=0; }
+  const todo=[['referrals','🎁','Referral rewards to approve',o.referral_pending||0,0],['reports','🚩','Open reports',o.open_reports,0],['appeals','⚖️','Open appeals',o.open_appeals,o.overdue_appeals],['age','🪪','18+ checks waiting',o.age_pending,o.age_overdue],
     ['feedback','💬','Feedback to read',o.feedback_open,0],['users','📧','People who can\'t confirm their email',o.email_help_open,0],['payouts','🏦','Payouts to send',o.payouts_pending,0],['errors','🐞','App errors (24 hours)',o.errors_24h,0]];
   const act=todo.filter(t=>t[3]>0), mx=Math.max(1,...(o.signups||[0]));
   admBody().innerHTML=`<div class="admin-pad"><div class="section-title" style="padding:0 0 6px">Needs attention</div>
@@ -3844,6 +3892,27 @@ async function admOverview(){
    <div class="section-title" style="padding:14px 0 6px">Money, last 7 days</div>
    <div class="admin-grid">${[['Sales',admMoney(o.sales_7d_cents)],['Our 15%',admMoney(o.fees_7d_cents)],['Wallet top-ups',admMoney(o.topups_7d_cents)]].map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
    <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px">Full figures, including what you hold on behalf of members, are under Stats.</p></div>`;
+}
+/* --- referral rewards: approve each reward after looking at the accounts (admin only) --- */
+async function admReferrals(){
+  const [rw,mm]=await Promise.all([admCall('admin_list_referral_rewards',{p_status:'pending'}),admCall('admin_referral_members')]); if(rw.error||mm.error) return;
+  admBody().innerHTML=`<div class="admin-pad"><div class="section-title" style="padding:0 0 6px">Rewards waiting for you</div>
+   <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:8px">Nothing is paid until you approve it. Look for a sudden spike in sign-ups, a low share of people who passed the 18+ check, or a very new creator. Approving pays the reward into their bonus balance.</p>
+   ${rw.data.length?rw.data.map(w=>`<div class="chart-card"><div style="display:flex;justify-content:space-between"><b>@${esc(w.username)}</b><span style="font-size:12px;color:var(--muted)">${ago(w.created_at)} ago</span></div>
+     <div style="font-size:13px;margin:4px 0">${$$(w.amount_cents)} for <b>${fmtN(w.qualified_count)}</b> qualified followers (milestone ${w.milestone})</div>
+     <div style="font-size:12px;color:var(--muted);line-height:1.6">${fmtN(Number(w.signed_up))} signed up in total · ${fmtN(Number(w.signed_up_7d))} in the last 7 days · busiest day ${fmtN(Number(w.busiest_day))} · ${w.verified_share}% passed the 18+ check · creator account ${w.creator_age_days} days old</div>
+     <div style="margin-top:8px"><button class="abtn ok" onclick="admRefDecide('${w.id}',true)">Approve and pay</button> <button class="abtn danger" onclick="admRefDecide('${w.id}',false)">Reject</button> <button class="abtn" onclick="admOpenUser('${w.creator_id}')">View creator</button></div></div>`).join(''):admEmpty('No rewards waiting.')}
+   <div class="section-title" style="padding:14px 0 6px">Creators in the programme</div>
+   ${mm.data.length?`<div class="list-card" style="margin:0">${mm.data.map(m=>`<div class="row" style="cursor:default"><div style="flex:1;min-width:0"><b>@${esc(m.username)}</b>${m.active?'':' <span style="color:var(--muted);font-size:12px">'+(m.removed_reason?'removed':'left')+'</span>'}<br><span style="font-size:11.5px;color:var(--muted)">${fmtN(Number(m.signed_up))} signed up · ${fmtN(m.qualified)} counting</span></div>${m.active?`<button class="abtn danger" onclick="admRefRemove('${m.creator_id}')">Remove</button>`:''}</div>`).join('')}</div>`:admEmpty('Nobody has joined yet.')}</div>`;
+}
+async function admRefDecide(id,ok){
+  if(ok&&!confirm('Pay this reward into the creator\'s bonus balance?')) return;
+  let note=null; if(!ok){ note=prompt('Why is it not approved? (kept in the record)'); if(note===null) return; if(note.trim().length<3) return toast('A reason is required'); }
+  const {error}=await admCall('admin_decide_referral_reward',{p_id:id,p_approve:ok,p_note:note&&note.trim()}); if(!error){ toast(ok?'Paid ✓':'Rejected'); admLoad(); }
+}
+async function admRefRemove(id){
+  const why=prompt('Reason for removing them from the programme (kept in the record):'); if(why===null) return; if(why.trim().length<3) return toast('A reason is required');
+  const {error}=await admCall('admin_remove_from_referrals',{p_creator:id,p_reason:why.trim()}); if(!error){ toast('Removed'); admLoad(); }
 }
 /* --- users --- */
 function admUsers(){
