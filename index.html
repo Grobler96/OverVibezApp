@@ -293,6 +293,10 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* ═══════════ LIVE STREAMING ═══════════ */
 .wm{position:absolute;inset:0;pointer-events:none;user-select:none;background-repeat:repeat;z-index:2}
+.imgv{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.95);display:none;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);cursor:zoom-out}
+.imgv.open{display:flex}
+.imgv img{max-width:100vw;max-height:92vh;object-fit:contain;touch-action:pinch-zoom}
+.imgv .x{position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:20px;display:grid;place-items:center}
 .scene-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000}
 .live-banner{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,#FF4757,#8B5CF6);border-radius:16px;padding:12px 14px;color:#fff;cursor:pointer;box-shadow:0 8px 24px rgba(255,71,87,.3)}
 .live-overlay{position:fixed;top:0;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;z-index:120;background:#0A0712;display:none;flex-direction:column;color:#fff}
@@ -795,6 +799,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   </div>
 </div>
 
+<div class="imgv" id="imgViewer" onclick="closeImage()" role="dialog" aria-label="Photo"><button class="x" onclick="closeImage()" aria-label="Close">✕</button><img id="imgViewerImg" alt=""></div>
 <div class="overlay" id="pushModal" onclick="if(event.target===this)closeModal('pushModal')">
   <div class="sheet" style="max-height:90vh;overflow-y:auto">
     <h3>🔔 Push notifications</h3>
@@ -1100,6 +1105,11 @@ function reportError(msg,stack){
 }
 window.addEventListener('error',e=>reportError(e.message,e.error&&e.error.stack));
 window.addEventListener('unhandledrejection',e=>reportError('Unhandled: '+((e.reason&&e.reason.message)||e.reason),e.reason&&e.reason.stack));
+
+/* tap a profile picture or cover photo to see it full size */
+function openImage(url){ if(!url) return; document.getElementById('imgViewerImg').src=url; document.getElementById('imgViewer').classList.add('open'); }
+function closeImage(){ document.getElementById('imgViewer').classList.remove('open'); document.getElementById('imgViewerImg').removeAttribute('src'); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeImage(); });
 
 /* ═══════════ PUSH NOTIFICATIONS ═══════════
    Browsers give each device a private push address; we store it against the signed-in member (server-side, never readable by others) and the
@@ -3073,8 +3083,8 @@ function renderMe(){
   const mySubs=Object.keys(store.subs).filter(k=>store.subs[k]&&k.startsWith(u.id)).map(k=>user(k.replace(u.id,''))).filter(Boolean);
   document.getElementById('page-me').innerHTML=`
     <div class="me-head">
-      ${u.coverUrl?`<div class="cover" style="background-image:url('${esc(u.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px"></div>`:''}
-      <div class="av ${u.av}">${avInner(u)}</div>
+      ${u.coverUrl?`<div class="cover" style="background-image:url('${esc(u.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px;cursor:zoom-in" onclick="openImage('${esc(u.coverUrl)}')"></div>`:''}
+      <div class="av ${u.av}" ${u.avatarUrl?`style="cursor:zoom-in" onclick="openImage('${esc(u.avatarUrl)}')"`:''}>${avInner(u)}</div>
       <h2>${esc(u.name)} ${u.verified?'<span class="verified">✔</span>':''} <span class="role-badge ${isC?'':'f'}">${isC?'✦ CREATOR':'♥ FOLLOWER'}</span></h2>
       <div class="u">@${esc(u.username)}${u.bio?' · '+esc(u.bio):''}</div>
       <div class="me-stats">
@@ -3309,8 +3319,8 @@ function renderProfile(){
   document.getElementById('page-profile').innerHTML=`
     <button class="back-btn" onclick="go('home')" style="padding:14px 18px 0">← Home</button>
     <div class="me-head">
-      ${c.coverUrl?`<div class="cover" style="background-image:url('${esc(c.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px"></div>`:''}
-      <div class="av ${c.av}">${avInner(c)}</div>
+      ${c.coverUrl?`<div class="cover" style="background-image:url('${esc(c.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px;cursor:zoom-in" onclick="openImage('${esc(c.coverUrl)}')"></div>`:''}
+      <div class="av ${c.av}" ${c.avatarUrl?`style="cursor:zoom-in" onclick="openImage('${esc(c.avatarUrl)}')"`:''}>${avInner(c)}</div>
       <h2>${esc(c.name)} ${c.verified?'<span class="verified">✔</span>':''} ${c.role==='creator'?'<span class="role-badge">✦ CREATOR</span>':'<span class="role-badge f">♥ FOLLOWER</span>'}</h2>
       <div class="u">@${esc(c.username)}${c.bio?' · '+esc(c.bio):''}</div>
       ${c.role==='creator'?`<div id="profBadges" style="margin:8px 0 2px">${levelSet[c.id]?profBadges(levelSet[c.id]):''}</div>`:''}
