@@ -1510,7 +1510,7 @@ if(sb) sb.auth.onAuthStateChange((ev,session)=>{
 /* Email links come to www.overvibez.com (not supabase.co, which spam filters dislike) carrying ?token_hash=…&type=signup|recovery — confirm it here */
 (async function emailLink(){
   const q=new URLSearchParams(location.search), th=q.get('token_hash'), ty=q.get('type');
-  if(!sb||!th||!/^(signup|recovery|email_change|magiclink)$/.test(ty||'')) return;
+  if(!sb||!th||!/^(signup|recovery|email_change|magiclink|invite)$/.test(ty||'')) return;
   history.replaceState(null,'',location.pathname);
   if(ty==='recovery') recoveryMode=true;
   const {error}=await sb.auth.verifyOtp({token_hash:th,type:ty});
