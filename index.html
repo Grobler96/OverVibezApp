@@ -505,6 +505,10 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <p style="font-size:13.5px;line-height:1.55;margin:0 0 14px">Tap the link in that email, then come back here and log in.</p>
     <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:13px;line-height:1.55;text-align:left;margin-bottom:14px">
       <b>Can't see it?</b> Open your <b>Junk / Spam</b> folder. Outlook, Hotmail and Live often put new senders there. Tap <b>Not junk</b> so you get our emails in future.</div>
+    <div style="background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;text-align:left;margin-bottom:14px">
+      <div style="font-size:13px;margin-bottom:8px">Link not working? Type the <b>6-digit code</b> from the email:</div>
+      <div style="display:flex;gap:8px"><input id="ceCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456" style="flex:1;min-width:0;letter-spacing:4px;font-size:18px;text-align:center" onkeydown="if(event.key==='Enter')verifyCode()">
+      <button class="primary" style="margin:0;width:auto;padding:0 18px" onclick="verifyCode()">Confirm</button></div></div>
     <button class="primary" id="ceResend" onclick="resendConfirm()">Resend the email</button>
     <button class="ghost" onclick="authTab('login')">I've confirmed it — log in</button>
     <button class="ghost" onclick="askEmailHelp()">Still nothing? Ask us to confirm you</button>
@@ -1313,7 +1317,7 @@ function authTab(t){
 /* confirmation emails: show a proper "check your email" screen, and let people resend it */
 let confirmEmail='', resendTimer=null;
 function showCheckEmail(em){
-  confirmEmail=em; document.getElementById('ceAddr').textContent=em; document.getElementById('ceMsg').textContent=''; authTab('check'); resendCooldown(60);
+  confirmEmail=em; document.getElementById('ceAddr').textContent=em; document.getElementById('ceMsg').textContent=''; document.getElementById('ceCode').value=''; authTab('check'); resendCooldown(60);
 }
 function resendCooldown(sec){
   const b=document.getElementById('ceResend'); clearInterval(resendTimer); let n=sec; b.disabled=true;
@@ -1328,6 +1332,15 @@ async function resendConfirm(em){
   const {error}=await sb.auth.resend({type:'signup',email:em,options:{emailRedirectTo:location.origin+location.pathname}});
   if(error){ msg.textContent=/rate|seconds|too many/i.test(error.message)?'Please wait a minute before asking for another email.':error.message; return; }
   msg.style.color='var(--ok)'; msg.textContent='Sent! It can take a minute to arrive — check Junk / Spam too.'; resendCooldown(60);
+}
+async function verifyCode(){
+  const msg=document.getElementById('ceMsg'), code=document.getElementById('ceCode').value.replace(/\D/g,'');
+  if(!confirmEmail) return;
+  if(code.length<6){ msg.style.color=''; msg.textContent='Enter the 6-digit code from the email.'; return; }
+  msg.style.color=''; msg.textContent='Checking…';
+  const {error}=await sb.auth.verifyOtp({email:confirmEmail,token:code,type:'signup'});
+  if(error){ msg.textContent=/expired|invalid/i.test(error.message)?'That code is wrong or has expired. Check the newest email, or tap Resend.':error.message; return; }
+  msg.style.color='var(--ok)'; msg.textContent='Confirmed! Logging you in…';   // SIGNED_IN event takes it from here
 }
 async function askEmailHelp(){
   const msg=document.getElementById('ceMsg'); if(!confirmEmail) return;
