@@ -43,6 +43,10 @@ export function composePush(row, opts = {}) {
     case 'weekly_summary': title = '📈 Your week on OverVibez'; body = d.role === 'creator'
       ? `${d.followers || 0} new follower${(d.followers || 0) === 1 ? '' : 's'} and ${money(d.earned_cents)} earned`
       : `${d.posts || 0} new post${(d.posts || 0) === 1 ? '' : 's'} from creators you follow${d.giveaways ? ' and ' + d.giveaways + ' free giveaway' + (d.giveaways === 1 ? '' : 's') + ' open' : ''}`; break;
+    case 'held': title = '⏳ Post being checked'; body = 'Our team is checking one of your posts. It will be back up or removed shortly'; break;
+    case 'held_ok': title = '✅ Post checked'; body = 'Your post has been checked and is back up'; break;
+    case 'scan_held': title = d.severity === 'urgent' ? '🚨 Urgent: post held' : '🛑 Post held'; body = 'A post was held for a safety check'; url = '/?go=notifs'; break;
+    case 'urgent_report': title = '🚨 Urgent report'; body = 'Someone reported illegal content or someone under 18'; break;
     default: break;
   }
   if (opts.discreet) { title = 'OverVibez'; body = 'You have new activity'; }

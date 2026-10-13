@@ -1900,6 +1900,10 @@ const notifInfo=n=>{
     case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+'. It is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done. You can now post, go live and add money'];
+    case 'held': return ['⏳','Our team is checking one of your posts. It will be back up or removed shortly'];
+    case 'held_ok': return ['✅','Your post has been checked and is back up'];
+    case 'scan_held': return [d.severity==='urgent'?'🚨':'🛑',(d.severity==='urgent'?'Urgent: a post was held, possible risk to a child':'A post was held for a safety check')+'. See Admin → Content → Held'];
+    case 'urgent_report': return ['🚨','Urgent report ('+esc(d.reason||'illegal or under 18')+'). See Admin → Reports'];
     case 'age_nudge': return ['🪪','Finish your 18+ check to start posting. Tap Profile, then Identity & age verification'];
     case 'weekly_summary': return d.role==='creator'?['📈','Your week: '+(d.followers||0)+' new follower'+((d.followers||0)===1?'':'s')+' and '+$$(d.earned_cents||0)+' earned']:['📰','This week: '+(d.posts||0)+' new post'+((d.posts||0)===1?'':'s')+' from creators you follow'+(d.giveaways?' and '+d.giveaways+' free giveaway'+(d.giveaways===1?'':'s')+' open':'')];
     case 'feedback': return [d.kind==='bug'?'🐞':d.kind==='idea'?'💡':'💬','@'+esc(d.username||'someone')+' sent feedback. See Admin → Feedback'];
@@ -3781,8 +3785,9 @@ async function admEndLive(id){
 async function admContent(){
   const k=adminSub.content;
   if(k==='review') return admReviewQueue();
+  if(k==='held') return admHeld();
   const {data,error}=await admCall('admin_list_content',{p_kind:k,p_limit:40}); if(error) return;
-  admBody().innerHTML=`<div class="chiprow">${[['review','Review queue'],['post','Posts'],['comment','Comments']].map(([x,l])=>`<button class="chip ${k===x?'on':''}" onclick="adminSub.content='${x}';admLoad()">${l}</button>`).join('')}</div>
+  admBody().innerHTML=`<div class="chiprow">${[['held','Held'],['review','Review queue'],['post','Posts'],['comment','Comments']].map(([x,l])=>`<button class="chip ${k===x?'on':''}" onclick="adminSub.content='${x}';admLoad()">${l}</button>`).join('')}</div>
    <div class="admin-pad">${data.length?data.map(c=>`<div class="chart-card" ${c.removed?'style="opacity:.65"':''}>
      <div style="display:flex;justify-content:space-between"><b>@${esc(c.author)}${c.is_paid?' · 🔒 '+$$(c.price_cents):''}</b><span style="font-size:12px;color:var(--muted)">${ago(c.created_at)} ago</span></div>
      <div style="font-size:13px;margin:6px 0;word-break:break-word">${esc(c.preview)}</div>
@@ -3790,12 +3795,28 @@ async function admContent(){
        :`<button class="abtn danger" onclick="admRemove('${c.kind}','${c.id}')">Remove</button>`}
    </div>`).join(''):admEmpty('No content yet.')}</div>`;
 }
+/* held posts: the automatic check flagged these, so they are hidden until a person decides */
+async function admHeld(){
+  const {data,error}=await admCall('admin_list_held',{p_limit:30}); if(error) return;
+  admBody().innerHTML=`<div class="chiprow">${[['held','Held'],['review','Review queue'],['post','Posts'],['comment','Comments']].map(([x,l])=>`<button class="chip ${adminSub.content===x?'on':''}" onclick="adminSub.content='${x}';admLoad()">${l}</button>`).join('')}</div>
+   <div class="admin-pad"><p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:10px">${data.length?`<b>${data.length}</b> post${data.length===1?'':'s'} held by the automatic safety check. They are hidden from everyone but the team until you decide. Anything that looks like a child is shown first, in red. If you find illegal content, follow the steps in the safety runbook (SAFETY.md).`:'Nothing is being held.'}</p>
+   ${data.map(c=>`<div class="chart-card" ${c.severity==='urgent'?'style="border-color:var(--live)"':''}><div style="display:flex;justify-content:space-between"><b>@${esc(c.author)}${c.subs_only?' · 💜 subscribers':c.is_paid?' · 🔒 paid':''}</b><span style="font-size:12px;color:var(--muted)">held ${ago(c.held_at)} ago</span></div>
+     ${c.severity==='urgent'?'<div style="color:var(--live);font-size:12.5px;font-weight:700;margin:4px 0">🚨 Urgent: possible risk to a child</div>':''}
+     <div style="font-size:12px;color:var(--muted);margin:4px 0">Flagged for: ${esc((c.categories||[]).join(', ')||'review')}</div>
+     <div style="font-size:13px;margin:6px 0;word-break:break-word">${esc(c.caption)||'(no caption)'}</div>
+     <button class="abtn" onclick="admReviewOpen('${c.id}')">View</button> <button class="abtn ok" onclick="admHeldKeep('${c.id}')">Keep it up</button> <button class="abtn danger" onclick="admHeldRemove('${c.id}')">Remove</button></div>`).join('')}</div>`;
+}
+async function admHeldKeep(id){ if(!confirm('Put this post back up? Only do this once you have looked at it.')) return; const {error}=await admCall('admin_decide_held',{p_post:id,p_keep:true}); if(!error){ toast('Post is back up'); admLoad(); } }
+async function admHeldRemove(id){
+  const why=prompt('Reason for removing it (the creator will see this and can appeal):'); if(why===null) return; if(why.trim().length<3) return toast('A reason is required');
+  const {error}=await admCall('admin_decide_held',{p_post:id,p_keep:false,p_reason:why.trim()}); if(!error){ toast('Removed'); admLoad(); }
+}
 /* review queue: every post with a photo or video that nobody on the team has looked at yet, oldest first */
 let reviewCur=null;
 async function admReviewQueue(){
   const {data,error}=await admCall('admin_review_queue',{p_limit:20}); if(error) return;
   const total=data.length?Number(data[0].waiting):0;
-  admBody().innerHTML=`<div class="chiprow">${[['review','Review queue'],['post','Posts'],['comment','Comments']].map(([x,l])=>`<button class="chip ${adminSub.content===x?'on':''}" onclick="adminSub.content='${x}';admLoad()">${l}</button>`).join('')}</div>
+  admBody().innerHTML=`<div class="chiprow">${[['held','Held'],['review','Review queue'],['post','Posts'],['comment','Comments']].map(([x,l])=>`<button class="chip ${adminSub.content===x?'on':''}" onclick="adminSub.content='${x}';admLoad()">${l}</button>`).join('')}</div>
    <div class="admin-pad"><p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:10px">${total?`<b>${total}</b> post${total===1?'':'s'} with photos or videos nobody has checked yet, oldest first.`:'Everything has been reviewed ✅'} Press View to see the media, then mark it fine or remove it. Viewing paid content is logged.</p>
    ${data.map(c=>`<div class="chart-card"><div style="display:flex;justify-content:space-between"><b>@${esc(c.author)}${c.subs_only?' · 💜 subscribers':c.is_paid?' · 🔒 '+$$(c.price_cents):''}</b><span style="font-size:12px;color:var(--muted)">${ago(c.created_at)} ago · ${esc(c.media_type)}</span></div>
      <div style="font-size:13px;margin:6px 0;word-break:break-word">${esc(c.caption)||'(no caption)'}</div>
@@ -3832,11 +3853,12 @@ async function admRestore(kind,id){
 /* --- overview: what needs attention, growth and money in one place (admin only) --- */
 async function admOverview(){
   const {data:o,error}=await admCall('admin_overview'); if(error||!o) return;
-  const todo=[['reports','🚩','Open reports',o.open_reports,0],['appeals','⚖️','Open appeals',o.open_appeals,o.overdue_appeals],['age','🪪','18+ checks waiting',o.age_pending,o.age_overdue],
+  const todo=[['content','🛑','Posts held by the safety check',o.held_posts,0],['reports','🚨','Urgent reports (illegal or under 18)',o.urgent_reports,0],['reports','🚩','Open reports',o.open_reports,0],['appeals','⚖️','Open appeals',o.open_appeals,o.overdue_appeals],['age','🪪','18+ checks waiting',o.age_pending,o.age_overdue],
     ['feedback','💬','Feedback to read',o.feedback_open,0],['users','📧','People who can\'t confirm their email',o.email_help_open,0],['payouts','🏦','Payouts to send',o.payouts_pending,0],['errors','🐞','App errors (24 hours)',o.errors_24h,0]];
   const act=todo.filter(t=>t[3]>0), mx=Math.max(1,...(o.signups||[0]));
-  admBody().innerHTML=`<div class="admin-pad"><div class="section-title" style="padding:0 0 6px">Needs attention</div>
-   ${act.length?`<div class="list-card" style="margin:0">${act.map(t=>`<div class="row" onclick="admTab('${t[0]}')"><div class="r-ic">${t[1]}</div>${t[2]}${t[4]?` <span style="color:var(--live);font-size:12px">· ${t[4]} overdue</span>`:''}<span class="sub"><b>${t[3]}</b> ›</span></div>`).join('')}</div>`:admEmpty('Nothing waiting. Nice work 🎉')}
+  const scanNote=!features.scanning?`<div class="chart-card" style="border-color:var(--accent)"><b>⚠️ Upload scanning is not switched on</b><p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:4px 0 0">New photos are only checked by your team (${o.scan_pending} waiting). Add the OPENAI_API_KEY secret to the scan-media function to switch on automatic checks.</p></div>`:'';
+  admBody().innerHTML=`<div class="admin-pad">${scanNote}<div class="section-title" style="padding:0 0 6px">Needs attention</div>
+   ${act.length?`<div class="list-card" style="margin:0">${act.map(t=>`<div class="row" onclick="${t[0]==='content'?"adminSub.content='held';":''}admTab('${t[0]}')"><div class="r-ic">${t[1]}</div>${t[2]}${t[4]?` <span style="color:var(--live);font-size:12px">· ${t[4]} overdue</span>`:''}<span class="sub"><b>${t[3]}</b> ›</span></div>`).join('')}</div>`:admEmpty('Nothing waiting. Nice work 🎉')}
    <div class="section-title" style="padding:14px 0 6px">Growth</div>
    <div class="admin-grid">${[['Members',o.users],['New today',o.new_24h],['New (7 days)',o.new_7d],['New (30 days)',o.new_30d],['Creators',o.creators],['Posting this week',o.creators_posting_7d],['Creators not yet 18+ checked',o.creators_unverified],['Live now',o.live_now]].map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
    <div class="chart-card" style="margin-top:10px"><h4 style="font-size:13px">Sign-ups, last 14 days</h4>
