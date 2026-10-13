@@ -210,3 +210,6 @@ The login box takes an email or a username. For a username the app calls `resolv
 
 ### 043 — become a creator
 Profile shows followers a "Become a creator" card. `become_creator()` flips the account to a creator account (default £4.99 subscription price, `intro_seen` reset) and logs it (`become_creator`); the app then reloads so the welcome tour plays like on a new creator account. Followers, subscriptions, wallet and history are kept; posting still needs the 18+ check. One way from the app (a direct update of `account_type` is blocked; staff can change it back in the database).
+
+### 044 — report a problem or idea
+Profile → **Report a problem or idea** (every account) sends a problem / idea / other message (`send_feedback`: 5–2000 characters, 10 a day per person, records the page and device). Admins get an in-app notification (not a push) and read them in Admin → **Feedback** (`admin_list_feedback`, `admin_handle_feedback` for To do / Done). The `feedback` table has no direct access.
