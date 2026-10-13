@@ -63,7 +63,7 @@ h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted
    .then(function(p){
      if(!p){ notFound(); return; }
      var name=p.display_name||p.username; document.title=name+' on OverVibez';
-     var qs=new URLSearchParams(location.search), ref=(qs.get('ref')||'').replace(/[^A-Za-z0-9]/g,'').slice(0,16), app='/'+(ref?'?ref='+ref:'')+'#'+encodeURIComponent(p.username);
+     var qs=new URLSearchParams(location.search), offer=(qs.get('offer')||'').replace(/[^A-Za-z0-9]/g,'').slice(0,16), ref=(qs.get('ref')||'').replace(/[^A-Za-z0-9]/g,'').slice(0,16), app='/'+(offer?'?offer='+offer:ref?'?ref='+ref:'')+'#'+encodeURIComponent(p.username);
      var links=(p.links||[]).map(function(l){ return '<a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer nofollow ugc" data-id="'+esc(l.id)+'">'+esc(l.title)+'<span>↗</span></a>'; }).join('');
      var posts=(p.posts||[]).map(function(x){
        if(x.is_paid) return '<a class="tile" href="'+app+'">🔒<span class="lk">'+(x.subs_only?'💜 Subscribers':money(x.price_cents||0))+'</span></a>';
