@@ -201,3 +201,6 @@ Tapping Followers or Following on a profile lists the accounts (`list_people`, `
 
 ### 041 — email help
 If someone's confirmation email never arrives, the "Check your email" screen has **Still nothing? Ask us to confirm you** (`request_email_help`). It tells every admin (in-app + push, type `email_help`) and never reveals whether an address has an account (silent if none; limits: one per address per 30 min, 200 a day). Admin → Users shows waiting requests (`admin_email_help_list`) with a **Confirm email** button, and each user page has **Confirm email manually** (`admin_confirm_email`, admin only, audit-logged as `confirm_email`). Table `email_help_requests` has no direct access.
+
+### Email links on our own domain
+The branded Confirm signup / Reset password templates (`supabase/email-templates/`) link to `https://www.overvibez.com/?token_hash={{ .TokenHash }}&type=signup|recovery` instead of supabase.co (a link domain that does not match the sender domain is a spam signal, and Resend flagged it). The app confirms the token itself on load (`emailLink()` in `index.html`, `verifyOtp` with `token_hash`). Old-style supabase.co links keep working.

@@ -1507,6 +1507,16 @@ if(sb) sb.auth.onAuthStateChange((ev,session)=>{
   if(ev==='PASSWORD_RECOVERY') recoveryMode=true;
   setTimeout(()=>{ if(session&&session.user) startSession(session.user.id); else { document.documentElement.classList.remove('booting'); if(store.session) clearSession(); } },0);
 });
+/* Email links come to www.overvibez.com (not supabase.co, which spam filters dislike) carrying ?token_hash=…&type=signup|recovery — confirm it here */
+(async function emailLink(){
+  const q=new URLSearchParams(location.search), th=q.get('token_hash'), ty=q.get('type');
+  if(!sb||!th||!/^(signup|recovery|email_change|magiclink)$/.test(ty||'')) return;
+  history.replaceState(null,'',location.pathname);
+  if(ty==='recovery') recoveryMode=true;
+  const {error}=await sb.auth.verifyOtp({token_hash:th,type:ty});
+  if(error){ recoveryMode=false; document.documentElement.classList.remove('booting'); authTab('login');
+    document.getElementById('liErr').textContent=ty==='recovery'?'That reset link has expired or was already used. Tap “Forgot password?” to get a new one.':'That link has expired or was already used. Try logging in — or sign up again to get a new email.'; }
+})();
 
 
 /* ═══════════ BLOCK / MUTE + APPEALS ═══════════ */
