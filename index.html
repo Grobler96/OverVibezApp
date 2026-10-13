@@ -3250,6 +3250,12 @@ function liveEnded(msg){
 async function liveClose(){ liveCleanup(); await loadLive().catch(()=>{}); settled(); }
 
 /* ═══════════ ME ═══════════ */
+async function becomeCreator(){
+  if(!confirm('Switch to a creator account?\n\n• You can post, go live and earn — you keep 85% of what you make.\n• You will need to pass a one-time 18+ ID check before you can post.\n• Your followers, subscriptions and history stay as they are.\n• Creators cannot top up the wallet, and this cannot be undone from the app.\n\nYou will get the welcome tour straight away.')) return;
+  if(!(await rpc('become_creator'))) return;
+  toast('Welcome, creator! ✨ Setting things up…');
+  setTimeout(()=>location.reload(),900);      // a fresh load picks up the creator account and plays the welcome tour
+}
 function renderMe(){
   const u=me(), isC=u.role==='creator';
   if(isC) loadFollowingCount(u.id);
@@ -3273,6 +3279,10 @@ function renderMe(){
     </div>
     ${!isC&&mySubs.length?`<div class="section-title" style="padding-top:4px">Your subscriptions</div>
       <div class="list-card">${mySubs.map(c=>`<div class="row" onclick="subscribe('${c.id}')"><div class="r-ic ${c.av}">${avInner(c)}</div>${esc(c.username)}<span class="sub">${store.subCanceled[c.id]?'cancelled · ends ':'renews '}${new Date(store.subEnds[c.id]).toLocaleDateString()}</span></div>`).join('')}</div>`:''}
+    ${!isC?`<div onclick="becomeCreator()" style="margin:6px 14px 14px;padding:16px;border-radius:16px;cursor:pointer;background:linear-gradient(135deg,#FF3D8A,#8B5CF6);color:#fff">
+      <div style="font-size:16px;font-weight:800;margin-bottom:4px">✦ Become a creator</div>
+      <div style="font-size:13px;line-height:1.5;opacity:.95">Post, go live and earn — you keep 85%. Same account, same followers, plus a guided tour to get you started.</div>
+      <div style="margin-top:10px;font-weight:700;font-size:13px">Switch to a creator account →</div></div>`:''}
     <div class="section-title" style="padding-top:4px">Settings</div>
     <div class="list-card">
       ${isC?`<div class="row" onclick="changeSubPrice()"><div class="r-ic">💜</div>Subscription price<span class="sub">${$$(u.subPrice)}/mo</span></div>

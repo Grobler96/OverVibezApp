@@ -207,3 +207,6 @@ The branded Confirm signup / Reset password templates (`supabase/email-templates
 
 ### 042 — log in with a username
 The login box takes an email or a username. For a username the app calls `resolve_login(name, password)`, which returns the account's email only if the password matches the stored hash (pgcrypto `crypt`), otherwise null, so it never reveals whether a username has an account; the app then signs in with that email as before. This check skips the normal sign-in rate limit, so it has its own: 8 tries per name per 15 minutes and 300 overall (`login_attempts`, no direct access, tidied hourly). Typing an email works exactly as before.
+
+### 043 — become a creator
+Profile shows followers a "Become a creator" card. `become_creator()` flips the account to a creator account (default £4.99 subscription price, `intro_seen` reset) and logs it (`become_creator`); the app then reloads so the welcome tour plays like on a new creator account. Followers, subscriptions, wallet and history are kept; posting still needs the 18+ check. One way from the app (a direct update of `account_type` is blocked; staff can change it back in the database).
