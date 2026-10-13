@@ -296,6 +296,10 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 /* ═══════════ LIVE STREAMING ═══════════ */
 .wm{position:absolute;inset:0;pointer-events:none;user-select:none;background-repeat:repeat;z-index:2}
+.install-bar{position:fixed;left:50%;transform:translateX(-50%);width:calc(100% - 24px);max-width:500px;z-index:210;background:var(--panel);border:1px solid var(--accent);border-radius:18px;padding:12px 14px;display:none;gap:12px;align-items:center;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.install-bar.open{display:flex}
+body:has(.overlay.open) .install-bar,body:has(.live-overlay.open) .install-bar{display:none}
+.install-bar img{width:44px;height:44px;border-radius:11px;flex:none}
 .imgv{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.95);display:none;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);cursor:zoom-out}
 .imgv.open{display:flex}
 .imgv img{max-width:100vw;max-height:92vh;object-fit:contain;touch-action:pinch-zoom}
@@ -816,6 +820,15 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   </div>
 </div>
 
+<div class="install-bar" id="installBar" role="dialog" aria-label="Install OverVibez">
+  <img src="icons/icon-192.png" alt="">
+  <div style="flex:1;min-width:0;font-size:13px;line-height:1.4"><b style="font-size:14px">Get the OverVibez app</b><br><span style="color:var(--muted)">Opens full screen, loads faster and sends you notifications.</span></div>
+  <button class="abtn" id="installGo" onclick="installGo()" style="flex:none">Install</button>
+  <button onclick="installDismiss()" title="Not now" aria-label="Not now" style="color:var(--muted);font-size:18px;padding:4px 6px;flex:none">✕</button>
+</div>
+<div class="overlay" id="installHelp" style="z-index:230" onclick="if(event.target===this)closeModal('installHelp')">
+  <div class="sheet"><h3>Add OverVibez to your Home Screen</h3><div id="installSteps" style="font-size:14px;line-height:1.7"></div><button class="primary" onclick="closeModal('installHelp')">Got it</button></div>
+</div>
 <div class="imgv" id="imgViewer" onclick="closeImage()" role="dialog" aria-label="Photo"><button class="x" onclick="closeImage()" aria-label="Close">✕</button><img id="imgViewerImg" alt=""></div>
 <div class="overlay" id="peopleModal" onclick="if(event.target===this)closeModal('peopleModal')">
   <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
@@ -1254,11 +1267,36 @@ window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEv
 window.addEventListener('appinstalled',()=>{ installEvt=null; toast('OverVibez is installed 🎉'); });
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')) window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
 const isStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+const isIosDevice=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const inAppBrowser=()=>/FBAN|FBAV|Instagram|TikTok|musical_ly|Snapchat|Twitter|Line\/|; wv\)/i.test(navigator.userAgent);   // browsers inside other apps cannot install anything
 async function installApp(){
-  if(installEvt){ installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt=null; return; }
-  if(/iphone|ipad|ipod/i.test(navigator.userAgent)) alert('To install: tap the Share button, then “Add to Home Screen”.');
-  else alert('To install: open your browser menu and choose “Install app” or “Add to Home Screen”.');
+  if(installEvt){ installEvt.prompt(); let r=null; try{ r=await installEvt.userChoice; }catch(e){} installEvt=null; if(r&&r.outcome==='accepted') localStorage.setItem('ov_installed','1'); installBarPaint(); return; }
+  installHelp();
 }
+function installHelp(){
+  const steps=inAppBrowser()?`<ol style="margin:0 0 14px;padding-left:20px"><li>This page is open inside another app, which can't install OverVibez.</li><li>Tap the <b>⋯</b> or <b>share</b> icon and choose <b>Open in ${isIosDevice()?'Safari':'Chrome'}</b>.</li><li>Then come back to this prompt.</li></ol>`
+    :isIosDevice()?`<ol style="margin:0 0 14px;padding-left:20px"><li>Tap the <b>Share</b> button <span style="font-size:17px">⬆︎</span> (bottom of Safari, or top right).</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li><li>Tap <b>Add</b>. OverVibez appears on your Home Screen like any other app.</li></ol>`
+    :`<ol style="margin:0 0 14px;padding-left:20px"><li>Open your browser menu <b>⋮</b>.</li><li>Tap <b>Install app</b> or <b>Add to Home screen</b>.</li><li>Tap <b>Install</b>.</li></ol>`;
+  document.getElementById('installSteps').innerHTML=steps; closeModal('installBar'); openModal('installHelp');
+}
+/* a friendly prompt to install the app when someone opens the site in a browser */
+function installDue(){
+  if(isStandalone()||localStorage.getItem('ov_installed')==='1') return false;
+  if(Date.now()-Number(localStorage.getItem('ov_install_no')||0)<7*864e5) return false;
+  return !!installEvt||isIosDevice()||/android/i.test(navigator.userAgent);
+}
+function installBarPaint(){
+  const bar=document.getElementById('installBar'); if(!bar) return;
+  const show=installDue(); bar.classList.toggle('open',show); if(!show) return;
+  const inApp=!document.getElementById('app').classList.contains('hidden');
+  bar.style.bottom=inApp?'calc(74px + env(safe-area-inset-bottom))':'calc(14px + env(safe-area-inset-bottom))';
+  document.getElementById('installGo').textContent=installEvt?'Install':'How to';
+}
+function installGo(){ installApp(); }
+function installDismiss(){ localStorage.setItem('ov_install_no',Date.now()); installBarPaint(); }
+window.addEventListener('beforeinstallprompt',()=>setTimeout(installBarPaint,1500));
+window.addEventListener('appinstalled',()=>{ localStorage.setItem('ov_installed','1'); installBarPaint(); });
+setTimeout(installBarPaint,2500); setInterval(installBarPaint,15000);
 
 /* ═══════════ AUTH ═══════════ */
 let signupRole='creator', recoveryMode=false, campaignName=null, freeShown=false;
