@@ -993,8 +993,8 @@ function mapUser(p,followers){
 }
 function friendly(m){
   if(/Insufficient wallet/i.test(m)) return 'Not enough balance in your wallet';
-  if(/Age verification/i.test(m)) return 'Age verification is required first — tap Me → Identity & age verification';
-  return m||'Something went wrong';
+  if(/Age verification/i.test(m)) return 'Age verification is required first — tap Profile → Identity & age verification';
+  return (m||'Something went wrong').replace(/\bMe →/g,'Profile →');
 }
 async function rpc(name,args){
   const {error}=await sb.rpc(name,args||{});
@@ -1181,7 +1181,7 @@ async function pushUnlinkDevice(){          // signing out stops this device rec
 }
 async function enablePush(){
   if(!pushOk()) return toast(isIos()&&!isStandalone()?'On iPhone, tap Share → Add to Home Screen, then open OverVibez from there':'This browser cannot do push notifications');
-  const perm=await Notification.requestPermission(); if(perm!=='granted'){ paintPush(); return toast(perm==='denied'?'Notifications are blocked — allow them in your browser settings':'No problem — you can turn them on later in Me'); }
+  const perm=await Notification.requestPermission(); if(perm!=='granted'){ paintPush(); return toast(perm==='denied'?'Notifications are blocked — allow them in your browser settings':'No problem — you can turn them on later in Profile'); }
   const {data:key}=await sb.rpc('push_public_key'); if(!key) return toast('Notifications are still being set up — try again in a minute');
   try{
     const reg=await pushReg(); let sub=await reg.pushManager.getSubscription();
@@ -1332,7 +1332,7 @@ async function savePassword(){
     closeModal('pwModal'); toast('Password updated ✓');
   } finally { btn.disabled=false; }
 }
-async function logOut(){ if(sb){ await pushUnlinkDevice(); await sb.auth.signOut(); } }
+async function logOut(){ if(sb){ await pushUnlinkDevice(); try{ localStorage.removeItem('ov_nav'); }catch(e){} await sb.auth.signOut(); } }
 /* ═══════════ TWO-STEP LOGIN (authenticator app) ═══════════ */
 let mfaState={mode:null,factorId:null,uid:null};
 const mfaErr=t=>{ document.getElementById('mfaErr').textContent=t||''; };
@@ -1695,7 +1695,7 @@ const notifInfo=n=>{
     case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
-    case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Me'];
+    case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Profile'];
     case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b> — it has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
     default: return ['🔔','New activity'];
   }
@@ -1751,7 +1751,11 @@ function enterApp(uid){
   document.getElementById('app').classList.remove('hidden');
   renderShell();
   const hc=hashUser();
-  if(hc&&hc.id!==uid) openProfile(hc.id); else go('home');
+  const nav=navRead(uid);
+  if(hc&&hc.id!==uid) openProfile(hc.id);
+  else if(nav&&nav.p==='profile'&&nav.c){ go('home'); ensureUsers([nav.c]).then(()=>{ if(user(nav.c)&&store.session===uid) openProfile(nav.c); }); }
+  else if(nav&&nav.p!=='profile'&&(nav.p!=='admin'||me().staffRole)) go(nav.p);
+  else go('home');
   pushOnLogin(); handleGo(location.href,true);
 }
 function renderShell(){
@@ -1769,12 +1773,12 @@ function renderShell(){
     <button class="nav-btn" data-page="studio" onclick="go('studio',this)">◔<span>Studio</span></button>
     <button class="nav-btn create" onclick="openCreate()">＋</button>
     <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<i class="nbadge hidden" id="chatBadge">0</i><span>Chats</span></button>
-    <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>` : `
+    <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Profile</span></button>` : `
     <button class="nav-btn on" data-page="home" onclick="go('home',this)">⌂<span>Home</span></button>
     <button class="nav-btn" data-page="explore" onclick="go('explore',this)">✦<span>Explore</span></button>
     <button class="nav-btn" data-page="raffles" onclick="go('raffles',this)">🎟<span>Raffles</span></button>
     <button class="nav-btn" data-page="messages" onclick="go('messages',this)">✉<i class="nbadge hidden" id="chatBadge">0</i><span>Chats</span></button>
-    <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Me</span></button>`;
+    <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Profile</span></button>`;
 }
 function go(page,btn){
   ['home','explore','raffles','messages','studio','me','profile','admin','notifs','money'].forEach(p=>{
@@ -1793,7 +1797,12 @@ function go(page,btn){
   if(page==='notifs')renderNotifs();
   if(page==='money')renderMoney(true);
   window.scrollTo({top:0});
+  navSave(page);
 }
+/* remember the page you were on, so a refresh (or reopening the app soon after) puts you back there instead of on Home */
+const NAV_PAGES=['home','explore','raffles','messages','studio','me','profile','admin','notifs','money'];
+function navSave(page){ try{ if(store.session) localStorage.setItem('ov_nav',JSON.stringify({u:store.session,p:page,c:page==='profile'?currentProfile:null,t:Date.now()})); }catch(e){} }
+function navRead(uid){ try{ const n=JSON.parse(localStorage.getItem('ov_nav')||'null'); return n&&n.u===uid&&NAV_PAGES.includes(n.p)&&Date.now()-n.t<6*36e5?n:null; }catch(e){ return null; } }
 function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt').textContent=$$(u.wallet); }
 
 /* ═══════════ HOME ═══════════ */
@@ -2074,7 +2083,7 @@ async function startTopup(cents){
 }
 /* ═══════════ CREATOR WELCOME ANIMATION ═══════════
    Plays once for a new creator's first login (the database remembers, per account: profiles.intro_seen) and can be replayed from
-   Me → Welcome tour. Scenes are plain CSS transitions switched on by timers; reduced-motion users get the final scene straight away. */
+   Profile → Welcome tour. Scenes are plain CSS transitions switched on by timers; reduced-motion users get the final scene straight away. */
 let introTimers=[], introShown=false;
 const introAt=(ms,fn)=>introTimers.push(setTimeout(fn,ms));
 function maybeIntro(){
@@ -2115,7 +2124,7 @@ function introConfetti(){
 function openIntro(replay){
   const u=me(), ov=document.getElementById('introOv'), reduce=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
   introTimers.forEach(clearTimeout); introTimers=[];
-  const steps=[['Get verified (18+)','Me → Identity &amp; age verification. You need this before you can post.'],
+  const steps=[['Get verified (18+)','Profile → Identity &amp; age verification. You need this before you can post.'],
                ['Make your profile yours','Photo, bio, category and your subscription price.'],
                ['Post your first drop','Free or paid — photo, video or text.'],
                ['Go live','Free or ticketed. You keep 85% of every ticket and tip.']];
@@ -2230,7 +2239,7 @@ function copyText(t){ (navigator.clipboard&&navigator.clipboard.writeText?naviga
 /* --- Bulk upload --- */
 let bulk=null;
 function openBulk(){
-  if(!me().ageVerified){ closeModal('switchModal'); toast('Get your 18+ check done first — Me → Identity & age verification'); return; }
+  if(!me().ageVerified){ closeModal('switchModal'); toast('Get your 18+ check done first — Profile → Identity & age verification'); return; }
   bulk={items:[],busy:false,type:'free'}; document.getElementById('bulkFiles').value=''; document.getElementById('bulkErr').textContent=''; bulkType('free'); paintBulk();
   closeModal('switchModal'); openModal('bulkModal');
 }
@@ -2259,7 +2268,7 @@ async function bulkStart(){
   if(!bulk||bulk.busy) return; const u=me(), err=document.getElementById('bulkErr'); err.textContent='';
   const type=bulk.type, price=Math.round(parseFloat(document.getElementById('bkPrice').value||'3')*100), incl=document.getElementById('bkIncluded').checked;
   if(type==='paid'&&(isNaN(price)||price<99||price>49999)) return err.textContent='Price must be between £0.99 and £499.99';
-  if(type==='subs'&&!u.subPrice) return err.textContent='Set a subscription price first (Me → Edit profile)';
+  if(type==='subs'&&!u.subPrice) return err.textContent='Set a subscription price first (Profile → Edit profile)';
   const todo=bulk.items.filter(i=>i.state==='ready'||i.state==='failed'); if(!todo.length) return;
   bulk.busy=true; bulk.items.forEach(i=>{ if(i.state==='failed') i.state='ready'; }); paintBulk();
   const bar=document.getElementById('bulkBar'); bar.classList.remove('hidden'); let doneN=0; const bi=document.getElementById('bulkBarI'); bi.style.width='0';
@@ -2860,10 +2869,10 @@ function setPostWhen(w){ postWhen=w;
 async function publishPost(){
   const u=me(), cap=document.getElementById('postCap').value.trim(), f=document.getElementById('postMedia').files[0];
   if(!cap&&!f) return toast('Add a caption or a photo/video first');
-  if(!u.ageVerified) return toast('Verify your age first — tap Me → Identity & age verification');
+  if(!u.ageVerified) return toast('Verify your age first — tap Profile → Identity & age verification');
   const price=Math.round(parseFloat(document.getElementById('postPrice').value||'3')*100);
   if(postType==='paid'&&(isNaN(price)||price<99||price>49999)) return toast('Price must be between £0.99 and £499.99');
-  if(postType==='subs'&&!u.subPrice) return toast('Set a subscription price first (Me → Edit profile) so people can subscribe');
+  if(postType==='subs'&&!u.subPrice) return toast('Set a subscription price first (Profile → Edit profile) so people can subscribe');
   const collab0=collab.id?(user(collab.id)||{}).username:null;
   let when=null;
   if(postWhen==='later'){ when=new Date(document.getElementById('postAt').value);
@@ -2922,7 +2931,7 @@ const liveFail=e=>toast(e.message==='NOT_CONFIGURED'?'Live streaming is not swit
 
 async function startBroadcast(){
   const u=me();
-  if(!u.ageVerified) return toast('Verify your age first — tap Me → Identity & age verification');
+  if(!u.ageVerified) return toast('Verify your age first — tap Profile → Identity & age verification');
   const title=document.getElementById('liveTitle').value.trim(); if(!title) return toast('Give your stream a title');
   const price=liveEntry==='paid'?Math.round(parseFloat(document.getElementById('livePrice').value||'0')*100):0;
   if(liveEntry==='paid'&&(isNaN(price)||price<99||price>50000)) return toast('Entry price must be between £0.99 and £500.00');
@@ -3687,7 +3696,7 @@ async function admInvites(){
 }
 function copyText(t){ (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Copied ✓')).catch(()=>prompt('Copy this:',t)); }
 async function admRequireMfa(on){
-  if(on&&!store.sec.mfa_enabled) return toast('Set up your own two-step login first (Me → Two-step login), then require it');
+  if(on&&!store.sec.mfa_enabled) return toast('Set up your own two-step login first (Profile → Two-step login), then require it');
   if(on&&!confirm('Require two-step login for all staff? Any moderator or admin without it will be locked out of staff tools until they set it up.')) return;
   const {error}=await admCall('admin_set_require_staff_mfa',{p_on:on}); if(!error){ toast(on?'Two-step is now required for staff':'Two-step is now optional'); await loadSecurity(); admLoad(); }
 }
