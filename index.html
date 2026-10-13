@@ -780,6 +780,20 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   </div>
 </div>
 
+<div class="overlay" id="offerModal" onclick="if(event.target===this)closeModal('offerModal')">
+  <div class="sheet">
+    <h3>New offer</h3>
+    <p>Give new subscribers a reason to start. Only people who have never subscribed to you can use an offer, and each person can use it once.</p>
+    <div class="chiprow" id="ofKinds" style="margin:6px 0 10px"></div>
+    <div class="field" id="ofDaysWrap"><label>Free trial length (1 to 30 days). After it ends the normal price renews from their wallet unless they cancel</label><input id="ofDays" type="number" min="1" max="30" value="7"></div>
+    <div class="field hidden" id="ofPctWrap"><label>Discount on the first 30 days (10% to 90%). It renews at the normal price</label><input id="ofPct" type="number" min="10" max="90" value="30"></div>
+    <div class="field"><label>Limit uses (optional)</label><input id="ofMax" type="number" min="1" max="10000" placeholder="No limit"></div>
+    <div class="field"><label>Ends after (days, optional)</label><input id="ofExp" type="number" min="1" max="365" placeholder="Never"></div>
+    <div class="err" id="ofErr"></div>
+    <button class="primary" onclick="createOffer()">Create offer link</button>
+    <button class="ghost" onclick="closeModal('offerModal')">Cancel</button>
+  </div>
+</div>
 <div class="overlay" id="feedbackModal" onclick="if(event.target===this)closeModal('feedbackModal')">
   <div class="sheet">
     <h3>Report a problem or idea</h3>
@@ -1102,7 +1116,7 @@ async function hydrate(){
   const earned={}; (tx.data||[]).forEach(t=>{ if(t.reference_id) earned[t.reference_id]=(earned[t.reference_id]||0)+Number(t.gross_cents); });
   store.posts=postRows.map(p=>({id:p.id,by:p.creator_id,cap:p.caption||'',scene:p.media_type==='text'?'✍️':'🖼️',
     paid:p.is_paid,subsOnly:!!p.subs_only,subIncluded:p.sub_included!==false,price:p.price_cents||0,likes:p.like_count,comments:p.comment_count||0,earned:earned[p.id]||0,ts:ago(p.created_at),at:p.created_at,
-    collab:p.collab_user_id||null,collabPct:p.collab_pct||50,collabStatus:p.collab_status||null,edited:!!p.edited_at,mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
+    collab:p.collab_user_id||null,collabPct:p.collab_pct||50,collabStatus:p.collab_status||null,edited:!!p.edited_at,pinned:p.pinned_at||null,mediaPath:p.media_path,mediaKind:p.media_type==='video'?'video':'image',mediaUrl:null})).filter(p=>!store.blocks.has(p.by));
   // media URLs: free media is public; paid media needs a signed URL, issued only if storage RLS agrees
   const paidPaths=[];
   store.posts.forEach(p=>{ if(!p.mediaPath) return;
@@ -1269,6 +1283,48 @@ function paintPushPrompt(){
     <div style="font-size:22px">🔔</div><div style="flex:1;min-width:0;font-size:13px;line-height:1.45"><b>Never miss a thing</b><br><span style="color:var(--muted)">${me()&&me().role==='creator'?'Get pinged for new followers, sales and tips.':'Get pinged for replies, live shows and giveaways.'}</span></div>
     <button class="abtn" onclick="enablePush()">Turn on</button><button onclick="localStorage.setItem('ov_pushno',Date.now());paintPushPrompt()" title="Not now" style="color:var(--muted);font-size:16px;padding:2px 6px">✕</button></div>`;
 }
+/* ═══════════ OFFERS (free trials and discounts) AND PINNED POSTS ═══════════ */
+let offerState=null, offerSet={data:null,at:0}, ofKind='trial';
+(function captureOffer(){ try{ const q=new URLSearchParams(location.search), c=q.get('offer'); if(c&&/^[A-Za-z0-9]{4,16}$/.test(c)){ localStorage.setItem('ov_offer',c.toUpperCase()); history.replaceState(null,'',location.pathname+location.hash); } }catch(e){} })();
+const offerLabel=o=>o.kind==='trial'?o.trial_days+' day free trial':o.percent_off+'% off the first month';
+function offerBtn(c){ const o=offerState; if(!o||!o.valid||o.creator_id!==c.id) return ''; return o.kind==='trial'?'Start '+o.trial_days+' day free trial':'Subscribe · '+o.percent_off+'% off'; }
+async function handleOffer(){
+  const code=localStorage.getItem('ov_offer'); if(!code||!store.session) return;
+  const {data}=await sb.rpc('offer_info',{p_code:code}); if(!data) return;
+  if(data.creator_id) await ensureUsers([data.creator_id]);
+  if(!data.valid){ localStorage.removeItem('ov_offer'); offerState=null; toast(data.reason||'That offer is not available'); if(data.creator_id) openProfile(data.creator_id); return; }
+  offerState=data; toast('🎁 '+offerLabel(data)+' from @'+data.username); openProfile(data.creator_id);
+}
+async function loadOffers(){ offerSet.at=Date.now(); const {data}=await sb.rpc('my_offers'); if(data){ offerSet.data=data; paintOffers(); } }
+function paintOffers(){
+  const el=document.getElementById('offersBox'); if(!el) return; const u=me(); if(!u||u.role!=='creator'){ el.innerHTML=''; return; }
+  const list=offerSet.data||[];
+  const row=o=>{ const live=o.active&&!(o.expires_at&&new Date(o.expires_at)<new Date())&&!(o.max_uses&&o.uses>=o.max_uses);
+    return `<div style="padding:10px 0;border-top:1px solid var(--line);${live?'':'opacity:.55'}"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:14px">${o.kind==='trial'?'🎁 '+o.trial_days+' day free trial':'🏷️ '+o.percent_off+'% off the first month'}</b><span style="font-size:12px;color:var(--muted)">${o.uses}${o.max_uses?' of '+o.max_uses:''} used</span></div>
+      <div style="font-size:12px;color:var(--muted);margin:2px 0 6px">${live?'Live':(o.active?'Finished':'Switched off')}${o.expires_at?' · ends '+new Date(o.expires_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):''}</div>
+      <button class="abtn" onclick="copyText(pageLink(me().username)+'?offer=${esc(o.code)}')">Copy link</button> <button class="abtn ${o.active?'':'ok'}" onclick="setOffer('${o.id}',${!o.active})">${o.active?'Switch off':'Switch on'}</button></div>`; };
+  el.innerHTML=`<div class="chart-card"><div style="display:flex;align-items:center;gap:8px"><h4 style="flex:1;margin:0;font-size:15px">Offers for new subscribers</h4><button class="abtn ok" onclick="openOffer()">＋ New</button></div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.5;margin:6px 0 4px">Share an offer link on your socials. With a free trial you earn nothing until it ends, then the first payment comes from their wallet. Discounts are charged our usual 15% on the reduced price.</p>
+    ${list.length?list.map(row).join(''):'<div style="font-size:13px;color:var(--muted);padding:6px 0">No offers yet.</div>'}</div>`;
+}
+function openOffer(){ ofKind='trial'; document.getElementById('ofErr').textContent=''; ofPaint(); openModal('offerModal'); }
+function ofPaint(){
+  document.getElementById('ofKinds').innerHTML=[['trial','🎁 Free trial'],['discount','🏷️ Discount']].map(([k,l])=>`<button class="chip ${ofKind===k?'on':''}" onclick="ofKind='${k}';ofPaint()">${l}</button>`).join('');
+  document.getElementById('ofDaysWrap').classList.toggle('hidden',ofKind!=='trial'); document.getElementById('ofPctWrap').classList.toggle('hidden',ofKind!=='discount');
+}
+async function createOffer(){
+  const err=document.getElementById('ofErr'); err.textContent='';
+  const n=id=>{ const v=document.getElementById(id).value.trim(); return v===''?null:parseInt(v,10); };
+  const {data,error}=await sb.rpc('create_offer',{p_kind:ofKind,p_days:ofKind==='trial'?n('ofDays'):null,p_percent:ofKind==='discount'?n('ofPct'):null,p_max_uses:n('ofMax'),p_expires_days:n('ofExp')});
+  if(error) return err.textContent=friendly(error.message);
+  closeModal('offerModal'); await loadOffers(); copyText(pageLink(me().username)+'?offer='+data); toast('Offer created. The link is copied, share it anywhere 🎁');
+}
+async function setOffer(id,on){ const {error}=await sb.rpc('set_offer_active',{p_offer:id,p_active:on}); if(error) return toast(friendly(error.message)); loadOffers(); }
+async function pinPost(id,pin){
+  const {error}=await sb.rpc('pin_post',{p_post:id,p_pin:pin}); if(error) return toast(friendly(error.message));
+  toast(pin?'Pinned to the top of your page 📌':'Unpinned'); postStats.at=0; await settled();
+}
+
 /* ═══════════ GET STARTED CHECKLIST, CREATORS TO FOLLOW, STREAKS ═══════════ */
 let startState=null, startAt=0, suggestIds=null, suggestAt=0;
 const clKey=()=>'ov_cl_'+(store.session||'');
@@ -1572,12 +1628,12 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); loadSecurity().then(()=>{ if(store.session){ refresh(); maybeIntro(); loadStart(true); touchStreak(); } }); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
+  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); loadSecurity().then(()=>{ if(store.session){ refresh(); maybeIntro(); loadStart(true); touchStreak(); handleOffer(); } }); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
   store.session=null; store.sec=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  startState=null; suggestIds=null; store.streak=null; payBal={data:null,at:0}; store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
+  startState=null; suggestIds=null; store.streak=null; payBal={data:null,at:0}; offerState=null; offerSet={data:null,at:0}; store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -2232,6 +2288,29 @@ function subscribe(cid){
     } else if(confirm('You are subscribed to '+c.username+'. It renews automatically on '+end+' for '+$$(store.subPrice[cid]||c.subPrice)+' from your wallet.\n\nCancel renewal? You keep access until '+end+' and will not be charged again.')) cancelSub(cid);
     return;
   }
+  const off=offerState&&offerState.valid&&offerState.creator_id===cid?offerState:null;
+  if(off){
+    const first=off.kind==='trial'?0:off.first_price_cents, endD=new Date(Date.now()+(off.trial_days||0)*864e5).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    document.getElementById('payTitle').textContent=off.kind==='trial'?'Start your free trial with '+c.username:'Subscribe to '+c.username;
+    document.getElementById('paySub').textContent=off.kind==='trial'
+      ?'Free for '+off.trial_days+' days. After that it renews automatically at '+$$(c.subPrice)+' every 30 days from your wallet, so make sure your wallet has '+$$(c.subPrice)+' by '+endD+'. We remind you before it happens. Cancel any time on their page and keep access to the end of the trial.'
+      :off.percent_off+'% off your first 30 days. After that it renews automatically at '+$$(c.subPrice)+' every 30 days from your wallet until you cancel.';
+    document.getElementById('payPrice').textContent=off.kind==='trial'?'Free for '+off.trial_days+' days':$$(first)+' first month';
+    document.getElementById('payCreator').textContent=$$(Math.round(first*(1-FEE)));
+    document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-first));
+    payBtn(off.kind==='trial'?'Start free trial':'Subscribe · '+$$(first));
+    document.getElementById('payConfirmBtn').onclick=async()=>{
+      closeModal('payModal'); toast('Processing…');
+      if(await rpc('subscribe_with_offer',{p_creator:cid,p_offer:off.code})){
+        localStorage.removeItem('ov_offer'); offerState=null;
+        store.subs[u.id+cid]=true; store.subEnds[cid]=new Date(Date.now()+(off.kind==='trial'?off.trial_days:30)*864e5).toISOString(); delete store.subCanceled[cid];
+        u.wallet=Math.max(0,u.wallet-first); rerender(); toast(off.kind==='trial'?'Your free trial has started 💜':'Subscribed to '+c.username+' 💜');
+        await sb.from('follows').upsert({follower_id:u.id,creator_id:cid},{ignoreDuplicates:true});
+        settled();
+      }
+    };
+    openModal('payModal'); return;
+  }
   document.getElementById('payTitle').textContent='Subscribe to '+c.username;
   document.getElementById('paySub').textContent='Renews automatically every 30 days from your wallet until you cancel. Cancel any time on their page and keep access to the end of the period. Includes subscriber-only posts, their paid posts marked “included”, and half-price live tickets.';
   document.getElementById('payPrice').textContent=$$(c.subPrice)+' / 30 days';
@@ -2770,7 +2849,7 @@ function paintPostStats(){
       ${me().followers>0?`<div style="font-size:12px;color:var(--muted);margin:2px 0 6px">👁 Seen by <b style="color:var(--text)">${Number(x.follower_views||0)}</b> of ${me().followers} followers (${Math.min(100,Math.round(Number(x.follower_views||0)/me().followers*100))}%)</div>`:''}
       <div class="pm"><div><b>${fmtN(x.views)}</b>Views</div><div><b>${fmtN(x.likes)}</b>Likes</div><div><b>${fmtN(x.comments)}</b>Comments</div><div><b>${fmtN(x.shares)}</b>Shares</div></div>
       ${x.is_paid&&!x.subs_only||Number(x.tips)?`<div style="font-size:12px;color:var(--muted);margin:4px 0">${x.is_paid&&!x.subs_only?'🔓 '+x.unlocks+' unlock'+(Number(x.unlocks)===1?'':'s')+' · ':''}💰 ${x.tips} tip${Number(x.tips)===1?'':'s'}</div>`:''}
-      ${!x.owner_id||x.owner_id===me().id?`<div><button class="abtn" onclick="openEditPost('${x.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${x.id}')">Delete</button></div>`:`<div><button class="abtn danger" onclick="answerCollab('${x.id}',false)">Leave collab</button></div>`}</div>`).join('')
+      ${!x.owner_id||x.owner_id===me().id?`<div><button class="abtn" onclick="pinPost('${x.id}',${!((store.posts.find(q=>q.id===x.id)||{}).pinned)})">${(store.posts.find(q=>q.id===x.id)||{}).pinned?'📌 Unpin':'📌 Pin'}</button><button class="abtn" onclick="openEditPost('${x.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${x.id}')">Delete</button></div>`:`<div><button class="abtn danger" onclick="answerCollab('${x.id}',false)">Leave collab</button></div>`}</div>`).join('')
       :'<p style="color:var(--muted);font-size:13px;padding:8px 0">No posts yet. Hit ＋ to publish your first one.</p>'}
     <p style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5">Views count each member once per post, once they have scrolled it into view. "Seen by" counts only people who follow you. Shares count link shares from the post. Money is what you kept after the 15% fee, with refunds taken off.</p></div>`;
 }
@@ -2794,6 +2873,7 @@ function renderStudio(){
       <div class="stat"><b>${myPosts.length}</b><span>Drops</span></div>
     </div>
     <div id="anBox"></div>
+    <div id="offersBox"></div>
     ${u.bonus>0?`<div class="bonus-card"><div class="lbl">🎁 Bonus from OverVibez</div><div class="amt">${$$(u.bonus)}</div>
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team, no fee taken. Kept separate from your sales earnings.</div>
       <button class="primary" onclick="requestBonusPayout()">Withdraw bonus ${$$(u.bonus)}</button></div>`:''}
@@ -2807,6 +2887,7 @@ function renderStudio(){
     <div id="postsBox"></div>
     <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(avail)}</button>
     <button class="ghost" style="margin-top:10px" onclick="go('money')">💳 Money &amp; receipts</button>`;
+  paintOffers(); if(!offerSet.data) loadOffers();
   paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
   paintLevel(); loadLevel(); paintSched(); if(!schedSet.data||Date.now()-schedSet.at>30000) loadSched(); paintTimes(); if(!timesSet.data) loadTimes();
   paintCollabInbox(); paintCommentSettings(); if(!cmtSet.data) loadCommentSettings();
@@ -3613,7 +3694,7 @@ function renderProfile(){
   if(c.role==='creator') loadProfBadges(c.id);
   if(c.role==='creator') loadFollowingCount(c.id);
   const u=me(), isMe=c.id===u.id, subbed=store.subs[u.id+c.id];
-  const theirPosts=store.posts.filter(p=>p.by===c.id||(p.collab===c.id&&p.collabStatus==='accepted'));
+  const theirPosts=store.posts.filter(p=>p.by===c.id||(p.collab===c.id&&p.collabStatus==='accepted')).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(a.pinned&&b.pinned?new Date(b.pinned)-new Date(a.pinned):0));
   document.getElementById('page-profile').innerHTML=`
     <button class="back-btn" onclick="go('home')" style="padding:14px 18px 0">← Home</button>
     <div class="me-head">
@@ -3632,14 +3713,14 @@ function renderProfile(){
       ${!isMe&&c.role==='creator'?`
       <div style="display:flex;gap:8px;width:100%;padding:2px 0 4px">
         <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text);flex:1 1 0;width:auto;min-width:0;padding:13px 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="toggleFollow('${c.id}')">${store.following.has(c.id)?'Following ✓':'Follow'}</button>
-        <button class="primary" style="margin:0;flex:1.8 1 0;width:auto;min-width:0;padding:13px 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="subscribe('${c.id}')">${subbed?(store.subCanceled[c.id]?'Ends '+new Date(store.subEnds[c.id]).toLocaleDateString():'Subscribed ✓'):'Subscribe '+$$(c.subPrice)+'/mo'}</button>
+        <button class="primary" style="margin:0;flex:1.8 1 0;width:auto;min-width:0;padding:13px 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="subscribe('${c.id}')">${subbed?(store.subCanceled[c.id]?'Ends '+new Date(store.subEnds[c.id]).toLocaleDateString():'Subscribed ✓'):(offerBtn(c)||'Subscribe '+$$(c.subPrice)+'/mo')}</button>
         <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text);flex:1 1 0;width:auto;min-width:0;padding:13px 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="msgFromProfile('${c.id}')">Message</button>
       </div>`:''}
       <button class="ghost" style="margin-top:2px" onclick="shareProfile('${esc(c.username)}')">🔗 Copy shareable link</button>
       ${!isMe?`<div style="display:flex;gap:8px;width:100%"><button class="ghost" style="margin:0;flex:1" onclick="toggleBlock('${c.id}','mute')">${store.blocks.get(c.id)==='mute'?'Unmute':'Mute'}</button><button class="ghost" style="margin:0;flex:1" onclick="toggleBlock('${c.id}','block')">${store.blocks.get(c.id)==='block'?'Unblock':'Block'}</button></div>
       <button class="ghost" onclick="reportProfile('${c.id}')">Report this account</button>`:''}
     </div>
-    <div class="feed">${theirPosts.length?theirPosts.map(postCard).join('')
+    <div class="feed">${theirPosts.length?theirPosts.map(p=>(p.pinned?'<div style="padding:8px 18px 0;font-size:12px;color:var(--muted)">📌 Pinned</div>':'')+postCard(p)).join('')
       :'<p style="color:var(--muted);text-align:center;padding:24px;font-size:13.5px">No drops yet.</p>'}</div>`;
 }
 /* hash routing: overvibez.link/#username lands on that creator's page */
