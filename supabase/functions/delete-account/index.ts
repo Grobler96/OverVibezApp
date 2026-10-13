@@ -1,6 +1,6 @@
 // POST { confirm: "<username>" } -> { deleted: true }
 // Permanently deletes the caller's account: checks it is allowed (no money owed either way, not the last admin), removes their
-// uploaded files, then deletes the login — everything else (profile, posts, comments, messages, ...) is removed by cascade.
+// uploaded files, then deletes the login. Everything else (profile, posts, comments, messages, ...) is removed by cascade.
 // Financial records are kept but anonymised (their user link is set to null).
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
   const uid = u.user.id;
   for (const bucket of ['public-media', 'paid-media']) {
     try { const files = await listAll(admin, bucket, uid); if (files.length) await admin.storage.from(bucket).remove(files); }
-    catch (e) { console.error('storage cleanup failed', bucket, (e as Error).message); return json({ error: 'Could not remove your files — nothing was deleted, please try again' }, 500); }
+    catch (e) { console.error('storage cleanup failed', bucket, (e as Error).message); return json({ error: 'Could not remove your files. Nothing was deleted, please try again' }, 500); }
   }
   const { error } = await admin.auth.admin.deleteUser(uid);
   if (error) return json({ error: 'Could not delete the account: ' + error.message }, 500);

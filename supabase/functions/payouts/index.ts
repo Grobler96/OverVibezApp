@@ -35,6 +35,6 @@ Deno.serve(async (req) => {
     return json({ error: 'Unknown action' }, 400);
   } catch (e) {
     const m = (e as Error).message || 'Something went wrong';
-    return json({ error: /signed up for connect/i.test(m) ? 'Payouts are not switched on yet — please try again soon.' : m }, 400);
+    return json({ error: /signed up for connect/i.test(m) ? 'Payouts are not switched on yet. Please try again soon.' : m }, 400);
   }
 });

@@ -213,3 +213,6 @@ Profile shows followers a "Become a creator" card. `become_creator()` flips the 
 
 ### 044 — report a problem or idea
 Profile → **Report a problem or idea** (every account) sends a problem / idea / other message (`send_feedback`: 5–2000 characters, 10 a day per person, records the page and device). Admins get an in-app notification (not a push) and read them in Admin → **Feedback** (`admin_list_feedback`, `admin_handle_feedback` for To do / Done). The `feedback` table has no direct access.
+
+### 045 — plain-English wording
+No long dashes in anything members see: the app, the legal pages, emails, push text, edge-function messages and database error/email text. Sentences are split with full stops or commas and number ranges read "1 to 3". Migration 045 rewrites the affected database functions from their current definitions. Ordinary hyphens inside words (sign-up, two-step, 18+) are left alone. The payouts function's two error messages in the repo use the new wording but that function has not been redeployed.

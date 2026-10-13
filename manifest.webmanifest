@@ -1,7 +1,7 @@
 {
   "name": "OverVibez",
   "short_name": "OverVibez",
-  "description": "Publish, earn 85% and go live — or follow your favourite creators and win free prizes. 18+, UK.",
+  "description": "Publish, earn 85% and go live, or follow your favourite creators and win free prizes. 18+, UK.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
