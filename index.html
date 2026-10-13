@@ -793,6 +793,17 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   </div>
 </div>
 
+<div class="overlay" id="reviewModal" onclick="if(event.target===this)closeModal('reviewModal')">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <h3>Review content</h3>
+    <div id="reviewBody" style="font-size:13.5px;line-height:1.5"></div>
+    <div id="reviewMedia" style="margin:10px 0;border-radius:12px;overflow:hidden;background:#000"></div>
+    <p style="font-size:12px;color:var(--muted);line-height:1.5">Opening paid or subscriber-only content is recorded in the audit log with your name and the time.</p>
+    <button class="primary" id="reviewOk" onclick="admReviewOk()">Looks fine</button>
+    <button class="ghost" id="reviewRemove" style="color:var(--live)" onclick="admReviewRemove()">Remove…</button>
+    <button class="ghost" onclick="closeModal('reviewModal')">Close</button>
+  </div>
+</div>
 <div class="overlay" id="editPostModal" onclick="if(event.target===this)closeModal('editPostModal')">
   <div class="sheet">
     <h3>Edit post</h3>
@@ -3259,7 +3270,7 @@ window.addEventListener('hashchange',()=>{ const c=hashUser(); if(c&&store.sessi
    Everything here calls admin_* database functions. Those functions re-check the caller's role on the server,
    so hiding this screen from non-staff is only cosmetic — it is not the security boundary. */
 const isStaff=()=>!!(me()&&me().staffRole), isAdmin=()=>!!(me()&&me().staffRole==='admin');
-let adminTab='reports', adminSub={reports:'open',appeals:'open',content:'post'}, adminUserQ='';
+let adminTab='reports', adminSub={reports:'open',appeals:'open',content:'review'}, adminUserQ='';
 const admBody=()=>document.getElementById('adminBody');
 const admLoading=()=>{ const b=admBody(); if(b) b.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">Loading…</p>'; };
 const admEmpty=t=>`<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">${t}</p>`;
@@ -3371,14 +3382,46 @@ async function admEndLive(id){
 
 /* --- content review --- */
 async function admContent(){
-  const k=adminSub.content, {data,error}=await admCall('admin_list_content',{p_kind:k,p_limit:40}); if(error) return;
-  admBody().innerHTML=`<div class="chiprow">${[['post','Posts'],['comment','Comments']].map(([x,l])=>`<button class="chip ${k===x?'on':''}" onclick="adminSub.content='${x}';admLoad()">${l}</button>`).join('')}</div>
+  const k=adminSub.content;
+  if(k==='review') return admReviewQueue();
+  const {data,error}=await admCall('admin_list_content',{p_kind:k,p_limit:40}); if(error) return;
+  admBody().innerHTML=`<div class="chiprow">${[['review','Review queue'],['post','Posts'],['comment','Comments']].map(([x,l])=>`<button class="chip ${k===x?'on':''}" onclick="adminSub.content='${x}';admLoad()">${l}</button>`).join('')}</div>
    <div class="admin-pad">${data.length?data.map(c=>`<div class="chart-card" ${c.removed?'style="opacity:.65"':''}>
      <div style="display:flex;justify-content:space-between"><b>@${esc(c.author)}${c.is_paid?' · 🔒 '+$$(c.price_cents):''}</b><span style="font-size:12px;color:var(--muted)">${ago(c.created_at)} ago</span></div>
      <div style="font-size:13px;margin:6px 0;word-break:break-word">${esc(c.preview)}</div>
      ${c.removed?`<div style="font-size:12px;color:var(--live)">Removed: ${esc(c.removed_reason||'')}</div><button class="abtn ok" onclick="admRestore('${c.kind}','${c.id}')">Restore</button>`
        :`<button class="abtn danger" onclick="admRemove('${c.kind}','${c.id}')">Remove</button>`}
    </div>`).join(''):admEmpty('No content yet.')}</div>`;
+}
+/* review queue: every post with a photo or video that nobody on the team has looked at yet, oldest first */
+let reviewCur=null;
+async function admReviewQueue(){
+  const {data,error}=await admCall('admin_review_queue',{p_limit:20}); if(error) return;
+  const total=data.length?Number(data[0].waiting):0;
+  admBody().innerHTML=`<div class="chiprow">${[['review','Review queue'],['post','Posts'],['comment','Comments']].map(([x,l])=>`<button class="chip ${adminSub.content===x?'on':''}" onclick="adminSub.content='${x}';admLoad()">${l}</button>`).join('')}</div>
+   <div class="admin-pad"><p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:10px">${total?`<b>${total}</b> post${total===1?'':'s'} with photos or videos nobody has checked yet, oldest first.`:'Everything has been reviewed ✅'} Press View to see the media, then mark it fine or remove it. Viewing paid content is logged.</p>
+   ${data.map(c=>`<div class="chart-card"><div style="display:flex;justify-content:space-between"><b>@${esc(c.author)}${c.subs_only?' · 💜 subscribers':c.is_paid?' · 🔒 '+$$(c.price_cents):''}</b><span style="font-size:12px;color:var(--muted)">${ago(c.created_at)} ago · ${esc(c.media_type)}</span></div>
+     <div style="font-size:13px;margin:6px 0;word-break:break-word">${esc(c.caption)||'(no caption)'}</div>
+     <button class="abtn" onclick="admReviewOpen('${c.id}')">View</button></div>`).join('')}</div>`;
+}
+async function admReviewOpen(id){
+  const {data:d,error}=await admCall('admin_open_post_media',{p_post:id}); if(error) return;
+  reviewCur=d; let url=null;
+  if(d.media_path){
+    if(d.is_paid||d.subs_only){ const r=await sb.storage.from('paid-media').createSignedUrl(d.media_path,600); url=r.data&&r.data.signedUrl; }
+    else url=sb.storage.from('public-media').getPublicUrl(d.media_path).data.publicUrl;
+  }
+  document.getElementById('reviewBody').innerHTML=`<b>@${esc(d.author)}</b>${d.subs_only?' · 💜 subscribers only':d.is_paid?' · 🔒 '+$$(d.price_cents||0):' · free'}<br>${esc(d.caption||'(no caption)')}`;
+  document.getElementById('reviewMedia').innerHTML=url?(d.media_type==='video'?`<video src="${esc(url)}" controls playsinline style="width:100%;max-height:60vh;display:block"></video>`:`<img src="${esc(url)}" alt="" style="width:100%;max-height:60vh;object-fit:contain;display:block">`):'<p style="color:#fff;padding:20px;text-align:center">No media could be loaded.</p>';
+  document.getElementById('reviewOk').classList.toggle('hidden',d.removed);
+  openModal('reviewModal');
+}
+async function admReviewOk(){
+  if(!reviewCur) return; const {error}=await admCall('admin_mark_reviewed',{p_post:reviewCur.id}); if(error) return;
+  closeModal('reviewModal'); toast('Marked as reviewed'); admLoad();
+}
+async function admReviewRemove(){
+  if(!reviewCur) return; const id=reviewCur.id; closeModal('reviewModal'); await admRemove('post',id);
 }
 async function admRemove(kind,id){
   const reason=prompt('Reason for removal (kept in the audit log):'); if(reason===null) return;
