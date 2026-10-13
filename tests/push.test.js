@@ -4,7 +4,7 @@ const assert = require('assert');
 (async () => {
   const { composePush } = await import('../supabase/functions/send-push/compose.js');
   const t = composePush({ type: 'tip', actor: 'amy', data: { gross_cents: 200, net_cents: 170 } });
-  assert.strictEqual(t.title, '💰 You got a tip'); assert.strictEqual(t.body, '@amy tipped you £2.00 — you keep £1.70'); assert.strictEqual(t.url, '/?go=notifs');
+  assert.strictEqual(t.title, '💰 You got a tip'); assert.strictEqual(t.body, '@amy tipped you £2.00. You keep £1.70'); assert.strictEqual(t.url, '/?go=notifs');
   assert.strictEqual(composePush({ type: 'new_follower', actor: 'bo' }).body, '@bo started following you');
   assert.strictEqual(composePush({ type: 'new_follower' }).body, 'Someone started following you');
   const live = composePush({ type: 'live', actor: 'cat', data: { title: 'Q&A' }, ref_id: 'abc' }); assert.strictEqual(live.url, '/?go=live&id=abc');

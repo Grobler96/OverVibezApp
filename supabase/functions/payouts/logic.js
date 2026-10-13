@@ -2,7 +2,7 @@
 // then a Stripe Transfer moves the same amount to their connected account; if the transfer fails the earnings are put back.
 // deps: { admin (service-role supabase), userClient (the caller's own login), stripe(path, opts), user: {id,email}, site, currency }
 
-const friendly = (msg) => (/not.*connect|signed up for connect/i.test(msg || '') ? 'Payouts are not switched on yet — please try again soon.' : msg);
+const friendly = (msg) => (/not.*connect|signed up for connect/i.test(msg || '') ? 'Payouts are not switched on yet. Please try again soon.' : msg);
 
 async function refreshAccount({ admin, stripe, user }, accountId) {
   const a = await stripe('/v1/accounts/' + accountId, { method: 'GET' });
@@ -77,7 +77,7 @@ export async function runPayout(deps, source = 'earnings') {
   } catch (e) {
     console.error('transfer failed', payoutId, e.message);
     await admin.rpc(bonus ? 'fail_bonus_payout' : 'fail_payout', { p_payout: payoutId, p_reason: String(e.message).slice(0, 250) });     // the money goes back
-    return { error: 'The payout could not be sent just now — your money is safe in your balance. Please try again later.', code: 'transfer_failed' };
+    return { error: 'The payout could not be sent just now. Your money is safe in your balance. Please try again later.', code: 'transfer_failed' };
   }
 
   // 3) record that it went. The transfer already happened, so retry rather than ever undoing it.

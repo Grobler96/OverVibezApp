@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>OverVibez — Publish. Earn. Win.</title>
+<title>OverVibez: Publish. Earn. Win.</title>
 <meta name="description" content="OverVibez is where creators publish, earn 85% and go live, and followers discover, subscribe and win free prizes. 18+, UK.">
 <meta name="theme-color" content="#0E0A14">
 <script>
@@ -21,12 +21,12 @@ setTimeout(function(){ document.documentElement.classList.remove('booting'); },1
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="OverVibez">
-<meta property="og:title" content="OverVibez — Publish. Earn. Win.">
+<meta property="og:title" content="OverVibez: Publish. Earn. Win.">
 <meta property="og:description" content="Creators keep 85%. Followers win free prizes. 18+, UK.">
 <meta property="og:image" content="https://www.overvibez.com/og.png">
 <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="OverVibez — Publish. Earn. Win.">
+<meta name="twitter:title" content="OverVibez: Publish. Earn. Win.">
 <meta name="twitter:description" content="Creators keep 85%. Followers win free prizes. 18+, UK.">
 <meta name="twitter:image" content="https://www.overvibez.com/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -449,8 +449,8 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div style="font-size:44px;margin-bottom:6px"><b style="font-family:Unbounded,sans-serif;border:2px solid #FF3D8A;border-radius:12px;padding:4px 10px">18+</b></div>
     <h1 style="font-size:26px;margin:0 0 8px;font-family:'Unbounded',system-ui,sans-serif">OverVibez is for adults</h1>
     <p id="ageMsg" style="color:#9E90B8;font-size:15px;line-height:1.55;margin:0 0 22px">You must be 18 or over to enter. By continuing you confirm you are 18+ and agree to our <a href="terms.html" style="color:#8B5CF6">Terms</a> and <a href="privacy.html" style="color:#8B5CF6">Privacy Policy</a>.</p>
-    <button id="ageYes" style="width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,#FF3D8A,#8B5CF6);color:#fff;font-weight:700;font-size:16px;border:0;cursor:pointer">I am 18 or over — enter</button>
-    <button id="ageNo" style="width:100%;padding:13px;margin-top:10px;border-radius:14px;background:transparent;color:#9E90B8;font-size:14px;border:1px solid #2a2238;cursor:pointer">I am under 18 — leave</button>
+    <button id="ageYes" style="width:100%;padding:15px;border-radius:14px;background:linear-gradient(135deg,#FF3D8A,#8B5CF6);color:#fff;font-weight:700;font-size:16px;border:0;cursor:pointer">I am 18 or over, let me in</button>
+    <button id="ageNo" style="width:100%;padding:13px;margin-top:10px;border-radius:14px;background:transparent;color:#9E90B8;font-size:14px;border:1px solid #2a2238;cursor:pointer">I am under 18, leave</button>
   </div>
 </div>
 <script>
@@ -458,20 +458,20 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   var ok=false; try{ ok=localStorage.getItem('ov_18')==='1'; }catch(e){}
   var g=document.getElementById('ageGate'); if(ok||!g) return; g.style.display='flex';
   document.getElementById('ageYes').onclick=function(){ try{ localStorage.setItem('ov_18','1'); }catch(e){} g.style.display='none'; };
-  document.getElementById('ageNo').onclick=function(){ document.getElementById('ageMsg').textContent='Sorry — OverVibez is only for people aged 18 and over.'; document.getElementById('ageYes').style.display='none'; document.getElementById('ageNo').style.display='none'; };
+  document.getElementById('ageNo').onclick=function(){ document.getElementById('ageMsg').textContent='Sorry, OverVibez is only for people aged 18 and over.'; document.getElementById('ageYes').style.display='none'; document.getElementById('ageNo').style.display='none'; };
 })();
 </script>
 <div id="landing" class="hidden" style="position:fixed;inset:0;z-index:200;overflow:auto;background:var(--bg);color:var(--text)">
   <div style="max-width:520px;margin:0 auto;padding:28px 20px 40px">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:26px"><img src="icons/icon-192.png" alt="" width="40" height="40" style="border-radius:10px"><b style="font-family:'Unbounded',system-ui,sans-serif;font-size:19px">OverVibez</b></div>
     <h1 style="font-family:'Unbounded',system-ui,sans-serif;font-size:30px;line-height:1.15;margin:0 0 12px">Your people.<br>Your content.<br><span style="background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent">85% yours.</span></h1>
-    <p style="color:var(--muted);font-size:16px;line-height:1.55;margin:0 0 22px">Creators publish, earn and go live. Followers discover, subscribe, tip — and win free prizes. For adults, built in the UK.</p>
+    <p style="color:var(--muted);font-size:16px;line-height:1.55;margin:0 0 22px">Creators publish, earn and go live. Followers discover, subscribe, tip, and win free prizes. For adults, built in the UK.</p>
     <button class="primary" onclick="enterAuth('signup')" style="margin:0 0 10px">Create your account</button>
     <button class="ghost" onclick="enterAuth('login')" style="margin:0 0 26px">I already have an account</button>
     <div style="display:grid;gap:12px">
       <div class="chart-card" style="margin:0"><b>✦ For creators</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Post free and paid drops, sell subscriptions, go live with paid tickets, and keep <b style="color:var(--text)">85%</b> of everything you earn. Track it all in your Studio.</p></div>
-      <div class="chart-card" style="margin:0"><b>♥ For followers</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Follow the creators you love, unlock exclusive posts, tip, chat and join live streams — your wallet, your control.</p></div>
-      <div class="chart-card" style="margin:0"><b>🎁 Free prize draws</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Every member can enter every free draw — no purchase necessary. Winners are picked by a method anyone can verify. UK, 18+.</p></div>
+      <div class="chart-card" style="margin:0"><b>♥ For followers</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Follow the creators you love, unlock exclusive posts, tip, chat and join live streams. Your wallet, your control.</p></div>
+      <div class="chart-card" style="margin:0"><b>🎁 Free prize draws</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">Every member can enter every free draw, no purchase necessary. Winners are picked by a method anyone can verify. UK, 18+.</p></div>
       <div class="chart-card" style="margin:0"><b>🛡️ Adults only, kept safe</b><p style="color:var(--muted);font-size:14px;line-height:1.5;margin:6px 0 0">18+ only with ID checks, block and mute tools, a report button on everything, and a real appeals process.</p></div>
     </div>
     <p style="color:var(--muted);font-size:12.5px;text-align:center;margin:26px 0 0;line-height:1.7"><a href="terms.html" style="color:var(--accent-2)">Terms</a> · <a href="privacy.html" style="color:var(--accent-2)">Privacy</a> · <a href="guidelines.html" style="color:var(--accent-2)">Community guidelines</a> · <a href="refunds.html" style="color:var(--accent-2)">Refunds &amp; disputes</a> · <a href="terms.html#giveaways" style="color:var(--accent-2)">Giveaway rules</a><br><span id="landingContact">Customer support: use Help &amp; contact after you sign up</span></p>
@@ -510,7 +510,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
       <div style="display:flex;gap:8px"><input id="ceCode" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="123456" style="flex:1;min-width:0;letter-spacing:4px;font-size:18px;text-align:center" onkeydown="if(event.key==='Enter')verifyCode()">
       <button class="primary" style="margin:0;width:auto;padding:0 18px" onclick="verifyCode()">Confirm</button></div></div>
     <button class="primary" id="ceResend" onclick="resendConfirm()">Resend the email</button>
-    <button class="ghost" onclick="authTab('login')">I've confirmed it — log in</button>
+    <button class="ghost" onclick="authTab('login')">I've confirmed it, log in</button>
     <button class="ghost" onclick="askEmailHelp()">Still nothing? Ask us to confirm you</button>
     <button class="ghost" onclick="authTab('signup')">Wrong email? Go back</button>
     <div class="err" id="ceMsg"></div>
@@ -530,7 +530,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     </div>
     <div id="suCampaign" class="hidden" style="background:linear-gradient(135deg,rgba(255,61,138,.18),rgba(124,92,255,.18));border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px;font-size:13.5px;line-height:1.5"></div>
     <div class="field hidden" id="suInviteWrap"><label>Invite code <span style="color:var(--muted)">(sign-up is by invitation)</span></label><input id="suInvite" placeholder="VIBE-XXXX-XXXX-XXXX-XXXX" autocapitalize="characters" autocomplete="off"></div>
-    <div class="field"><label>Username</label><input id="suUser" placeholder="lowercase, 3–24 chars" maxlength="24"></div>
+    <div class="field"><label>Username</label><input id="suUser" placeholder="lowercase, 3 to 24 chars" maxlength="24"></div>
     <div class="field"><label>Email</label><input id="suEmail" type="email" placeholder="you@example.com"></div>
     <div class="field"><label>Password</label><input id="suPass" type="password" placeholder="min 8 characters"></div>
     <div class="field"><label>Date of birth (18+ required)</label><input id="suDob" type="date"></div>
@@ -584,7 +584,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div class="section-sub">Enter free giveaways and raffles. Winners are announced publicly.</div>
     <div id="raffleList"></div>
     <div class="fair-note"><span>🛡️</span>
-      <span><b>Provably fair.</b> Every draw is locked in with a published fingerprint before entries close, and anyone can check the result afterwards (tap Verify under Recent winners). Paid random draws may be regulated as gambling in some regions — availability varies by location.</span></div>
+      <span><b>Provably fair.</b> Every draw is locked in with a published fingerprint before entries close, and anyone can check the result afterwards (tap Verify under Recent winners). Paid random draws may be regulated as gambling in some regions, availability varies by location.</span></div>
   </div>
 
   <div id="page-messages" class="hidden">
@@ -634,7 +634,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 <div class="overlay" id="freeModal" onclick="if(event.target===this)closeModal('freeModal')">
   <div class="sheet">
     <h3>🎁 Free giveaway entries</h3>
-    <p>Welcome to OverVibez! You can enter every giveaway for free — one entry each. Tap Enter on any you like. No purchase necessary — 18+, UK prizes only.</p>
+    <p>Welcome to OverVibez! You can enter every giveaway for free, one entry each. Tap Enter on any you like. No purchase necessary, 18+, UK prizes only.</p>
     <div id="freeList"></div>
     <button class="ghost" onclick="closeModal('freeModal')">Maybe later</button>
   </div>
@@ -659,7 +659,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 <div class="overlay" id="raffleModal" onclick="if(event.target===this)closeModal('raffleModal')">
   <div class="sheet">
     <h3>Buy raffle entries</h3>
-    <p>Entries are final. Seed hash <code id="raffleSeed"></code> — verify after the draw.</p>
+    <p>Entries are final. Seed hash <code id="raffleSeed"></code>. Verify after the draw.</p>
     <div class="pay-row"><span>Entries</span><span><button onclick="chgQty(-1)" style="padding:0 12px;font-size:17px">−</button><b id="qty">5</b><button onclick="chgQty(1)" style="padding:0 12px;font-size:17px">＋</button></span></div>
     <div class="pay-row"><span>Total</span><span id="raffleTotal"></span></div>
     <button class="primary" onclick="confirmRaffle()">Confirm purchase</button>
@@ -675,7 +675,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
       <button id="cmLive" onclick="setCreateMode('live')">🔴 Go live</button>
     </div>
     <div id="createPostSection">
-      <p>Publish to your followers — free, or set a price and keep 85%.</p>
+      <p>Publish to your followers, free, or set a price and keep 85%.</p>
       <div class="toggle-row">
         <button id="ctFree" class="on" onclick="setPostType('free')">Free post</button>
         <button id="ctPaid" onclick="setPostType('paid')">Pay-per-view 🔒</button>
@@ -781,7 +781,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 <div class="overlay" id="feedbackModal" onclick="if(event.target===this)closeModal('feedbackModal')">
   <div class="sheet">
     <h3>Report a problem or idea</h3>
-    <p>Something broken, confusing, or missing? Tell us — we read every message.</p>
+    <p>Something broken, confusing, or missing? Tell us. We read every message.</p>
     <div class="chiprow" id="fbKinds" style="margin:6px 0 10px"></div>
     <div class="field"><textarea id="fbText" rows="5" maxlength="2000" placeholder="What happened? What were you trying to do? The more detail the better." style="width:100%"></textarea></div>
     <div class="err" id="fbErr"></div>
@@ -792,7 +792,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 <div class="overlay" id="topupModal" onclick="if(event.target===this)closeModal('topupModal')">
   <div class="sheet">
     <h3>Add funds</h3>
-    <p>Top up your wallet to unlock posts, subscribe, tip and join live streams. Payments are handled securely by Stripe — we never see your card details.</p>
+    <p>Top up your wallet to unlock posts, subscribe, tip and join live streams. Payments are handled securely by Stripe. We never see your card details.</p>
     <div class="pay-row"><span>Current balance</span><span id="topupBal"></span></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
       <button class="primary" style="margin:0" onclick="startTopup(1000)">£10</button>
@@ -875,7 +875,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   <div class="sheet">
     <h3>Edit post</h3>
     <div class="field"><label>Caption</label><textarea id="epCaption" rows="4" maxlength="2200" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
-    <div class="field" id="epPriceWrap"><label>Price (GBP) — can only change until someone unlocks it</label><input id="epPrice" type="number" min="0.99" max="499.99" step="0.01"></div>
+    <div class="field" id="epPriceWrap"><label>Price (GBP). You can only change it until someone unlocks it</label><input id="epPrice" type="number" min="0.99" max="499.99" step="0.01"></div>
     <div class="err" id="epPostErr"></div>
     <button class="primary" onclick="saveEditPost()">Save changes</button>
     <button class="ghost" onclick="closeModal('editPostModal')">Cancel</button>
@@ -969,7 +969,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div class="field"><label>Bio</label><textarea id="epBio" rows="3" maxlength="500" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;font-size:14px;outline:none;resize:none"></textarea></div>
     <div class="field hidden" id="epCatWrap"><label>Your category (so people can find you in Explore)</label>
       <select id="epCat" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none">
-        <option value="">— none —</option><option value="music">🎵 Music</option><option value="fitness">💪 Fitness</option><option value="art">🎨 Art</option><option value="food">🍳 Food</option>
+        <option value="">None</option><option value="music">🎵 Music</option><option value="fitness">💪 Fitness</option><option value="art">🎨 Art</option><option value="food">🍳 Food</option>
         <option value="photography">📷 Photography</option><option value="fashion">👗 Fashion</option><option value="gaming">🎮 Gaming</option><option value="comedy">😂 Comedy</option>
         <option value="lifestyle">✨ Lifestyle</option><option value="other">Other</option></select></div>
     <div class="field"><label>Profile picture</label>
@@ -1001,16 +1001,16 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 
 <script>
 /* ═════════════════════════════════════════════════════════════
-   DATA LAYER — Supabase. `store` is a client-side cache hydrated from
+   DATA LAYER, Supabase. `store` is a client-side cache hydrated from
    the database after login; every mutation goes through the server
    (RLS + SECURITY DEFINER functions), then re-hydrates.
    See supabase/migrations/ for the schema.
    ═════════════════════════════════════════════════════════════ */
 const SUPABASE_URL='https://ectwnzhuebgnvejdpgdk.supabase.co';
-const SUPABASE_KEY='sb_publishable_jiM3fKJ42PZ7MFir6gKUoQ_JeleNdaW'; // publishable key — safe to ship; RLS enforces access
+const SUPABASE_KEY='sb_publishable_jiM3fKJ42PZ7MFir6gKUoQ_JeleNdaW'; // publishable key, safe to ship; RLS enforces access
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
 
-const FEE = 0.15; // platform share — creators keep 85% (enforced server-side in _settle())
+const FEE = 0.15; // platform share, creators keep 85% (enforced server-side in _settle())
 const $$ = c => '£' + ((Number(c)||0)/100).toFixed(2);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
@@ -1036,7 +1036,7 @@ function mapUser(p,followers){
 }
 function friendly(m){
   if(/Insufficient wallet/i.test(m)) return 'Not enough balance in your wallet';
-  if(/Age verification/i.test(m)) return 'Age verification is required first — tap Profile → Identity & age verification';
+  if(/Age verification/i.test(m)) return 'Age verification is required first. Tap Profile → Identity & age verification';
   return (m||'Something went wrong').replace(/\bMe →/g,'Profile →');
 }
 async function rpc(name,args){
@@ -1144,7 +1144,7 @@ async function loadPublicSettings(){
   if(code){ authTab('signup'); document.getElementById('suInvite').value=code;
     try{ const {data:ci}=await sb.rpc('campaign_info',{p_code:code}); if(ci){ campaignName=ci.name;
       const b=document.getElementById('suCampaign'); b.classList.remove('hidden');
-      b.innerHTML='🎁 <b>Free giveaway entries</b><br>Create your account, confirm your email and enter every giveaway for free — '+esc(ci.name)+'. 18+, UK prizes only, no purchase needed.'; } }catch(e){} }
+      b.innerHTML='🎁 <b>Free giveaway entries</b><br>Create your account, confirm your email and enter every giveaway for free, '+esc(ci.name)+'. 18+, UK prizes only, no purchase needed.'; } }catch(e){} }
 })();
 
 /* ═══════════ ERROR MONITORING ═══════════ */
@@ -1164,7 +1164,7 @@ window.addEventListener('unhandledrejection',e=>reportError('Unhandled: '+((e.re
 const fgCache={}; let peopleSt={id:null,kind:null,off:0,done:false};
 async function loadFollowingCount(id){
   const {data}=await sb.rpc('following_count',{p_user:id}); if(data==null) return; fgCache[id]=data;
-  document.querySelectorAll('.fgCount').forEach(el=>{ if(el.textContent==='–') el.textContent=data; });
+  document.querySelectorAll('.fgCount').forEach(el=>{ if(el.textContent==='·') el.textContent=data; });
 }
 async function openPeople(id,kind){
   peopleSt={id,kind,off:0,done:false}; const mine=id===store.session, c=user(id);
@@ -1186,7 +1186,7 @@ async function morePeople(first){
   const mine=st.id===store.session, c=user(st.id);
   const note=st.kind==='followers'&&!mine&&c&&c.role==='creator'?'<p style="font-size:12px;color:var(--muted);line-height:1.5;margin:10px 4px 0">Fans can choose whether they appear here, so this may not show everyone who follows.</p>'
     :st.kind==='followers'&&mine&&me().role!=='creator'?'':'';
-  const empty=st.kind==='followers'?(mine?'No followers yet — share your link to get your first.':'Nobody to show here yet.'):(mine?'You are not following anyone yet. Find creators in Explore.':'Not following anyone yet.');
+  const empty=st.kind==='followers'?(mine?'No followers yet. Share your link to get your first.':'Nobody to show here yet.'):(mine?'You are not following anyone yet. Find creators in Explore.':'Not following anyone yet.');
   box.innerHTML=((old+rows)?`<div class="plist list-card" style="margin:0">${old+rows}</div>`:`<p style="color:var(--muted);text-align:center;padding:30px 12px;font-size:13.5px;line-height:1.5">${empty}</p>`)
     +(st.done?'':'<button class="ghost" onclick="morePeople()">Show more</button>')+note;
 }
@@ -1224,8 +1224,8 @@ async function pushUnlinkDevice(){          // signing out stops this device rec
 }
 async function enablePush(){
   if(!pushOk()) return toast(isIos()&&!isStandalone()?'On iPhone, tap Share → Add to Home Screen, then open OverVibez from there':'This browser cannot do push notifications');
-  const perm=await Notification.requestPermission(); if(perm!=='granted'){ paintPush(); return toast(perm==='denied'?'Notifications are blocked — allow them in your browser settings':'No problem — you can turn them on later in Profile'); }
-  const {data:key}=await sb.rpc('push_public_key'); if(!key) return toast('Notifications are still being set up — try again in a minute');
+  const perm=await Notification.requestPermission(); if(perm!=='granted'){ paintPush(); return toast(perm==='denied'?'Notifications are blocked. Allow them in your browser settings':'No problem. You can turn them on later in Profile'); }
+  const {data:key}=await sb.rpc('push_public_key'); if(!key) return toast('Notifications are still being set up. Try again in a minute');
   try{
     const reg=await pushReg(); let sub=await reg.pushManager.getSubscription();
     if(sub){ const cur=sub.options&&sub.options.applicationServerKey; if(cur&&btoa(String.fromCharCode(...new Uint8Array(cur))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')!==key){ await sub.unsubscribe(); sub=null; } }
@@ -1243,14 +1243,14 @@ async function openPush(){ openModal('pushModal'); document.getElementById('push
 function paintPush(){
   const box=document.getElementById('pushBody'); if(!box) return; const p=pushSet.prefs||{}, on=pushLabel()==='On', isC=me()&&me().role==='creator';
   const tg=(k,l,sub)=>`<label style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);text-transform:none;letter-spacing:0;font-size:14px"><input type="checkbox" ${p[k]?'checked':''} onchange="setPushPref('${k}',this.checked)" style="width:auto;margin-top:3px"><span><b>${l}</b><br><span style="color:var(--muted);font-size:12.5px">${sub}</span></span></label>`;
-  box.innerHTML=`<p style="font-size:13.5px;line-height:1.55;color:var(--muted);margin:0 0 12px">Get a ping on this device when something happens — even when the app is closed.</p>
+  box.innerHTML=`<p style="font-size:13.5px;line-height:1.55;color:var(--muted);margin:0 0 12px">Get a ping on this device when something happens, even when the app is closed.</p>
     ${on?`<div style="background:var(--panel-2);border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:10px">✅ On for this device</div>
       ${tg('money','Money',isC?'Sales, tips, unlocks, payouts, bonuses':'Renewals, refunds, wallet updates')}
       ${tg('people','People',isC?'New followers, comments, collab invitations':'Replies and updates from creators')}
       ${tg('messages','Messages','Someone sent you a message (the text is never shown)')}
       ${tg('live','Live &amp; giveaways','Creators you follow going live, new giveaways and draws')}
       ${tg('likes','Likes','Every like on your posts (can be a lot)')}
-      ${tg('discreet','Hide details on the lock screen','Notifications just say "You have new activity" — good for shared or visible screens')}
+      ${tg('discreet','Hide details on the lock screen','Notifications just say "You have new activity", good for shared or visible screens')}
       <button class="ghost" style="margin-top:10px" onclick="disablePush()">Turn off on this device</button>`
     :`<button class="primary" onclick="enablePush()">Turn on notifications</button>
       <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px">${pushOk()?(Notification.permission==='denied'?'Your browser is blocking notifications for this site. Allow them in the site settings, then try again.':'Your browser will ask for permission. Important account and safety messages are always sent.'):(isIos()?'On iPhone: tap Share → Add to Home Screen, open OverVibez from your Home Screen, then turn this on.':'This browser does not support push notifications.')}</p>`}`;
@@ -1342,7 +1342,7 @@ async function resendConfirm(em){
   msg.style.color=''; msg.textContent='Sending…';
   const {error}=await sb.auth.resend({type:'signup',email:em,options:{emailRedirectTo:location.origin+location.pathname}});
   if(error){ msg.textContent=/rate|seconds|too many/i.test(error.message)?'Please wait a minute before asking for another email.':error.message; return; }
-  msg.style.color='var(--ok)'; msg.textContent='Sent! It can take a minute to arrive — check Junk / Spam too.'; resendCooldown(60);
+  msg.style.color='var(--ok)'; msg.textContent='Sent! It can take a minute to arrive. Check Junk / Spam too.'; resendCooldown(60);
 }
 async function verifyCode(){
   const msg=document.getElementById('ceMsg'), code=document.getElementById('ceCode').value.replace(/\D/g,'');
@@ -1357,8 +1357,8 @@ async function askEmailHelp(){
   const msg=document.getElementById('ceMsg'); if(!confirmEmail) return;
   msg.style.color=''; msg.textContent='Sending…';
   const {error}=await sb.rpc('request_email_help',{p_email:confirmEmail});
-  if(error){ msg.textContent='Could not send your request — please try again in a minute.'; return; }
-  msg.style.color='var(--ok)'; msg.textContent="Thanks — we've told our team. We'll confirm your account by hand, usually within a few hours. You can then log in.";
+  if(error){ msg.textContent='Could not send your request. Please try again in a minute.'; return; }
+  msg.style.color='var(--ok)'; msg.textContent="Thanks, we've told our team. We'll confirm your account by hand, usually within a few hours. You can then log in.";
 }
 function pickRole(r){
   signupRole=r;
@@ -1367,20 +1367,20 @@ function pickRole(r){
 }
 async function doSignup(){
   const err=document.getElementById('suErr');
-  if(!sb) return err.textContent='Cannot reach OverVibez servers — check your connection and reload.';
+  if(!sb) return err.textContent='Cannot reach OverVibez servers. Check your connection and reload.';
   const un=document.getElementById('suUser').value.trim().toLowerCase();
   const em=document.getElementById('suEmail').value.trim();
   const pw=document.getElementById('suPass').value;
   const dob=document.getElementById('suDob').value;
-  if(!/^[a-z0-9_.]{3,24}$/.test(un)) return err.textContent='Username: 3–24 chars, lowercase letters, numbers, . or _';
+  if(!/^[a-z0-9_.]{3,24}$/.test(un)) return err.textContent='Username: 3 to 24 chars, lowercase letters, numbers, . or _';
   if(!em.includes('@')) return err.textContent='Enter a valid email.';
   if(pw.length<8) return err.textContent='Password must be at least 8 characters.';
   if(!dob) return err.textContent='Date of birth is required.';
   if((Date.now()-new Date(dob).getTime())/3.15576e10<18) return err.textContent='You must be 18 or older to join OverVibez.';
-  try{ const {data:free}=await sb.rpc('username_ok',{p_username:un}); if(free===false) return err.innerHTML='That username is taken or not allowed — please try another.<br><span style="color:var(--muted)">Already signed up with it? <a href="#" onclick="authTab(\'login\');return false" style="color:var(--accent-2)">Log in</a> — if it says your email isn\'t confirmed you can resend the link.</span>'; }catch(e){}
+  try{ const {data:free}=await sb.rpc('username_ok',{p_username:un}); if(free===false) return err.innerHTML='That username is taken or not allowed. Please try another.<br><span style="color:var(--muted)">Already signed up with it? <a href="#" onclick="authTab(\'login\');return false" style="color:var(--accent-2)">Log in</a>, if it says your email isn\'t confirmed you can resend the link.</span>'; }catch(e){}
   let invite=document.getElementById('suInvite').value.trim().toUpperCase();
   if(settings.invite_only){
-    if(!invite) return err.textContent='You need an invite code — sign-up is by invitation.';
+    if(!invite) return err.textContent='You need an invite code, sign-up is by invitation.';
     const {data:valid}=await sb.rpc('check_invite',{p_code:invite});
     if(!valid) return err.textContent='That invite code is not valid, or has been used up.';
   }
@@ -1388,34 +1388,34 @@ async function doSignup(){
   const {data:taken}=await sb.from('profiles').select('id').eq('username',un).maybeSingle();
   if(taken) return err.innerHTML='That username is taken.<br><span style="color:var(--muted)">Already signed up with it? <a href="#" onclick="authTab(\'login\');return false" style="color:var(--accent-2)">Log in</a>.</span>';
   const {data,error}=await sb.auth.signUp({email:em,password:pw,options:{data:{username:un,display_name:un,account_type:signupRole,invite_code:invite}}});
-  if(error) return err.textContent=/Database error saving new user/i.test(error.message)?'Could not create the account — the invite code may have just been used up, or that username/email is taken.':error.message;
+  if(error) return err.textContent=/Database error saving new user/i.test(error.message)?'Could not create the account, the invite code may have just been used up, or that username/email is taken.':error.message;
   if(/[?&](invite|campaign)=/.test(location.search)) history.replaceState(null,'',location.pathname+location.hash);
   err.textContent='';
   if(!data.session){ showCheckEmail(em); if(campaignName) document.getElementById('ceMsg').textContent='Your free giveaway entries are waiting for you 🎁'; }
 }
 async function doLogin(){
   const err=document.getElementById('liErr');
-  if(!sb) return err.textContent='Cannot reach OverVibez servers — check your connection and reload.';
+  if(!sb) return err.textContent='Cannot reach OverVibez servers. Check your connection and reload.';
   let em=document.getElementById('liUser').value.trim(), pw=document.getElementById('liPass').value;
   if(!em||!pw) return err.textContent='Enter your email (or username) and password.';
   err.textContent='';
   let loginEmail=em;
   if(!em.includes('@')){      // a username: the server gives back the email only when the password is right
     const {data:found,error:re}=await sb.rpc('resolve_login',{p_name:em,p_password:pw});
-    if(re) return err.textContent=/too many/i.test(re.message)?re.message:'Could not log in right now — please try again.';
+    if(re) return err.textContent=/too many/i.test(re.message)?re.message:'Could not log in right now. Please try again.';
     if(!found) return err.textContent='Invalid login credentials';
     loginEmail=found;
   }
   const {error}=await sb.auth.signInWithPassword({email:loginEmail,password:pw});
   if(error){
     if(/not confirmed/i.test(error.message)){ confirmEmail=loginEmail; em=loginEmail;
-      err.innerHTML='Your email isn\'t confirmed yet. We sent a link to <b>'+esc(em)+'</b> — check your inbox <b>and Junk / Spam</b>.<br><a href="#" onclick="resendConfirm(confirmEmail);return false" style="color:var(--accent-2);font-weight:700">Resend the email</a>'; }
+      err.innerHTML='Your email isn\'t confirmed yet. We sent a link to <b>'+esc(em)+'</b>. Check your inbox <b>and Junk / Spam</b>.<br><a href="#" onclick="resendConfirm(confirmEmail);return false" style="color:var(--accent-2);font-weight:700">Resend the email</a>'; }
     else err.textContent=error.message;
   }
 }
 async function doForgot(){
   const err=document.getElementById('liErr');
-  if(!sb) return err.textContent='Cannot reach OverVibez servers — check your connection and reload.';
+  if(!sb) return err.textContent='Cannot reach OverVibez servers. Check your connection and reload.';
   let em=document.getElementById('liUser').value.trim();
   if(!em||!em.includes('@')){ em=(prompt('Enter the email address of your account:')||'').trim(); if(!em) return; }
   const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
@@ -1494,7 +1494,7 @@ async function submitMfa(){
   const btn=document.getElementById('mfaBtn'); btn.disabled=true; mfaErr('');
   try{
     const {error}=await sb.auth.mfa.challengeAndVerify({factorId:mfaState.factorId,code});
-    if(error) return mfaErr(/invalid|expired/i.test(error.message)?'That code is not right — wait for a new one and try again.':error.message);
+    if(error) return mfaErr(/invalid|expired/i.test(error.message)?'That code is not right. Wait for a new one and try again.':error.message);
     const m=mfaState.mode, uid=mfaState.uid; closeModal('mfaModal');
     if(m==='login'){ mfaState={mode:null}; startSession(uid); }
     else if(m==='setup'){ mfaState={mode:null}; await loadSecurity(); toast('Two-step login is on ✓'); if(typeof renderMe==='function'&&document.getElementById('page-me')) refresh(); }
@@ -1533,7 +1533,7 @@ if(sb) sb.auth.onAuthStateChange((ev,session)=>{
   if(ty==='recovery') recoveryMode=true;
   const {error}=await sb.auth.verifyOtp({token_hash:th,type:ty});
   if(error){ recoveryMode=false; document.documentElement.classList.remove('booting'); authTab('login');
-    document.getElementById('liErr').textContent=ty==='recovery'?'That reset link has expired or was already used. Tap “Forgot password?” to get a new one.':'That link has expired or was already used. Try logging in — or sign up again to get a new email.'; }
+    document.getElementById('liErr').textContent=ty==='recovery'?'That reset link has expired or was already used. Tap “Forgot password?” to get a new one.':'That link has expired or was already used. Try logging in, or sign up again to get a new email.'; }
 })();
 
 
@@ -1569,7 +1569,7 @@ async function sendAppeal(){
   const err=document.getElementById('appealErr'); err.textContent='';
   const {error}=await sb.rpc('submit_appeal',{p_kind:appealTarget.kind,p_target:appealTarget.target||null,p_body:document.getElementById('appealBody').value});
   if(error) return err.textContent=friendly(error.message);
-  closeModal('appealModal'); toast('Appeal sent — a person will reply within 48 hours');
+  closeModal('appealModal'); toast('Appeal sent, a person will reply within 48 hours');
 }
 let fbKind='bug';
 function openFeedback(){
@@ -1586,7 +1586,7 @@ async function sendFeedback(){
   const {error}=await sb.rpc('send_feedback',{p_kind:fbKind,p_message:t,p_page:page,p_ua:navigator.userAgent.slice(0,200)});
   b.disabled=false;
   if(error){ err.textContent=friendly(error.message); return; }
-  closeModal('feedbackModal'); toast('Thank you — we got it 💜');
+  closeModal('feedbackModal'); toast('Thank you. We got it 💜');
 }
 function helpContact(){
   if(settings.support_email) location.href='mailto:'+settings.support_email+'?subject='+encodeURIComponent('OverVibez support');
@@ -1609,7 +1609,7 @@ function txInfo(t){
   }
   if(t.type==='wallet_topup') return {icon:TX_ICONS[t.type],title:'Added funds',sub:'Wallet top-up',amt:+t.gross_cents,pot:'wallet',kind:'in'};
   if(t.type==='admin_credit') return {icon:TX_ICONS[t.type],title:'Credit from OverVibez',sub:'Added to your wallet by our team',amt:+t.gross_cents,pot:'wallet',kind:'in'};
-  if(t.type==='admin_bonus') return {icon:TX_ICONS[t.type],title:'Bonus from OverVibez',sub:'Added to your bonus balance — no fee taken',amt:+t.net_cents,pot:'bonus',kind:'earned'};
+  if(t.type==='admin_bonus') return {icon:TX_ICONS[t.type],title:'Bonus from OverVibez',sub:'Added to your bonus balance, no fee taken',amt:+t.net_cents,pot:'bonus',kind:'earned'};
   if(t.type==='payout') return {icon:TX_ICONS[t.type],title:'Withdrawal requested',sub:'Sent to your bank',amt:-t.gross_cents,pot:'earnings',kind:'out'};
   if(mine) return {icon:TX_ICONS[t.type]||'•',title:name+(t.type==='raffle_entry'?'':' · '+who),sub:'Paid from wallet',amt:-t.gross_cents,pot:'wallet',kind:'out'};
   return {icon:TX_ICONS[t.type]||'•',title:name+' from '+who,sub:'You keep 85%',amt:+t.net_cents,pot:'earnings',kind:'earned'};
@@ -1671,13 +1671,13 @@ function dsBeep(f,ms,vol){
 function dsToggleSound(){ dsSound=!dsSound; document.getElementById('dsMute').textContent=dsSound?'🔊':'🔇'; }
 const dsWait=ms=>new Promise(r=>dsTimers.push(setTimeout(r,ms)));
 function closeDrawStage(){
-  if(dsBusy&&!confirm('The draw is running. Close it anyway? (The result is already decided — you can announce it from the Raffles list.)')) return;
+  if(dsBusy&&!confirm('The draw is running. Close it anyway? (The result is already decided. You can announce it from the Raffles list.)')) return;
   dsTimers.forEach(clearTimeout); dsTimers=[]; dsBusy=false; stopConfetti('dsConfetti'); document.getElementById('drawStage').classList.add('hidden'); if(adminTab) admLoad();
 }
 async function openDrawStage(id){
   const {data:r,error}=await sb.from('raffles').select('id,title,prize,seed_hash,closes_at,winner_entry_id,is_free,image_path').eq('id',id).single(); if(error) return toast(error.message);
   if(new Date(r.closes_at)>new Date()) return toast('This raffle has not closed yet');
-  if(r.winner_entry_id) return toast('This raffle has already been drawn — use Announce winner');
+  if(r.winner_entry_id) return toast('This raffle has already been drawn. Use Announce winner');
   const {data:tt}=await sb.rpc('raffle_totals',{p_raffle:id}); const t=(tt||[{}])[0]||{};
   if(!Number(t.entries)) return toast('Nobody entered, so there is nothing to draw');
   dsRaffle=Object.assign({},r,{tickets:Number(t.entries),players:Number(t.players)});
@@ -1728,7 +1728,7 @@ async function startLiveDraw(){
     <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:clamp(28px,9vw,44px);line-height:1.15;word-break:break-word;margin-bottom:6px">@${esc(res.winner_username)}</div>
     <div style="font-family:'Unbounded',system-ui,sans-serif;font-size:clamp(20px,6vw,28px);color:var(--accent-2);margin-bottom:6px">Ticket ${fmtTicket(ticket)}</div>
     <div style="color:var(--muted);font-size:15px;margin-bottom:22px">wins <b style="color:var(--text)">${esc(res.prize)}</b></div>
-    ${ae?`<p style="color:var(--live);font-size:13px">Could not announce: ${esc(ae.message)} — use "Announce winner" in the Raffles list.</p>`:''}
+    ${ae?`<p style="color:var(--live);font-size:13px">Could not announce: ${esc(ae.message)}. Use "Announce winner" in the Raffles list.</p>`:''}
     <div id="dsProof" class="chart-card" style="text-align:left"><div style="color:var(--muted);font-size:13px">Checking the draw…</div></div>
     <button class="primary" onclick="closeDrawStage()">Done</button>`;
   dsBusy=false; if(!reduce) confettiBurst('dsConfetti');
@@ -1740,7 +1740,7 @@ async function renderProof(pr,raffleId,el){
   try{
     a=(await sha256Hex(pr.revealed_seed))===pr.seed_hash;
     if(Number(pr.redraws)===0){ const h=await sha256Hex(pr.revealed_seed+':'+raffleId+':'+pr.total_tickets); b=(Number(BigInt('0x'+h.slice(0,15))%BigInt(pr.total_tickets))+1)===Number(pr.winning_ticket); }
-    else note='This prize was redrawn once the first winner could not be reached, using the same sealed number — so only the seed check is shown.';
+    else note='This prize was redrawn once the first winner could not be reached, using the same sealed number. So only the seed check is shown.';
   }catch(e){ note='Your browser could not run the check.'; }
   const row=(ok,t)=>`<div style="display:flex;gap:8px;font-size:13px;line-height:1.5;margin:6px 0"><b style="color:${ok?'var(--ok)':'var(--live)'}">${ok?'✓':'✗'}</b><span>${t}</span></div>`;
   el.innerHTML=`<div style="font-weight:700;margin-bottom:6px">Check it yourself</div>
@@ -1813,35 +1813,35 @@ const notifInfo=n=>{
     case 'new_follower': return ['👤',who+' started following you'];
     case 'new_subscriber': return ['💜',who+' subscribed to you'+(d.price_cents?' ('+$$(d.price_cents)+'/mo)':'')];
     case 'subscription_renewed': return ['🔁',who+' renewed their subscription'];
-    case 'tip': return ['💰',who+' tipped you '+$$(d.gross_cents)+' — you keep '+$$(d.net_cents)];
-    case 'unlock': return ['🔓',who+' unlocked your post — you earned '+$$(d.net_cents)];
-    case 'ticket': return ['🎟️',who+' bought a ticket to your live stream — you earned '+$$(d.net_cents)];
+    case 'tip': return ['💰',who+' tipped you '+$$(d.gross_cents)+'. You keep '+$$(d.net_cents)];
+    case 'unlock': return ['🔓',who+' unlocked your post. You earned '+$$(d.net_cents)];
+    case 'ticket': return ['🎟️',who+' bought a ticket to your live stream. You earned '+$$(d.net_cents)];
     case 'comment': return ['💬',who+' commented: “'+esc(d.preview||'')+'”'];
     case 'like': return ['♥',who+' liked your post'];
     case 'live': return ['🔴',who+' is live: '+esc(d.title||'')];
     case 'payout_paid': return ['🏦','Your payout of '+$$(d.amount_cents)+' has been sent'];
     case 'won': return ['🏆','You won <b>'+esc(d.prize||'a prize')+'</b> in “'+esc(d.title||'a giveaway')+'”!'+(d.free?' Add your UK delivery address in Raffles.':'')];
-    case 'prize_shipped': return ['📦','Your prize is on its way'+(d.tracking?' — tracking '+esc(d.tracking):'')];
-    case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')+(['post','comment'].includes(d.kind)?' — tap to appeal':'')];
-    case 'raffle_result': return ['🎲','The draw for <b>'+esc(d.prize||'the raffle')+'</b> is done — <b>@'+esc(d.winner||'someone')+'</b> won'+(d.ticket?' with ticket '+fmtTicket(d.ticket):'')];
-    case 'new_giveaway': return ['🎁','New free giveaway: <b>'+esc(d.prize||'a prize')+'</b> — tap to enter'];
-    case 'refunded': return ['↩️',d.role==='payee'?'A sale was refunded — '+$$(d.cents)+' was taken from your earnings'+(d.reason?' ('+esc(d.reason)+')':''):'You were refunded '+$$(d.cents)+' to your wallet'+(d.reason?' ('+esc(d.reason)+')':'')];
+    case 'prize_shipped': return ['📦','Your prize is on its way'+(d.tracking?', tracking '+esc(d.tracking):'')];
+    case 'removed': return ['⚠️','Your '+esc(d.kind||'content')+' was removed by a moderator'+(d.reason?': '+esc(d.reason):'')+(['post','comment'].includes(d.kind)?'. Tap to appeal':'')];
+    case 'raffle_result': return ['🎲','The draw for <b>'+esc(d.prize||'the raffle')+'</b> is done, <b>@'+esc(d.winner||'someone')+'</b> won'+(d.ticket?' with ticket '+fmtTicket(d.ticket):'')];
+    case 'new_giveaway': return ['🎁','New free giveaway: <b>'+esc(d.prize||'a prize')+'</b>. Tap to enter'];
+    case 'refunded': return ['↩️',d.role==='payee'?'A sale was refunded. '+$$(d.cents)+' was taken from your earnings'+(d.reason?' ('+esc(d.reason)+')':''):'You were refunded '+$$(d.cents)+' to your wallet'+(d.reason?' ('+esc(d.reason)+')':'')];
     case 'topup_reversed': return ['⚠️','A top-up of '+$$(d.cents)+' was reversed ('+esc(d.reason||'refund')+')'+(d.owed>0?'. You now owe '+$$(d.owed)+', taken from your next top-up':'')];
-    case 'topup_restored': return ['✅','Good news — '+$$(d.cents)+' was put back in your wallet'];
+    case 'topup_restored': return ['✅','Good news, '+$$(d.cents)+' was put back in your wallet'];
     case 'debt_repaid': return ['🧾',$$(d.cents)+' of your latest payment cleared what you owed'];
     case 'sub_renew_soon': return ['🔔','Your subscription to <b>'+esc(d.creator||'a creator')+'</b> renews on '+new Date(d.on).toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' for '+$$(d.cents)+' from your wallet'];
-    case 'sub_renewed': return ['💜','Renewed your subscription to <b>'+esc(d.creator||'a creator')+'</b> — '+$$(d.cents)+' taken from your wallet'];
-    case 'sub_renew_failed': return ['⚠️','Your wallet was too low to renew <b>'+esc(d.creator||'a creator')+'</b> ('+$$(d.cents)+') — add funds and we will try again within the hour'];
+    case 'sub_renewed': return ['💜','Renewed your subscription to <b>'+esc(d.creator||'a creator')+'</b>, '+$$(d.cents)+' taken from your wallet'];
+    case 'sub_renew_failed': return ['⚠️','Your wallet was too low to renew <b>'+esc(d.creator||'a creator')+'</b> ('+$$(d.cents)+'). Add funds and we will try again within the hour'];
     case 'sub_ended': return ['💔','Your subscription to <b>'+esc(d.creator||'a creator')+'</b> has ended'];
-    case 'collab_invite': return ['🤝','<b>@'+esc(d.who||'a creator')+'</b> invited you to collab on a post — you would get '+(d.pct||50)+'% of every sale. Open Studio to answer'];
-    case 'collab_response': return ['🤝',d.left?'<b>@'+esc(d.who||'your collaborator')+'</b> left your collab post — it stays up and sales now come to you alone':'<b>@'+esc(d.who||'they')+'</b> '+(d.accepted?'accepted':'declined')+' your collab'+(d.accepted?' — the post is live':'')];
+    case 'collab_invite': return ['🤝','<b>@'+esc(d.who||'a creator')+'</b> invited you to collab on a post. You would get '+(d.pct||50)+'% of every sale. Open Studio to answer'];
+    case 'collab_response': return ['🤝',d.left?'<b>@'+esc(d.who||'your collaborator')+'</b> left your collab post. It stays up and sales now come to you alone':'<b>@'+esc(d.who||'they')+'</b> '+(d.accepted?'accepted':'declined')+' your collab'+(d.accepted?', the post is live':'')];
     case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
-    case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your bonus balance (Studio), no fee taken'];
-    case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
-    case 'feedback': return [d.kind==='bug'?'🐞':d.kind==='idea'?'💡':'💬','@'+esc(d.username||'someone')+' sent feedback — see Admin → Feedback'];
-    case 'email_help': return ['📧','@'+esc(d.username||'someone')+' ('+esc(d.email||'')+') can\'t get their confirmation email — confirm them in Admin → Users'];
-    case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Profile'];
-    case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b> — it has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
+    case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+'. It is in your bonus balance (Studio), no fee taken'];
+    case 'age_approved': return ['✅','Your 18+ check is done. You can now post, go live and add money'];
+    case 'feedback': return [d.kind==='bug'?'🐞':d.kind==='idea'?'💡':'💬','@'+esc(d.username||'someone')+' sent feedback. See Admin → Feedback'];
+    case 'email_help': return ['📧','@'+esc(d.username||'someone')+' ('+esc(d.email||'')+') can\'t get their confirmation email. Confirm them in Admin → Users'];
+    case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+'. You can request another from Profile'];
+    case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b>. It has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
     default: return ['🔔','New activity'];
   }
 };
@@ -1979,7 +1979,7 @@ function postCard(p){
       ${mine?`<span class="own-tag">${partner?'🤝 Collab · you get '+p.collabPct+'%':p.subsOnly?'💜 Subscribers only':(p.paid&&!p.subIncluded?'🔒 Pay-per-view only':'Your post')}</span>`:
         `<button class="sub-pill ${store.subs[u.id+p.by]?'subbed':''}" onclick="subscribe('${p.by}')">${store.subs[u.id+p.by]?(store.subCanceled[p.by]?'Ends '+new Date(store.subEnds[p.by]).toLocaleDateString():'Subscribed'):'Subscribe '+$$(c.subPrice)}</button>`}
     </div>
-    ${p.collabStatus==='pending'&&(owner||partner)?`<div class="collab-note" style="background:var(--panel-2);padding:10px 14px;font-size:13px;line-height:1.5">${owner?`⏳ Waiting for <b>@${esc(cb?cb.username:'them')}</b> to accept — nobody else can see this yet.`:`🤝 <b>@${esc(c.username)}</b> wants to publish this with you. You would get <b>${p.collabPct}%</b> of every sale and tip.`}
+    ${p.collabStatus==='pending'&&(owner||partner)?`<div class="collab-note" style="background:var(--panel-2);padding:10px 14px;font-size:13px;line-height:1.5">${owner?`⏳ Waiting for <b>@${esc(cb?cb.username:'them')}</b> to accept. Nobody else can see this yet.`:`🤝 <b>@${esc(c.username)}</b> wants to publish this with you. You would get <b>${p.collabPct}%</b> of every sale and tip.`}
       ${partner?`<div style="margin-top:8px;display:flex;gap:8px"><button class="abtn" onclick="answerCollab('${p.id}',true)">Accept</button><button class="abtn danger" onclick="answerCollab('${p.id}',false)">Decline</button></div>`:''}</div>`:''}
     <div class="media ${open?'':'locked'}">
       ${p.mediaUrl&&open?(p.mediaKind==='video'
@@ -2115,7 +2115,7 @@ async function loadComments(){
       ${c.user_id===myId?`<button onclick="deleteComment('${c.id}')" title="Delete" style="color:var(--muted);font-size:15px;padding:2px 6px">✕</button>`
       :`${ownsPost?`<button onclick="creatorDeleteComment('${c.id}')" title="Delete this comment" style="color:var(--muted);font-size:15px;padding:2px 6px">✕</button><button onclick="closeModal('commentsModal');toggleBlock('${c.user_id}','block')" title="Block this person" style="color:var(--muted);font-size:14px;padding:2px 6px">🚫</button>`:''}<button onclick="closeModal('commentsModal');openReport('comment','${c.id}')" title="Report" style="color:var(--muted);font-size:14px;padding:2px 6px">⚑</button>`}
     </div>`; }).join('')
-    :'<p style="color:var(--muted);text-align:center;padding:24px 10px;font-size:13.5px">No comments yet — be the first.</p>';
+    :'<p style="color:var(--muted);text-align:center;padding:24px 10px;font-size:13.5px">No comments yet, be the first.</p>';
   rerender();
   el.scrollTop=el.scrollHeight;
 }
@@ -2164,12 +2164,12 @@ function subscribe(cid){
   if(store.subs[u.id+cid]){
     const end=new Date(store.subEnds[cid]).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
     if(store.subCanceled[cid]){
-      if(confirm('Your subscription to '+c.username+' is cancelled and runs until '+end+'.\n\nTurn automatic renewal back on? You will not be charged now — it would renew on '+end+' for '+$$(c.subPrice)+' from your wallet.')) resumeSub(cid);
+      if(confirm('Your subscription to '+c.username+' is cancelled and runs until '+end+'.\n\nTurn automatic renewal back on? You will not be charged now. It would renew on '+end+' for '+$$(c.subPrice)+' from your wallet.')) resumeSub(cid);
     } else if(confirm('You are subscribed to '+c.username+'. It renews automatically on '+end+' for '+$$(store.subPrice[cid]||c.subPrice)+' from your wallet.\n\nCancel renewal? You keep access until '+end+' and will not be charged again.')) cancelSub(cid);
     return;
   }
   document.getElementById('payTitle').textContent='Subscribe to '+c.username;
-  document.getElementById('paySub').textContent='Renews automatically every 30 days from your wallet until you cancel — cancel any time on their page and keep access to the end of the period. Includes subscriber-only posts, their paid posts marked “included”, and half-price live tickets.';
+  document.getElementById('paySub').textContent='Renews automatically every 30 days from your wallet until you cancel. Cancel any time on their page and keep access to the end of the period. Includes subscriber-only posts, their paid posts marked “included”, and half-price live tickets.';
   document.getElementById('payPrice').textContent=$$(c.subPrice)+' / 30 days';
   document.getElementById('payCreator').textContent=$$(Math.round(c.subPrice*(1-FEE)));
   document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-c.subPrice));
@@ -2199,7 +2199,7 @@ async function toggleFollow(cid){
 async function cancelSub(cid){
   if(await rpc('cancel_subscription',{p_creator:cid})){
     store.subCanceled[cid]=true; rerender();
-    toast('Renewal cancelled — access continues until '+new Date(store.subEnds[cid]).toLocaleDateString());
+    toast('Renewal cancelled, access continues until '+new Date(store.subEnds[cid]).toLocaleDateString());
     settled();
   }
 }
@@ -2207,11 +2207,11 @@ async function tip(cid,pid){
   toast('Processing tip…');
   if(await rpc('tip_creator',{p_creator:cid,p_amount:200,p_post:pid||null})){
     const u=me(); u.wallet=Math.max(0,u.wallet-200); updateWallet();
-    toast(`Tipped ${user(cid).username} £2.00 — they keep £1.70 ✨`); settled(); }
+    toast(`Tipped ${user(cid).username} £2.00. They keep £1.70 ✨`); settled(); }
 }
 function openTopup(){
   const u=me(); if(u.role==='creator')return;
-  if(!features.payments){ toast('Adding funds is coming soon — we will tell you when it is ready'); return; }
+  if(!features.payments){ toast('Adding funds is coming soon. We will tell you when it is ready'); return; }
   if(!u.ageVerified){ if(confirm('Adding funds needs a one-time age check (18+) with a government ID and a selfie, done securely by Stripe. Start the check now?')) startVerification(); return; }
   document.getElementById('topupBal').textContent=$$(u.wallet); openModal('topupModal');
 }
@@ -2271,7 +2271,7 @@ function openIntro(replay){
   introTimers.forEach(clearTimeout); introTimers=[];
   const steps=[['Get verified (18+)','Profile → Identity &amp; age verification. You need this before you can post.'],
                ['Make your profile yours','Photo, bio, category and your subscription price.'],
-               ['Post your first drop','Free or paid — photo, video or text.'],
+               ['Post your first drop','Free or paid, photo, video or text.'],
                ['Go live','Free or ticketed. You keep 85% of every ticket and tip.']];
   ov.innerHTML=`<div class="ig-a"></div><div class="ig-b"></div>
     <div class="iring" style="width:70vmax;height:70vmax;right:-30vmax;top:-26vmax"></div>
@@ -2348,7 +2348,7 @@ async function announceCard(kind){        // kind: 'story' (1080x1920) or 'post'
   x.fillStyle='#EFEAF6'; x.font=F(900,64); x.fillText(u.name.length>22?u.name.slice(0,21)+'…':u.name,W/2,cy+R+110);
   x.fillStyle='#A99BC4'; x.font='400 38px system-ui, sans-serif'; x.fillText('@'+u.username,W/2,cy+R+168);
   x.fillStyle='#EFEAF6'; x.font=F(900,70); x.fillText("I'm on OverVibez",W/2,cy+R+330);
-  x.fillStyle='#A99BC4'; x.font='400 40px system-ui, sans-serif'; x.fillText('Follow me there — free to join',W/2,cy+R+400);
+  x.fillStyle='#A99BC4'; x.font='400 40px system-ui, sans-serif'; x.fillText('Follow me there, free to join',W/2,cy+R+400);
   const qs=kind==='story'?420:360, qy=cy+R+450, qc=await qrCanvas(pageLink(u.username),qs);
   x.save(); x.beginPath(); x.roundRect?x.roundRect(W/2-qs/2-14,qy-14,qs+28,qs+28,28):x.rect(W/2-qs/2-14,qy-14,qs+28,qs+28); x.fillStyle='#fff'; x.fill(); x.restore(); x.drawImage(qc,W/2-qs/2,qy);
   x.fillStyle=lg; x.font=F(700,40); x.fillText(pageLink(u.username).replace(/^https?:\/\//,''),W/2,qy+qs+90);
@@ -2356,8 +2356,8 @@ async function announceCard(kind){        // kind: 'story' (1080x1920) or 'post'
   return new Promise(r=>cv.toBlob(r,'image/png'));
 }
 async function downloadCard(kind){
-  try{ const b=await announceCard(kind), a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='overvibez-'+me().username+'-'+kind+'.png'; document.body.appendChild(a); a.click(); a.remove(); toast('Saved — post it everywhere 📣'); }
-  catch(e){ toast('Could not make the image — please try again'); }
+  try{ const b=await announceCard(kind), a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='overvibez-'+me().username+'-'+kind+'.png'; document.body.appendChild(a); a.click(); a.remove(); toast('Saved, post it everywhere 📣'); }
+  catch(e){ toast('Could not make the image. Please try again'); }
 }
 async function openSwitchKit(){
   const u=me(); if(u.role!=='creator') return;
@@ -2384,7 +2384,7 @@ function copyText(t){ (navigator.clipboard&&navigator.clipboard.writeText?naviga
 /* --- Bulk upload --- */
 let bulk=null;
 function openBulk(){
-  if(!me().ageVerified){ closeModal('switchModal'); toast('Get your 18+ check done first — Profile → Identity & age verification'); return; }
+  if(!me().ageVerified){ closeModal('switchModal'); toast('Get your 18+ check done first, Profile → Identity & age verification'); return; }
   bulk={items:[],busy:false,type:'free'}; document.getElementById('bulkFiles').value=''; document.getElementById('bulkErr').textContent=''; bulkType('free'); paintBulk();
   closeModal('switchModal'); openModal('bulkModal');
 }
@@ -2393,7 +2393,7 @@ document.addEventListener('change',e=>{
   if(!e.target||e.target.id!=='bulkFiles'||!bulk) return;
   const err=document.getElementById('bulkErr'); err.textContent='';
   for(const f of e.target.files){
-    if(bulk.items.length>=30){ err.textContent='30 files at a time — upload the rest in another batch'; break; }
+    if(bulk.items.length>=30){ err.textContent='30 files at a time. Upload the rest in another batch'; break; }
     const img=/^image\/(png|jpeg|webp|gif)$/.test(f.type), vid=/^video\/(mp4|quicktime|webm)$/.test(f.type); const it={file:f,caption:'',state:'ready',msg:''};
     if(!img&&!vid){ it.state='bad'; it.msg='Not supported'; } else if(vid&&f.size>50*1024*1024){ it.state='bad'; it.msg='Over 50 MB'; } else if(img&&f.size>25*1024*1024){ it.state='bad'; it.msg='Over 25 MB'; }
     it.thumb=img&&it.state==='ready'?URL.createObjectURL(f):null; bulk.items.push(it);
@@ -2435,7 +2435,7 @@ async function bulkStart(){
   await Promise.all([worker(),worker()]);
   bulk.busy=false; bar.classList.add('hidden'); paintBulk();
   const ok=todo.filter(i=>i.state==='done').length, bad=todo.length-ok;
-  await hydrate(); rerender(); toast(ok+' post'+(ok===1?'':'s')+' published ✨'+(bad?' · '+bad+' failed — tap Upload to retry':''));
+  await hydrate(); rerender(); toast(ok+' post'+(ok===1?'':'s')+' published ✨'+(bad?' · '+bad+' failed. Tap Upload to retry':''));
   if(!bad){ setTimeout(()=>{ if(bulk&&!bulk.busy) closeModal('bulkModal'); },900); }
 }
 
@@ -2447,14 +2447,14 @@ async function openAgeRequest(){
   const {data}=await sb.rpc('my_age_request'); const r=data||{};
   const mail=settings.support_email?`<a href="mailto:${esc(settings.support_email)}">${esc(settings.support_email)}</a>`:'our support team';
   if(r.status==='pending'){
-    body.innerHTML=`<p style="line-height:1.55">✅ Your request is with us. <b>One more step:</b> email a photo of yourself holding your passport or driving licence to ${mail}, <b>from the email address on your account</b>, with <b>${esc(me().username)}</b> in the subject. Your face and the details on the ID must be clear — you can cover the ID number. We check it and delete it straight away, and you will get a notification here when it is done.</p>`; return;
+    body.innerHTML=`<p style="line-height:1.55">✅ Your request is with us. <b>One more step:</b> email a photo of yourself holding your passport or driving licence to ${mail}, <b>from the email address on your account</b>, with <b>${esc(me().username)}</b> in the subject. Your face and the details on the ID must be clear. You can cover the ID number. We check it and delete it straight away, and you will get a notification here when it is done.</p>`; return;
   }
   body.innerHTML=(r.status==='rejected'?`<p style="color:var(--live);line-height:1.5">Your last request was not approved${r.note?': '+esc(r.note):''}. You can ask again.</p>`:'')+
     `<p style="line-height:1.55;font-size:14px">OverVibez is for adults, so we check ID by hand before you can post, go live or add money.<br><br>
      <b>1.</b> Tap <b>Request a check</b>.<br>
-     <b>2.</b> Email a photo of <b>yourself holding your passport or driving licence</b> to ${mail}, from the email address on your account, with your username in the subject. Your face and the details must be clear — you can cover the ID number.<br>
+     <b>2.</b> Email a photo of <b>yourself holding your passport or driving licence</b> to ${mail}, from the email address on your account, with your username in the subject. Your face and the details must be clear. You can cover the ID number.<br>
      <b>3.</b> We check it and delete the photo straight away.<br><br>
-     <b>We never store your ID in the app</b> — only that you were verified and when.</p>
+     <b>We never store your ID in the app</b>, only that you were verified and when.</p>
      <div class="field"><label>Anything we should know? (optional, e.g. best time for a call)</label><input id="ageNote" maxlength="300"></div>
      <div class="err" id="ageErr"></div><button class="primary" id="ageBtn" onclick="sendAgeRequest()">Request a check</button>`;
 }
@@ -2473,10 +2473,10 @@ async function startVerification(){
 function handleStripeReturn(){
   const q=new URLSearchParams(location.search); if(!q.has('topup')&&!q.has('verify')&&!q.has('connect')) return;
   const refresh=(times)=>times.forEach(ms=>setTimeout(()=>{ if(store.session) settled(); },ms));
-  if(q.get('topup')==='success'){ toast('Payment received — your wallet updates in a few seconds ✓'); refresh([3000,8000,15000,30000]); }
-  else if(q.get('topup')==='cancel') toast('Payment cancelled — you were not charged');
-  if(q.get('verify')==='done'){ toast('Thanks — we are checking your ID. This usually takes a few minutes and updates automatically.'); refresh([10000,30000,60000,120000]); }
-  if(q.has('connect')){ if(q.get('connect')==='return'){ toast('Checking your payout account…'); refreshPayoutStatus().then(st=>{ if(st) toast(st.payouts_enabled?'Payouts are ready ✅':'Almost there — finish the remaining steps with Stripe'); }); } else toast('Payout setup was not finished — tap Payout method to continue'); }
+  if(q.get('topup')==='success'){ toast('Payment received. Your wallet updates in a few seconds ✓'); refresh([3000,8000,15000,30000]); }
+  else if(q.get('topup')==='cancel') toast('Payment cancelled. You were not charged');
+  if(q.get('verify')==='done'){ toast('Thanks. We are checking your ID. This usually takes a few minutes and updates automatically.'); refresh([10000,30000,60000,120000]); }
+  if(q.has('connect')){ if(q.get('connect')==='return'){ toast('Checking your payout account…'); refreshPayoutStatus().then(st=>{ if(st) toast(st.payouts_enabled?'Payouts are ready ✅':'Almost there. Finish the remaining steps with Stripe'); }); } else toast('Payout setup was not finished. Tap Payout method to continue'); }
   history.replaceState(null,'',location.pathname+location.hash);
 }
 
@@ -2538,14 +2538,14 @@ function prizePanel(){
   return (store.prizes||[]).map(x=>{
     const by=x.claim_by?new Date(x.claim_by).toLocaleDateString():'';
     const msg=x.status==='needs address'?`<b>🏆 You won ${esc(x.prize)}!</b><br><span style="font-size:12.5px;color:var(--muted)">Add your UK delivery address${by?' by '+by:''} so we can send it.</span><br><button class="abtn ok" style="margin-top:8px" onclick="openPrize('${x.raffle_id}')">Add delivery address</button>`
-      :x.status==='pending'?`<b>🏆 ${esc(x.prize)}</b><br><span style="font-size:12.5px;color:var(--muted)">Address received — we will post it soon. <a href="#" onclick="openPrize('${x.raffle_id}');return false" style="color:var(--accent-2)">Edit address</a></span>`
-      :`<b>📦 ${esc(x.prize)}</b><br><span style="font-size:12.5px;color:var(--muted)">Shipped — look out for it in the post!</span>`;
+      :x.status==='pending'?`<b>🏆 ${esc(x.prize)}</b><br><span style="font-size:12.5px;color:var(--muted)">Address received. We will post it soon. <a href="#" onclick="openPrize('${x.raffle_id}');return false" style="color:var(--accent-2)">Edit address</a></span>`
+      :`<b>📦 ${esc(x.prize)}</b><br><span style="font-size:12.5px;color:var(--muted)">Shipped. Look out for it in the post!</span>`;
     return `<div class="raffle-card" style="margin-bottom:12px">${msg}</div>`; }).join('');
 }
 const fmtTicket=n=>'#'+String(n).padStart(4,'0');
 function ticketText(raffleId){
   const t=store.myTickets[raffleId]; if(!t||!t.length) return '';
-  return t.map(x=>x.qty>1?fmtTicket(x.start)+'–'+fmtTicket(x.start+x.qty-1):fmtTicket(x.start)).join(', ');
+  return t.map(x=>x.qty>1?fmtTicket(x.start)+' to '+fmtTicket(x.start+x.qty-1):fmtTicket(x.start)).join(', ');
 }
 function freeBtn(r){
   const f=store.freeStatus||{};
@@ -2566,7 +2566,7 @@ function renderRaffles(){
       <div class="cd-unit"><b>${String(s).padStart(2,'0')}</b><span>sec</span></div></div>
     <div class="raffle-meta"><span>🎟️ ${r.entries.toLocaleString()} entries</span><span>${r.free?'🎁 Free entry':'💵 '+$$(r.price)+' / entry'}</span><span>👥 ${r.players.toLocaleString()} players</span></div>
     ${!r.free&&ticketText(r.id)?`<div style="font-size:13px;margin:0 0 8px">🎟️ <b>Your tickets:</b> ${ticketText(r.id)}</div>`:''}
-    ${r.free?freeBtn(r):`<button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries — ${$$(r.price)} each</button>`}</div>`;
+    ${r.free?freeBtn(r):`<button class="enter-btn" onclick="openRaffle('${r.id}')">Buy entries, ${$$(r.price)} each</button>`}</div>`;
   }).join(''):'<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">No raffles running right now.</p>');
   if(store.raffleResults.length) document.getElementById('raffleList').innerHTML+=`<div class="section-title" style="padding-top:8px">Recent winners</div><div class="list-card">${
     store.raffleResults.map(w=>`<div class="row" style="cursor:default"><div class="r-ic">🏆</div><div style="flex:1;min-width:0"><b>@${esc(w.winner_username)}</b> won ${esc(w.prize)}<br><span style="font-size:11.5px;color:var(--muted)">${esc(w.title)} · ${Number(w.total_tickets)} tickets · ${w.hash_ok?'seed verified ✓':'seed mismatch ⚠'}</span></div><button class="abtn" onclick="openProof('${w.id}')">Verify</button></div>`).join('')}</div>`;
@@ -2707,7 +2707,7 @@ function paintPostStats(){
       <div class="pm"><div><b>${fmtN(x.views)}</b>Views</div><div><b>${fmtN(x.likes)}</b>Likes</div><div><b>${fmtN(x.comments)}</b>Comments</div><div><b>${fmtN(x.shares)}</b>Shares</div></div>
       ${x.is_paid&&!x.subs_only||Number(x.tips)?`<div style="font-size:12px;color:var(--muted);margin:4px 0">${x.is_paid&&!x.subs_only?'🔓 '+x.unlocks+' unlock'+(Number(x.unlocks)===1?'':'s')+' · ':''}💰 ${x.tips} tip${Number(x.tips)===1?'':'s'}</div>`:''}
       ${!x.owner_id||x.owner_id===me().id?`<div><button class="abtn" onclick="openEditPost('${x.id}')">Edit</button><button class="abtn danger" onclick="deletePost('${x.id}')">Delete</button></div>`:`<div><button class="abtn danger" onclick="answerCollab('${x.id}',false)">Leave collab</button></div>`}</div>`).join('')
-      :'<p style="color:var(--muted);font-size:13px;padding:8px 0">No posts yet — hit ＋ to publish your first one.</p>'}
+      :'<p style="color:var(--muted);font-size:13px;padding:8px 0">No posts yet. Hit ＋ to publish your first one.</p>'}
     <p style="font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.5">Views count each member once per post, once they have scrolled it into view. "Seen by" counts only people who follow you. Shares count link shares from the post. Money is what you kept after the 15% fee, with refunds taken off.</p></div>`;
 }
 function renderStudio(){
@@ -2728,7 +2728,7 @@ function renderStudio(){
     </div>
     <div id="anBox"></div>
     ${u.bonus>0?`<div class="bonus-card"><div class="lbl">🎁 Bonus from OverVibez</div><div class="amt">${$$(u.bonus)}</div>
-      <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team — no fee taken. Kept separate from your sales earnings.</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team, no fee taken. Kept separate from your sales earnings.</div>
       <button class="primary" onclick="requestBonusPayout()">Withdraw bonus ${$$(u.bonus)}</button></div>`:''}
     <div id="levelBox"></div>
     <div id="schedBox"></div>
@@ -2807,14 +2807,14 @@ async function deletePost(id){
   const {data,error}=await sb.rpc('delete_post',{p_post:id});
   if(error) return toast(friendly(error.message));
   if(data&&data.mode==='deleted'&&data.media_path){ try{ await sb.storage.from(data.paid?'paid-media':'public-media').remove([data.media_path]); }catch(e){} }
-  toast(data&&data.mode==='hidden'?'Post hidden — people who paid for it are not affected':'Post deleted'); postStats.at=0; await settled();
+  toast(data&&data.mode==='hidden'?'Post hidden, people who paid for it are not affected':'Post deleted'); postStats.at=0; await settled();
 }
 async function payoutCall(action){
   try{ return await stripeCall('payouts',{action}); }
-  catch(e){ throw new Error(e.message==='NOT_CONFIGURED'?'Payouts are not switched on yet — please try again soon.':e.message); }
+  catch(e){ throw new Error(e.message==='NOT_CONFIGURED'?'Payouts are not switched on yet. Please try again soon.':e.message); }
 }
 async function payoutSetup(){
-  if(!features.payouts) return toast('Bank payouts are coming soon — we will tell you when they are ready');
+  if(!features.payouts) return toast('Bank payouts are coming soon. We will tell you when they are ready');
   if(store.payout.payouts_enabled) return toast('Your payout account is ready ✅');
   toast('Opening secure payout setup…');
   try{ const d=await payoutCall('onboard'); location.href=d.url; }catch(e){ toast(e.message); }
@@ -2826,33 +2826,33 @@ async function requestPayout(){
   const u=me();
   if(u.earnings<1000) return toast('Minimum payout is £10.00');
   if(!features.payouts){   // not connected yet: the request is saved and an admin sends it by hand
-    if(await rpc('request_payout',{p_amount:u.earnings})){ await settled(); toast('Payout requested — it will be sent once bank payouts are connected'); }
+    if(await rpc('request_payout',{p_amount:u.earnings})){ await settled(); toast('Payout requested. It will be sent once bank payouts are connected'); }
     return;
   }
   if(!store.payout.payouts_enabled){
     if(confirm('Set up your payout account first. It takes a few minutes with Stripe and you only do it once. Start now?')) payoutSetup();
     return;
   }
-  if(!confirm('Send '+$$(u.earnings)+' to your bank account?\n\nIt usually arrives in 1–3 working days.')) return;
+  if(!confirm('Send '+$$(u.earnings)+' to your bank account?\n\nIt usually arrives in 1 to 3 working days.')) return;
   toast('Sending your payout…');
-  try{ const r=await payoutCall('payout'); toast('Payout of '+$$(r.amount_cents)+' sent 🎉 It should reach your bank in 1–3 working days'); await settled(); }
+  try{ const r=await payoutCall('payout'); toast('Payout of '+$$(r.amount_cents)+' sent 🎉 It should reach your bank in 1 to 3 working days'); await settled(); }
   catch(e){ toast(e.message); await settled(); }
 }
 
 async function requestBonusPayout(){
   const u=me();
-  if(u.bonus<1000) return toast('Minimum withdrawal is £10.00 — your bonus is '+$$(u.bonus));
+  if(u.bonus<1000) return toast('Minimum withdrawal is £10.00. Your bonus is '+$$(u.bonus));
   if(!features.payouts){
-    if(await rpc('request_bonus_payout',{p_amount:u.bonus})){ await settled(); toast('Withdrawal requested — it will be sent once bank payouts are connected'); }
+    if(await rpc('request_bonus_payout',{p_amount:u.bonus})){ await settled(); toast('Withdrawal requested. It will be sent once bank payouts are connected'); }
     return;
   }
   if(!store.payout.payouts_enabled){
     if(confirm('Set up your payout account first. It takes a few minutes with Stripe and you only do it once. Start now?')) payoutSetup();
     return;
   }
-  if(!confirm('Send your bonus of '+$$(u.bonus)+' to your bank account?\n\nIt usually arrives in 1–3 working days.')) return;
+  if(!confirm('Send your bonus of '+$$(u.bonus)+' to your bank account?\n\nIt usually arrives in 1 to 3 working days.')) return;
   toast('Sending your bonus…');
-  try{ const r=await payoutCall('payout_bonus'); toast('Bonus of '+$$(r.amount_cents)+' sent 🎉 It should reach your bank in 1–3 working days'); await settled(); }
+  try{ const r=await payoutCall('payout_bonus'); toast('Bonus of '+$$(r.amount_cents)+' sent 🎉 It should reach your bank in 1 to 3 working days'); await settled(); }
   catch(e){ toast(e.message); await settled(); }
 }
 
@@ -2898,7 +2898,7 @@ function paintTimes(){
   const top=d.hours.map((c,h)=>({h,c})).sort((a,b)=>b.c-a.c).slice(0,3).filter(x=>x.c>0), max=Math.max(1,...d.hours);
   const DN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'], bd=d.days.indexOf(Math.max(...d.days));
   box.innerHTML=`<div class="chart-card"><h4>⏰ Best time to post</h4>
-    <p style="font-size:13.5px;line-height:1.55;margin:0 0 8px">Your audience is most active around <b>${top.map(x=>hourLbl(x.h)+'–'+hourLbl((x.h+1)%24)).join(', ')}</b>, and <b>${DN[bd]}</b> is your busiest day. Times are UK time, from ${d.total} views in the last 90 days.</p>
+    <p style="font-size:13.5px;line-height:1.55;margin:0 0 8px">Your audience is most active around <b>${top.map(x=>hourLbl(x.h)+' to '+hourLbl((x.h+1)%24)).join(', ')}</b>, and <b>${DN[bd]}</b> is your busiest day. Times are UK time, from ${d.total} views in the last 90 days.</p>
     <svg viewBox="0 0 240 56" width="100%" role="img" aria-label="Views by hour of day">${d.hours.map((c,h)=>`<rect x="${h*10}" y="${(44-c/max*40).toFixed(1)}" width="8" height="${(c/max*40).toFixed(1)}" rx="2" fill="var(--accent-2)" opacity="${top.some(t=>t.h===h)?1:.45}"><title>${hourLbl(h)}: ${c} views</title></rect>`).join('')}
       <text x="0" y="55" font-size="7" fill="var(--muted)">12am</text><text x="120" y="55" font-size="7" fill="var(--muted)" text-anchor="middle">12pm</text><text x="240" y="55" font-size="7" fill="var(--muted)" text-anchor="end">11pm</text></svg></div>`;
 }
@@ -2913,14 +2913,14 @@ function paintInsights(){
     out.push(`📸 Your <b>${KN[ranked[0]]}</b> get about <b>${(avg(kinds[ranked[0]],'likes')/avg(kinds[ranked[ranked.length-1]],'likes')).toFixed(1)}×</b> more likes than your ${KN[ranked[ranked.length-1]]}.`);
   const paid=d.filter(x=>x.is_paid&&!x.subs_only), free=d.filter(x=>!x.is_paid);
   if(paid.length>=2){ const v=paid.reduce((s,x)=>s+Number(x.views),0), u=paid.reduce((s,x)=>s+Number(x.unlocks),0);
-    out.push(`💰 Your pay-per-view posts earned <b>${$$(paid.reduce((s,x)=>s+Number(x.earned_cents),0))}</b> from ${paid.length} posts${v>=10?` — about <b>${Math.round(u/v*100)}%</b> of people who saw them unlocked one`:''}.`); }
-  if(paid.length>=2&&free.length>=2&&avg(free,'views')>avg(paid,'views')*1.3) out.push(`👀 Free posts get <b>${(avg(free,'views')/Math.max(1,avg(paid,'views'))).toFixed(1)}×</b> more views than paid ones — a good way to bring people in before they unlock.`);
+    out.push(`💰 Your pay-per-view posts earned <b>${$$(paid.reduce((s,x)=>s+Number(x.earned_cents),0))}</b> from ${paid.length} posts${v>=10?`, about <b>${Math.round(u/v*100)}%</b> of people who saw them unlocked one`:''}.`); }
+  if(paid.length>=2&&free.length>=2&&avg(free,'views')>avg(paid,'views')*1.3) out.push(`👀 Free posts get <b>${(avg(free,'views')/Math.max(1,avg(paid,'views'))).toFixed(1)}×</b> more views than paid ones, a good way to bring people in before they unlock.`);
   const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'], byDay={};
   d.forEach(x=>{ const k=new Date(x.created_at).getDay(); (byDay[k]=byDay[k]||[]).push(x); });
   const days=Object.keys(byDay).filter(k=>byDay[k].length>=2).sort((a,b)=>avg(byDay[b],'views')+avg(byDay[b],'likes')-avg(byDay[a],'views')-avg(byDay[a],'likes'));
   if(days.length>=2) out.push(`📅 Posts on <b>${DN[days[0]]}s</b> do best for you (about ${Math.round(avg(byDay[days[0]],'views'))} views each).`);
   const best=d.slice().sort((a,b)=>Number(b.views)+Number(b.likes)*3+Number(b.earned_cents)/50-(Number(a.views)+Number(a.likes)*3+Number(a.earned_cents)/50))[0];
-  if(best&&(Number(best.views)>0||Number(best.likes)>0)) out.push(`🏆 Your best post: “${esc(best.caption||'(media post)').slice(0,60)}” — ${fmtN(best.views)} views, ${fmtN(best.likes)} likes${Number(best.earned_cents)?', '+$$(Number(best.earned_cents))+' earned':''}.`);
+  if(best&&(Number(best.views)>0||Number(best.likes)>0)) out.push(`🏆 Your best post: “${esc(best.caption||'(media post)').slice(0,60)}”, ${fmtN(best.views)} views, ${fmtN(best.likes)} likes${Number(best.earned_cents)?', '+$$(Number(best.earned_cents))+' earned':''}.`);
   box.innerHTML=out.length?`<div class="chart-card"><h4>💡 What worked</h4>${out.map(t=>`<p style="font-size:13.5px;line-height:1.55;margin:0 0 8px">${t}</p>`).join('')}<p style="font-size:11.5px;color:var(--muted);margin:0">Worked out from your own posts. Small numbers can mislead, so treat these as hints.</p></div>`:'';
 }
 /* levels and badges */
@@ -2975,7 +2975,7 @@ function collabPctChange(){ const v=+document.getElementById('collabPct').value;
   document.getElementById('collabMath').textContent='On a £10 sale they get £'+(10*v/100).toFixed(2)+' and you get £'+(10*(100-v)/100).toFixed(2)+', before the 15% fee on each share.'; }
 async function answerCollab(id,accept){
   if(!accept&&!confirm('Decline or leave this collab?\n\nIf it was already live, the post stays up and future sales go to the creator who posted it.')) return;
-  if(await rpc('respond_collab',{p_post:id,p_accept:accept})){ toast(accept?'Collab accepted — the post is live 🤝':'Done'); postStats.at=0; await settled(); }
+  if(await rpc('respond_collab',{p_post:id,p_accept:accept})){ toast(accept?'Collab accepted, the post is live 🤝':'Done'); postStats.at=0; await settled(); }
 }
 /* who may comment on my posts + my blocked words */
 const cmtSet={data:null};
@@ -2987,7 +2987,7 @@ function paintCommentSettings(){
   box.innerHTML=`<div class="chart-card"><h4>🛡️ Comment controls</h4>
     <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">Who can comment on your posts</div>
     <div class="chiprow" style="padding:0 0 10px;flex-wrap:wrap">${CMT_MODES.map(([k,l])=>`<button class="chip ${d.mode===k?'on':''}" onclick="cmtSet.data.mode='${k}';paintCommentSettings()">${l}</button>`).join('')}</div>
-    <div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">Blocked words and phrases — one per line. Comments and live chat containing them are refused. Only you can see this list.</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">Blocked words and phrases, one per line. Comments and live chat containing them are refused. Only you can see this list.</div>
     <textarea id="cmtWords" rows="4" style="width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:13.5px;outline:none;resize:vertical">${esc((d.words||[]).join('\n'))}</textarea>
     <button class="primary" style="margin-top:10px" onclick="saveCommentSettings()">Save</button>
     <p style="font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:8px">You can also delete any comment on your posts, and blocking someone stops them commenting.</p></div>`;
@@ -3014,7 +3014,7 @@ function setPostWhen(w){ postWhen=w;
 async function publishPost(){
   const u=me(), cap=document.getElementById('postCap').value.trim(), f=document.getElementById('postMedia').files[0];
   if(!cap&&!f) return toast('Add a caption or a photo/video first');
-  if(!u.ageVerified) return toast('Verify your age first — tap Profile → Identity & age verification');
+  if(!u.ageVerified) return toast('Verify your age first. Tap Profile → Identity & age verification');
   const price=Math.round(parseFloat(document.getElementById('postPrice').value||'3')*100);
   if(postType==='paid'&&(isNaN(price)||price<99||price>49999)) return toast('Price must be between £0.99 and £499.99');
   if(postType==='subs'&&!u.subPrice) return toast('Set a subscription price first (Profile → Edit profile) so people can subscribe');
@@ -3041,7 +3041,7 @@ async function publishPost(){
       return toast(postWhen==='later'?'Scheduled for '+when.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' 🕒':'Saved to your drafts 📝'); }
     await hydrate();
     collabClear(); closeModal('createModal'); go('home');
-    if(collab0) toast('Collab sent — it goes live when @'+collab0+' accepts'); else toast(paid?`Paid drop published 🔒 ${$$(price)} — you keep ${$$(Math.round(price*(1-FEE)))} per unlock`:'Post published ✨');
+    if(collab0) toast('Collab sent. It goes live when @'+collab0+' accepts'); else toast(paid?`Paid drop published 🔒 ${$$(price)}. You keep ${$$(Math.round(price*(1-FEE)))} per unlock`:'Post published ✨');
   } finally { btn.disabled=false; }
 }
 
@@ -3076,7 +3076,7 @@ const liveFail=e=>toast(e.message==='NOT_CONFIGURED'?'Live streaming is not swit
 
 async function startBroadcast(){
   const u=me();
-  if(!u.ageVerified) return toast('Verify your age first — tap Profile → Identity & age verification');
+  if(!u.ageVerified) return toast('Verify your age first. Tap Profile → Identity & age verification');
   const title=document.getElementById('liveTitle').value.trim(); if(!title) return toast('Give your stream a title');
   const price=liveEntry==='paid'?Math.round(parseFloat(document.getElementById('livePrice').value||'0')*100):0;
   if(liveEntry==='paid'&&(isNaN(price)||price<99||price>50000)) return toast('Entry price must be between £0.99 and £500.00');
@@ -3100,7 +3100,7 @@ async function openLive(streamId){
     if(!data||!data.length){
       payBtn(); document.getElementById('payTitle').textContent='Join '+c.username+' live';
       const price=store.subs[u.id+s.creator_id]?Math.ceil(s.entry_price_cents/2):s.entry_price_cents;
-      document.getElementById('paySub').textContent=price<s.entry_price_cents?'Ticket for this live stream — half price because you subscribe to '+c.username+'. The creator keeps 85%.':'Ticket for this live stream. The creator keeps 85%. (Subscribers pay half price.)';
+      document.getElementById('paySub').textContent=price<s.entry_price_cents?'Ticket for this live stream, half price because you subscribe to '+c.username+'. The creator keeps 85%.':'Ticket for this live stream. The creator keeps 85%. (Subscribers pay half price.)';
       document.getElementById('payPrice').textContent=$$(price);
       document.getElementById('payCreator').textContent=$$(Math.round(price*(1-FEE)));
       document.getElementById('payAfter').textContent=$$(Math.max(0,u.wallet-price));
@@ -3120,7 +3120,7 @@ async function watchLive(s,c){
 }
 
 async function connectLive(streamId,role,meta){
-  if(!window.LivekitClient) throw new Error('The video library failed to load — check your connection and reload');
+  if(!window.LivekitClient) throw new Error('The video library failed to load. Check your connection and reload');
   const t=await liveToken(streamId);
   const {Room,RoomEvent,Track}=window.LivekitClient;
   const room=new Room({adaptiveStream:true,dynacast:true});
@@ -3200,7 +3200,7 @@ async function openVibes(){
 }
 async function sendVibe(key){
   if(!liveState) return; const u=me(), v=(vibeTypes||[]).find(x=>x.key===key); if(!v) return;
-  if(u.wallet<v.price_cents){ closeModal('vibeModal'); toast('Your wallet is too low for this vibe — add funds first'); return openTopup&&openTopup(); }
+  if(u.wallet<v.price_cents){ closeModal('vibeModal'); toast('Your wallet is too low for this vibe. Add funds first'); return openTopup&&openTopup(); }
   if(v.price_cents>=1000&&!confirm('Send a '+v.label+' '+v.emoji+' for '+$$(v.price_cents)+'?')) return;
   const {data,error}=await sb.rpc('send_vibe',{p_stream:liveState.id,p_vibe:key,p_qty:1});
   if(error) return toast(friendly(error.message));
@@ -3235,7 +3235,7 @@ async function liveTip(){
   if(await rpc('tip_creator',{p_creator:liveState.creator,p_amount:200,p_post:liveState.id})){
     const u=me(); u.wallet=Math.max(0,u.wallet-200); updateWallet();
     const {data}=await sb.from('live_comments').insert({stream_id:liveState.id,user_id:store.session,body:'💰 tipped £2.00'}).select('id,user_id,body').single();
-    if(data) liveChatAdd(data,true); toast('Tipped £2.00 — they keep £1.70 ✨'); }
+    if(data) liveChatAdd(data,true); toast('Tipped £2.00. They keep £1.70 ✨'); }
 }
 function liveReport(){ if(liveState) openReport('stream',liveState.id); }
 
@@ -3280,7 +3280,7 @@ async function liveClose(){ liveCleanup(); await loadLive().catch(()=>{}); settl
 
 /* ═══════════ ME ═══════════ */
 async function becomeCreator(){
-  if(!confirm('Switch to a creator account?\n\n• You can post, go live and earn — you keep 85% of what you make.\n• You will need to pass a one-time 18+ ID check before you can post.\n• Your followers, subscriptions and history stay as they are.\n• Creators cannot top up the wallet, and this cannot be undone from the app.\n\nYou will get the welcome tour straight away.')) return;
+  if(!confirm('Switch to a creator account?\n\n• You can post, go live and earn. You keep 85% of what you make.\n• You will need to pass a one-time 18+ ID check before you can post.\n• Your followers, subscriptions and history stay as they are.\n• Creators cannot top up the wallet, and this cannot be undone from the app.\n\nYou will get the welcome tour straight away.')) return;
   if(!(await rpc('become_creator'))) return;
   toast('Welcome, creator! ✨ Setting things up…');
   setTimeout(()=>location.reload(),900);      // a fresh load picks up the creator account and plays the welcome tour
@@ -3297,7 +3297,7 @@ function renderMe(){
       <div class="u">@${esc(u.username)}${u.bio?' · '+esc(u.bio):''}</div>
       <div class="me-stats">
         ${isC?`<div class="tap" onclick="openPeople('${u.id}','followers')"><b>${fmtN(u.followers)}</b><span>Followers</span></div>
-               <div class="tap" onclick="openPeople('${u.id}','following')"><b class="fgCount">${fgCache[u.id]??'–'}</b><span>Following</span></div>
+               <div class="tap" onclick="openPeople('${u.id}','following')"><b class="fgCount">${fgCache[u.id]??'·'}</b><span>Following</span></div>
                <div><b>${$$(u.earnings)}</b><span>Earnings</span></div>
                <div><b>${$$(u.subPrice)}</b><span>Sub price</span></div>`
              :`<div><b>${$$(u.wallet)}</b><span>Wallet</span></div>
@@ -3310,7 +3310,7 @@ function renderMe(){
       <div class="list-card">${mySubs.map(c=>`<div class="row" onclick="subscribe('${c.id}')"><div class="r-ic ${c.av}">${avInner(c)}</div>${esc(c.username)}<span class="sub">${store.subCanceled[c.id]?'cancelled · ends ':'renews '}${new Date(store.subEnds[c.id]).toLocaleDateString()}</span></div>`).join('')}</div>`:''}
     ${!isC?`<div onclick="becomeCreator()" style="margin:6px 14px 14px;padding:16px;border-radius:16px;cursor:pointer;background:linear-gradient(135deg,#FF3D8A,#8B5CF6);color:#fff">
       <div style="font-size:16px;font-weight:800;margin-bottom:4px">✦ Become a creator</div>
-      <div style="font-size:13px;line-height:1.5;opacity:.95">Post, go live and earn — you keep 85%. Same account, same followers, plus a guided tour to get you started.</div>
+      <div style="font-size:13px;line-height:1.5;opacity:.95">Post, go live and earn. You keep 85%. Same account, same followers, plus a guided tour to get you started.</div>
       <div style="margin-top:10px;font-weight:700;font-size:13px">Switch to a creator account →</div></div>`:''}
     <div class="section-title" style="padding-top:4px">Settings</div>
     <div class="list-card">
@@ -3348,7 +3348,7 @@ async function toggleEmailNotif(){
   u.emailNotif=on; toast(on?'We will email you about important things (wins, refunds, appeals, payouts)':'Email notifications are off'); renderMe();
 }
 async function changeSubPrice(){
-  const v=prompt('Monthly subscription price (GBP, 1.99–99.99):', (me().subPrice/100).toFixed(2));
+  const v=prompt('Monthly subscription price (GBP, 1.99 to 99.99):', (me().subPrice/100).toFixed(2));
   if(!v)return; const c=Math.round(parseFloat(v)*100);
   if(isNaN(c)||c<199||c>9999) return toast('Price must be between £1.99 and £99.99');
   const {error}=await sb.from('profiles').update({sub_price_cents:c}).eq('id',store.session);
@@ -3501,7 +3501,7 @@ if(window.MutationObserver){ let vt=null; new MutationObserver(()=>{ if(vt) retu
 function shareProfile(un){
   const l=shareLink(un);
   if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(l).then(()=>toast('Link copied — share it anywhere 🔗'))
+    navigator.clipboard.writeText(l).then(()=>toast('Link copied. Share it anywhere 🔗'))
       .catch(()=>prompt('Copy your shareable link:',l));
   } else prompt('Copy your shareable link:',l);
 }
@@ -3525,9 +3525,9 @@ async function submitReport(){
   if(sel.value==='copyright'&&det.length<15) return toast('For copyright reports, say what the work is and where you own it');
   const btn=document.getElementById('reportBtn'); btn.disabled=true;
   const {error}=await sb.from('reports').insert({reporter_id:store.session,target_type:reportTarget.type,target_id:reportTarget.id,
-    reason:(sel.value+': '+label+(det?' — '+det:'')).slice(0,1000)});
+    reason:(sel.value+': '+label+(det?', '+det:'')).slice(0,1000)});
   btn.disabled=false; closeModal('reportModal');
-  toast(error?error.message:'Report submitted — thank you');
+  toast(error?error.message:'Report submitted, thank you');
 }
 function profBadges(b){ return `<div style="font-size:13px;margin-bottom:6px">${b.emoji} <b>${esc(b.level)}</b></div>${badgeChips(b)}`; }
 async function loadProfBadges(id){ if(levelSet[id]&&Date.now()-(levelSet[id].at||0)<120e3) return; const {data}=await sb.rpc('creator_badges',{p_creator:id}); if(!data) return; data.at=Date.now(); levelSet[id]=data;
@@ -3548,11 +3548,11 @@ function renderProfile(){
       ${c.role==='creator'?`<div id="profBadges" style="margin:8px 0 2px">${levelSet[c.id]?profBadges(levelSet[c.id]):''}</div>`:''}
       <div class="me-stats">
         ${c.role==='creator'||isMe?`<div class="tap" onclick="openPeople('${c.id}','followers')"><b>${fmtN(c.followers)}</b><span>Followers</span></div>
-        <div class="tap" onclick="openPeople('${c.id}','following')"><b class="fgCount">${isMe&&c.role!=='creator'?store.following.size:(fgCache[c.id]??'–')}</b><span>Following</span></div>`:`<div><b>${fmtN(c.followers)}</b><span>Followers</span></div>`}
+        <div class="tap" onclick="openPeople('${c.id}','following')"><b class="fgCount">${isMe&&c.role!=='creator'?store.following.size:(fgCache[c.id]??'·')}</b><span>Following</span></div>`:`<div><b>${fmtN(c.followers)}</b><span>Followers</span></div>`}
         <div><b>${theirPosts.length}</b><span>Drops</span></div>
         ${c.role==='creator'?`<div><b>${$$(c.subPrice)}</b><span>Per month</span></div>`:''}
       </div>
-      ${(()=>{ const l=store.live.find(x=>x.creator_id===c.id); return l&&!isMe?`<button class="enter-btn" style="margin:2px 0 10px;background:var(--live)" onclick="openLive('${l.id}')">● LIVE now — tap to join</button>`:''; })()}
+      ${(()=>{ const l=store.live.find(x=>x.creator_id===c.id); return l&&!isMe?`<button class="enter-btn" style="margin:2px 0 10px;background:var(--live)" onclick="openLive('${l.id}')">● LIVE now. Tap to join</button>`:''; })()}
       ${!isMe&&c.role==='creator'?`
       <div style="display:flex;gap:8px;width:100%;padding:2px 0 4px">
         <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text);flex:1 1 0;width:auto;min-width:0;padding:13px 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="toggleFollow('${c.id}')">${store.following.has(c.id)?'Following ✓':'Follow'}</button>
@@ -3588,7 +3588,7 @@ window.addEventListener('hashchange',()=>{ const c=hashUser(); if(c&&store.sessi
 
 /* ═══════════ ADMIN / MODERATION CONSOLE ═══════════
    Everything here calls admin_* database functions. Those functions re-check the caller's role on the server,
-   so hiding this screen from non-staff is only cosmetic — it is not the security boundary. */
+   so hiding this screen from non-staff is only cosmetic. It is not the security boundary. */
 const isStaff=()=>!!(me()&&me().staffRole), isAdmin=()=>!!(me()&&me().staffRole==='admin');
 let adminTab='reports', adminSub={reports:'open',appeals:'open',content:'review'}, adminUserQ='';
 const admBody=()=>document.getElementById('adminBody');
@@ -3602,7 +3602,7 @@ function renderAdmin(){
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
-    ${store.sec&&!store.sec.mfa_enabled?`<div class="chart-card" style="border-color:var(--accent)"><b>🛡️ Turn on two-step login</b><p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:4px 0 8px">Staff accounts can move money and ban people. Protect yours with an authenticator app.${store.sec.require_staff_mfa?' <b>Required — until you do, staff tools are locked.</b>':''}</p><button class="abtn ok" onclick="openTwoStep()">Set up</button></div>`:''}
+    ${store.sec&&!store.sec.mfa_enabled?`<div class="chart-card" style="border-color:var(--accent)"><b>🛡️ Turn on two-step login</b><p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:4px 0 8px">Staff accounts can move money and ban people. Protect yours with an authenticator app.${store.sec.require_staff_mfa?' <b>Required. Until you do, staff tools are locked.</b>':''}</p><button class="abtn ok" onclick="openTwoStep()">Set up</button></div>`:''}
     <div class="chiprow">${tabs.map(([k,l])=>`<button class="chip ${adminTab===k?'on':''}" onclick="admTab('${k}')">${l}</button>`).join('')}</div>
     <div id="adminBody"></div>`;
   admLoad();
@@ -3618,13 +3618,13 @@ async function admAge(){
     <div class="chart-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div><b>ID checks: ${stripeOn?'Stripe Identity (paid per check)':'by hand (free)'}</b>
       <div style="font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5">${stripeOn?'Members verify through Stripe. Stripe charges per check.':'Members request a check; you look at their ID yourself, then approve below. Nothing is charged.'}</div></div>
       <button class="abtn ${stripeOn?'ok':''}" onclick="admIdMode('${stripeOn?'manual':'stripe'}')">${stripeOn?'Switch to by hand':'Switch to Stripe'}</button></div></div>
-    <div class="chart-card" style="font-size:12.5px;color:var(--muted);line-height:1.55"><b style="color:var(--text)">How to check</b><br>The member emails a photo of themselves holding a passport or driving licence to your support inbox, from the email shown on their request, with their username in the subject. Check that the face matches the person, the ID looks genuine, the name is plausible and the date of birth makes them 18 or over. Then <b>delete the email and the photo straight away</b> (and empty your trash). Approve only if you are satisfied. The note you write is kept as the record — do not put ID numbers in it.</div>
+    <div class="chart-card" style="font-size:12.5px;color:var(--muted);line-height:1.55"><b style="color:var(--text)">How to check</b><br>The member emails a photo of themselves holding a passport or driving licence to your support inbox, from the email shown on their request, with their username in the subject. Check that the face matches the person, the ID looks genuine, the name is plausible and the date of birth makes them 18 or over. Then <b>delete the email and the photo straight away</b> (and empty your trash). Approve only if you are satisfied. The note you write is kept as the record, do not put ID numbers in it.</div>
     <div class="chiprow">${['pending','approved','rejected'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.age='${x}';admLoad()">${x}</button>`).join('')}</div>
     ${data.length?data.map(r=>`<div class="chart-card">
       <div style="display:flex;justify-content:space-between;gap:8px"><b>@${esc(r.username)}</b><span style="font-size:12px;color:var(--muted)">${ago(r.created_at)} ago</span></div>
       <div style="font-size:12.5px;color:var(--muted);margin:4px 0">${esc(r.account_type)} · ${r.email?`<a href="mailto:${esc(r.email)}">${esc(r.email)}</a>`:'no email'}</div>
       ${r.note?`<div style="font-size:13px;margin:6px 0;word-break:break-word">“${esc(r.note)}”</div>`:''}
-      ${st==='pending'?`<button class="abtn ok" onclick="admAgeReview('${r.id}',true)">Approve — over 18</button><button class="abtn danger" onclick="admAgeReview('${r.id}',false)">Reject</button>`
+      ${st==='pending'?`<button class="abtn ok" onclick="admAgeReview('${r.id}',true)">Approve, over 18</button><button class="abtn danger" onclick="admAgeReview('${r.id}',false)">Reject</button>`
         :`<div style="font-size:12.5px;color:var(--muted)">${esc(r.review_note||'')}${r.reviewed_at?' · '+ago(r.reviewed_at)+' ago':''}</div>`}
       <button class="abtn" onclick="admOpenUser('${r.user_id}')">View user</button></div>`).join(''):admEmpty(st==='pending'?'No requests waiting ✓':'Nothing here yet.')}</div>`;
 }
@@ -3652,7 +3652,7 @@ async function admReports(){
        ${r.target_user_id?`<button class="abtn danger" onclick="admResolve('${r.id}','ban_user')">Ban user</button>`:''}
        ${['post','comment','message','stream'].includes(r.target_type)&&!r.already_removed&&r.target_user_id?`<button class="abtn danger" onclick="admResolve('${r.id}','remove_and_ban')">Remove + ban</button>`:''}
        ${r.target_user_id?`<button class="abtn" onclick="admOpenUser('${r.target_user_id}')">View user</button>`:''}</div>`:''}
-   </div>`).join(''):admEmpty('Nothing here — the queue is clear ✓')}</div>`;
+   </div>`).join(''):admEmpty('Nothing here, the queue is clear ✓')}</div>`;
 }
 async function admResolve(id,action){
   const ban=action.includes('ban');
@@ -3668,7 +3668,7 @@ async function admAppeals(){
   const st=adminSub.appeals, {data:raw,error}=await admCall('admin_list_appeals',{p_status:st}); if(error) return;
   const data=st==='open'?raw.slice().sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)):raw, late=a=>st==='open'&&Date.now()-new Date(a.created_at)>48*36e5;
   const {data:cnt}=await admCall('admin_appeal_counts');
-  admBody().innerHTML=(cnt&&cnt.overdue>0?`<div style="background:rgba(255,71,87,.15);border:1px solid var(--live);border-radius:12px;padding:10px 14px;margin:0 14px 10px;font-size:13px">⏰ <b>${cnt.overdue} appeal${cnt.overdue==1?' is':'s are'} overdue</b> — we promise members a reply within 48 hours. Oldest first below.</div>`:(cnt&&cnt.open>0?`<div style="margin:0 14px 10px;font-size:12.5px;color:var(--muted)">${cnt.open} open · all within the 48-hour promise ✓</div>`:''))+`<div class="chiprow">${['open','overturned','upheld'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.appeals='${x}';admLoad()">${x}</button>`).join('')}</div>
+  admBody().innerHTML=(cnt&&cnt.overdue>0?`<div style="background:rgba(255,71,87,.15);border:1px solid var(--live);border-radius:12px;padding:10px 14px;margin:0 14px 10px;font-size:13px">⏰ <b>${cnt.overdue} appeal${cnt.overdue==1?' is':'s are'} overdue</b>. We promise members a reply within 48 hours. Oldest first below.</div>`:(cnt&&cnt.open>0?`<div style="margin:0 14px 10px;font-size:12.5px;color:var(--muted)">${cnt.open} open · all within the 48-hour promise ✓</div>`:''))+`<div class="chiprow">${['open','overturned','upheld'].map(x=>`<button class="chip ${st===x?'on':''}" onclick="adminSub.appeals='${x}';admLoad()">${x}</button>`).join('')}</div>
    <div class="admin-pad">${data.length?data.map(a=>`<div class="chart-card">
      <div style="display:flex;justify-content:space-between"><b>@${esc(a.username)} · ${a.kind==='ban'?'suspension':a.kind+' removal'}</b><span style="font-size:12px;${late(a)?'color:var(--live);font-weight:700':'color:var(--muted)'}">${late(a)?'⏰ OVERDUE · ':''}${ago(a.created_at)} ago</span></div>
      ${a.original_reason?`<div style="font-size:12px;color:var(--muted);margin-top:4px">Original reason: ${esc(a.original_reason)}</div>`:''}
@@ -3697,7 +3697,7 @@ async function admLive(){
 async function admEndLive(id){
   const reason=prompt('Reason for ending this stream (kept in the audit log):'); if(reason===null) return;
   if(reason.trim().length<3) return toast('A reason is required');
-  const {error}=await admCall('admin_end_live_stream',{p_stream:id,p_reason:reason.trim()}); if(!error){ toast('Stream ended — the broadcaster is disconnected within 30 seconds'); admLoad(); }
+  const {error}=await admCall('admin_end_live_stream',{p_stream:id,p_reason:reason.trim()}); if(!error){ toast('Stream ended, the broadcaster is disconnected within 30 seconds'); admLoad(); }
 }
 
 /* --- content review --- */
@@ -3760,12 +3760,12 @@ function admUsers(){
 }
 async function admEmailHelp(){
   const {data,error}=await admCall('admin_email_help_list'); const el=document.getElementById('admHelp'); if(error||!el) return;
-  el.innerHTML=(data||[]).length?`<div class="chart-card" style="border-color:var(--accent)"><b>📧 Waiting for email confirmation</b><div style="font-size:12px;color:var(--muted);margin:4px 0 8px">These people asked for help — their confirmation email never reached them.</div>${data.map(r=>`<div style="display:flex;gap:8px;align-items:center;margin:6px 0"><div style="flex:1;min-width:0;font-size:13px"><b>@${esc(r.username||'?')}</b><br><span style="color:var(--muted);font-size:11.5px;word-break:break-all">${esc(r.email)}</span></div><button class="abtn ok" onclick="admConfirmEmail('${r.user_id}',true)">Confirm email</button></div>`).join('')}</div>`:'';
+  el.innerHTML=(data||[]).length?`<div class="chart-card" style="border-color:var(--accent)"><b>📧 Waiting for email confirmation</b><div style="font-size:12px;color:var(--muted);margin:4px 0 8px">These people asked for help, their confirmation email never reached them.</div>${data.map(r=>`<div style="display:flex;gap:8px;align-items:center;margin:6px 0"><div style="flex:1;min-width:0;font-size:13px"><b>@${esc(r.username||'?')}</b><br><span style="color:var(--muted);font-size:11.5px;word-break:break-all">${esc(r.email)}</span></div><button class="abtn ok" onclick="admConfirmEmail('${r.user_id}',true)">Confirm email</button></div>`).join('')}</div>`:'';
 }
 async function admConfirmEmail(id,fromList){
   if(!confirm('Confirm this person\'s email address by hand? Only do this for someone you know is real.')) return;
   const {error}=await admCall('admin_confirm_email',{p_user:id}); if(error) return;
-  toast('Email confirmed — they can log in now'); if(fromList) admEmailHelp(); else admOpenUser(id);
+  toast('Email confirmed. They can log in now'); if(fromList) admEmailHelp(); else admOpenUser(id);
 }
 async function admSearch(){
   adminUserQ=document.getElementById('admQ').value.trim();
@@ -3819,7 +3819,7 @@ async function admFlag(id,flags){
   const {error}=await admCall('admin_set_user_flags',Object.assign({p_user:id},flags)); if(!error){ toast('Updated'); admOpenUser(id); }
 }
 async function admBonus(id){
-  const v=prompt('Bonus amount in pounds (0.01–100). It goes to their separate bonus balance (they can withdraw it, no fee), and comes out of OverVibez funds when they withdraw it.'); if(v===null) return;
+  const v=prompt('Bonus amount in pounds (0.01 to 100). It goes to their separate bonus balance (they can withdraw it, no fee), and comes out of OverVibez funds when they withdraw it.'); if(v===null) return;
   const cents=Math.round(parseFloat(v)*100); if(isNaN(cents)) return toast('Enter an amount like 25.00');
   const reason=prompt('Reason (kept in the audit log):'); if(reason===null) return;
   if(!confirm('Pay '+$$(cents)+' to this creator? This is real money you will owe them.')) return;
@@ -3850,7 +3850,7 @@ async function admInvites(){
       <div class="field"><input id="supEmail" type="email" maxlength="120" placeholder="support@yourdomain.com" value="${esc(settings.support_email||'')}"></div>
       <button class="primary" onclick="admSupportEmail()">Save</button></div>
     <div class="chart-card"><h4>Create an invite</h4>
-      <div class="field"><label>Who is it for? (note)</label><input id="invNote" maxlength="100" placeholder="e.g. Sarah — beta creator"></div>
+      <div class="field"><label>Who is it for? (note)</label><input id="invNote" maxlength="100" placeholder="e.g. Sarah, beta creator"></div>
       <div class="field"><label>How many people can use it</label><input id="invUses" type="number" min="1" max="1000" value="1"></div>
       <div class="field"><label>Expires after (days, blank = never)</label><input id="invDays" type="number" min="1" max="365" placeholder="never"></div>
       <button class="primary" onclick="admCreateInvite()">Create code</button><div id="invNew" style="margin-top:10px"></div></div>
@@ -3858,7 +3858,7 @@ async function admInvites(){
       <div style="display:flex;justify-content:space-between;gap:8px"><b style="font-family:monospace;font-size:13px">${esc(c.code)}</b><span style="font-size:12px;color:var(--muted)">${c.uses}/${c.max_uses} used</span></div>
       <div style="font-size:12.5px;color:var(--muted);margin:4px 0">${esc(c.note||'')}${c.redeemed_by?' · joined: '+esc(c.redeemed_by):''}${c.expires_at?' · expires '+new Date(c.expires_at).toLocaleDateString():''}${!c.active?' · REVOKED':''}</div>
       ${c.active?`<button class="abtn" onclick="copyText('${esc(c.code)}')">Copy code</button><button class="abtn" onclick="copyText(inviteLink('${esc(c.code)}'))">Copy invite link</button><button class="abtn danger" onclick="admRevokeInvite('${esc(c.code)}')">Revoke</button>`:''}
-    </div>`).join(''):admEmpty('No invite codes yet — create one above.')}</div>`;
+    </div>`).join(''):admEmpty('No invite codes yet, create one above.')}</div>`;
 }
 function copyText(t){ (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Copied ✓')).catch(()=>prompt('Copy this:',t)); }
 async function admRequireMfa(on){
@@ -3897,7 +3897,7 @@ async function admStats(){
 }
 async function admCotw(){
   const {data}=await admCall('admin_cotw_candidates'); const box=document.getElementById('cotwBox'); if(!box||!data) return;
-  box.innerHTML=`<div class="chart-card" style="margin:10px 14px"><h4>⭐ Creator of the Week — most new followers this week</h4>${data.length?data.map(c=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;font-size:13.5px"><span>@${esc(c.username)} · +${c.new_followers} followers · ${c.posts_7d} posts</span><button class="abtn" onclick="admFeature('${c.id}')">Feature</button></div>`).join(''):'<p style="font-size:13px;color:var(--muted)">No new followers this week yet.</p>'}</div>`;
+  box.innerHTML=`<div class="chart-card" style="margin:10px 14px"><h4>⭐ Creator of the Week, most new followers this week</h4>${data.length?data.map(c=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;font-size:13.5px"><span>@${esc(c.username)} · +${c.new_followers} followers · ${c.posts_7d} posts</span><button class="abtn" onclick="admFeature('${c.id}')">Feature</button></div>`).join(''):'<p style="font-size:13px;color:var(--muted)">No new followers this week yet.</p>'}</div>`;
 }
 async function admPayouts(){
   const {data,error}=await admCall('admin_list_payouts',{p_status:'pending'}); if(error) return;
@@ -3922,14 +3922,14 @@ async function admRaffles(){
      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">All raffles on OverVibez are <b>free to enter</b>. Paid entries are switched off because they count as gambling.</p>
      <div class="field"><label>Title</label><input id="rfTitle" maxlength="120" placeholder="Creator Fund Drop"></div>
      <div class="field"><label>Prize</label><input id="rfPrize" maxlength="120" placeholder="£2,500"></div>
-     <div class="field"><label>Entry</label><select id="rfType" onchange="document.getElementById('rfPriceWrap').classList.toggle('hidden',this.value==='free')" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none"><option value="free">Free — every confirmed member can enter, no link needed</option>${settings.paid_raffles?'<option value="paid">Paid — members buy entries from their wallet</option>':''}</select></div>
+     <div class="field"><label>Entry</label><select id="rfType" onchange="document.getElementById('rfPriceWrap').classList.toggle('hidden',this.value==='free')" style="width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:14.5px;outline:none"><option value="free">Free. Every confirmed member can enter, no link needed</option>${settings.paid_raffles?'<option value="paid">Paid, members buy entries from their wallet</option>':''}</select></div>
      <div class="field hidden" id="rfPriceWrap"><label>Entry price (GBP)</label><input id="rfPrice" type="number" min="0.5" step="0.5" value="2.00"></div>
      <div class="field"><label>Prize photo (optional)</label><input id="rfImg" type="file" accept="image/*"></div>
      ${durField('rfDur',7,'days')}
      <button class="primary" onclick="admCreateRaffle()">Create</button></div>
    ${rs.map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, res=(results[i].data||[])[0], closed=new Date(r.closes_at)<new Date();
      return `<div class="chart-card">${r.image_path?`<img src="${esc(pubUrl(r.image_path))}" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:8px">`:''}<b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)} · ${r.is_free?'free':$$(r.entry_price_cents)+'/entry'}</span>
-       <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} tickets · ${Number(t.players||0)} players · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
+       <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} tickets · ${Number(t.players||0)} players · ${r.winner_entry_id?'drawn':(closed?'closed, ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
        ${res?`<div style="font-size:13px">🏆 <b>@${esc(res.winner_username)}</b> · seed ${res.hash_ok?'verified ✓':'MISMATCH ⚠'}</div>`
          :r.winner_entry_id&&!r.announced_at?`<div style="font-size:12.5px;color:var(--live);margin-bottom:4px">Winner drawn but not announced yet</div><button class="abtn ok" onclick="admAnnounce('${r.id}')">Announce winner</button>`
          :(closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">🎲 Draw winner live</button>`:'')}
@@ -3960,12 +3960,12 @@ async function admCreateRaffle(){
   const title=document.getElementById('rfTitle').value, prize=document.getElementById('rfPrize').value;
   if(document.getElementById('rfType').value==='free'){
     const {data:rid,error}=await admCall('admin_create_free_raffle',{p_title:title,p_prize:prize,p_hours:hours});
-    if(!error){ await admAfterCreate(rid,'rfImg'); toast('Free giveaway created — every member has been told'); admLoad(); } return;
+    if(!error){ await admAfterCreate(rid,'rfImg'); toast('Free giveaway created. Every member has been told'); admLoad(); } return;
   }
   const price=Math.round(parseFloat(document.getElementById('rfPrice').value)*100);
   if(isNaN(price)) return toast('Enter an entry price');
   const {data:rid,error}=await admCall('admin_create_raffle',{p_title:title,p_prize:prize,p_price_cents:price,p_hours:hours});
-  if(!error){ await admAfterCreate(rid,'rfImg'); toast('Raffle created — it is now live for users'); admLoad(); }
+  if(!error){ await admAfterCreate(rid,'rfImg'); toast('Raffle created. It is now live for users'); admLoad(); }
 }
 async function admDraw(id){ openDrawStage(id); }
 async function admAnnounce(id){
@@ -3983,7 +3983,7 @@ async function admErrors(){
    <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0"><div class="section-title" style="padding:0">App errors</div>${er.data.length?`<button class="abtn danger" onclick="admClearErrors()">Clear all</button>`:''}</div>
    ${er.data.length?er.data.map(e=>`<div class="chart-card"><div style="display:flex;justify-content:space-between;gap:8px"><b style="word-break:break-word;font-size:13.5px">${esc(e.message)}</b><span style="font-size:12px;color:var(--muted);white-space:nowrap">×${e.occurrences}</span></div>
      <div style="font-size:12px;color:var(--muted);margin:4px 0">${ago(e.last_seen_at)} ago · ${esc(e.url||'')}${e.username?' · @'+esc(e.username):''}</div>
-     ${e.stack?`<details><summary style="font-size:12px;color:var(--muted);cursor:pointer">Details</summary><pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--muted);margin:6px 0 0">${esc(e.stack)}\n${esc(e.ua||'')}</pre></details>`:''}</div>`).join(''):admEmpty('No errors reported — nice ✓')}</div>`;
+     ${e.stack?`<details><summary style="font-size:12px;color:var(--muted);cursor:pointer">Details</summary><pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--muted);margin:6px 0 0">${esc(e.stack)}\n${esc(e.ua||'')}</pre></details>`:''}</div>`).join(''):admEmpty('No errors reported, nice ✓')}</div>`;
 }
 /* --- feedback from members (admin only) --- */
 async function admFeedback(){
@@ -4016,7 +4016,7 @@ async function admGiveaways(){
      ${durField('fgDur',14,'days')}
      <button class="primary" onclick="admCreateFree()">Create giveaway</button></div>
    <div class="chart-card"><h4>2. Create a sign-up link</h4>
-     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">For bringing NEW people in: the link lets them sign up (even while sign-up is by invitation) and shows a free-giveaway welcome. Existing members don't need a link — they can enter any free giveaway from the Raffles page.</p>
+     <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">For bringing NEW people in: the link lets them sign up (even while sign-up is by invitation) and shows a free-giveaway welcome. Existing members don't need a link. They can enter any free giveaway from the Raffles page.</p>
      <div class="field"><label>Campaign name</label><input id="cpName" maxlength="80" placeholder="Autumn giveaway"></div>
      <div class="field"><label>Link code (letters, numbers, dashes)</label><input id="cpCode" maxlength="24" placeholder="AUTUMN" autocapitalize="characters"></div>
      <div class="field"><label>Maximum sign-ups</label><input id="cpMax" type="number" min="1" max="100000" value="500"></div>
@@ -4029,11 +4029,11 @@ async function admGiveaways(){
    <div class="section-title" style="padding:12px 0 6px">Free giveaways</div>
    ${(rs.data||[]).map((r,i)=>{ const t=(totals[i].data||[{}])[0]||{}, closed=new Date(r.closes_at)<new Date();
      return `<div class="chart-card">${r.image_path?`<img src="${esc(pubUrl(r.image_path))}" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:8px">`:''}<b>${esc(r.title)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(r.prize)}</span>
-      <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} entries · ${r.winner_entry_id?'drawn':(closed?'closed — ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
+      <div style="font-size:12px;color:var(--muted);margin:4px 0">${Number(t.entries||0)} entries · ${r.winner_entry_id?'drawn':(closed?'closed, ready to draw':'closes '+new Date(r.closes_at).toLocaleString())}</div>
       ${!r.winner_entry_id&&closed?`<button class="abtn ok" onclick="admDraw('${r.id}')">🎲 Draw winner live</button>`:''}${r.winner_entry_id&&!r.announced_at?`<div style="font-size:12.5px;color:var(--live);margin:4px 0">Winner drawn but not announced yet</div><button class="abtn ok" onclick="admAnnounce('${r.id}')">Announce winner</button>`:''}${!r.winner_entry_id?`<button class="abtn" onclick="admPickRaffleImage('${r.id}')">📷 ${r.image_path?'Change':'Add'} photo</button>`:''}</div>`; }).join('')||admEmpty('No free giveaways yet.')}
    <div class="section-title" style="padding:12px 0 6px">Winners to post to</div>
    ${pc.data.map(c=>`<div class="chart-card"><b>${esc(c.prize)}</b> <span style="color:var(--muted);font-size:12px">· ${esc(c.title)} · won by @${esc(c.winner)}</span>
-     <div style="font-size:12.5px;margin:6px 0;line-height:1.5">${c.full_name?`${esc(c.full_name)}<br>${esc(c.line1)}${c.line2?', '+esc(c.line2):''}<br>${esc(c.city)}, ${esc(c.postcode)}${c.phone?'<br>'+esc(c.phone):''}`:'<span style="color:var(--muted)">No address yet'+(c.claim_by?' — claim by '+new Date(c.claim_by).toLocaleDateString():'')+'</span>'}</div>
+     <div style="font-size:12.5px;margin:6px 0;line-height:1.5">${c.full_name?`${esc(c.full_name)}<br>${esc(c.line1)}${c.line2?', '+esc(c.line2):''}<br>${esc(c.city)}, ${esc(c.postcode)}${c.phone?'<br>'+esc(c.phone):''}`:'<span style="color:var(--muted)">No address yet'+(c.claim_by?'. Claim by '+new Date(c.claim_by).toLocaleDateString():'')+'</span>'}</div>
      <div style="font-size:12px;color:var(--muted)">Status: ${esc(c.status)}${c.tracking?' · '+esc(c.tracking):''}</div>
      ${c.status==='pending'?`<button class="abtn ok" onclick="admShipPrize('${c.raffle_id}')">Mark as posted</button>`:''}
      ${c.status!=='shipped'?`<button class="abtn danger" onclick="admRedraw('${c.raffle_id}')">Redraw (no reply / fake)</button>`:''}</div>`).join('')||admEmpty('No winners yet.')}
@@ -4042,15 +4042,15 @@ async function admGiveaways(){
 async function admCreateFree(){
   const hours=durHours('fgDur'); if(hours===null) return toast('Enter how long it stays open'); if(hours===-1) return toast('The longest a giveaway can run is 12 months');
   const {data:rid,error}=await admCall('admin_create_free_raffle',{p_title:document.getElementById('fgTitle').value,p_prize:document.getElementById('fgPrize').value,p_hours:hours});
-  if(!error){ await admAfterCreate(rid,'fgImg'); toast('Giveaway created — every member has been told'); admLoad(); }
+  if(!error){ await admAfterCreate(rid,'fgImg'); toast('Giveaway created. Every member has been told'); admLoad(); }
 }
 async function admCreateCampaign(){
   const max=parseInt(document.getElementById('cpMax').value,10), d=document.getElementById('cpDays').value;
   const {error}=await admCall('admin_create_campaign',{p_name:document.getElementById('cpName').value,p_code:document.getElementById('cpCode').value,p_max_signups:max,p_entries:1,p_days:d?parseInt(d,10):null});
-  if(!error){ toast('Link created — copy it below'); admLoad(); }
+  if(!error){ toast('Link created. Copy it below'); admLoad(); }
 }
 async function admCampaignActive(id,on){ const {error}=await admCall('admin_set_campaign_active',{p_id:id,p_on:on}); if(!error){ toast(on?'Campaign resumed':'Campaign paused'); admLoad(); } }
-async function admShipPrize(id){ const t=prompt('Tracking number (optional):',''); if(t===null) return; const {error}=await admCall('admin_mark_prize_shipped',{p_raffle:id,p_tracking:t.trim()||null}); if(!error){ toast('Marked as posted — the winner has been told'); admLoad(); } }
+async function admShipPrize(id){ const t=prompt('Tracking number (optional):',''); if(t===null) return; const {error}=await admCall('admin_mark_prize_shipped',{p_raffle:id,p_tracking:t.trim()||null}); if(!error){ toast('Marked as posted, the winner has been told'); admLoad(); } }
 async function admRedraw(id){
   const why=prompt('Redraw the winner? Say why (e.g. "no reply in 14 days"):',''); if(!why) return;
   const {error}=await admCall('admin_redraw_raffle',{p_raffle:id,p_reason:why}); if(!error){ toast('New winner drawn and notified'); admLoad(); }
