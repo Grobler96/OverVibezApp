@@ -39,6 +39,10 @@ export function composePush(row, opts = {}) {
     case 'age_approved': title = '✅ 18+ check done'; body = 'You can now post, go live and add money'; break;
     case 'age_rejected': title = '⚠️ 18+ check'; body = 'Your 18+ check was not approved. You can request another from Profile'; break;
     case 'appeal_result': title = '⚖️ Appeal reviewed'; body = d.action === 'overturn' ? 'Your appeal was accepted' : 'Your appeal has been reviewed'; break;
+    case 'age_nudge': title = '🪪 Finish your 18+ check'; body = 'You can post and go live as soon as it is done'; break;
+    case 'weekly_summary': title = '📈 Your week on OverVibez'; body = d.role === 'creator'
+      ? `${d.followers || 0} new follower${(d.followers || 0) === 1 ? '' : 's'} and ${money(d.earned_cents)} earned`
+      : `${d.posts || 0} new post${(d.posts || 0) === 1 ? '' : 's'} from creators you follow${d.giveaways ? ' and ' + d.giveaways + ' free giveaway' + (d.giveaways === 1 ? '' : 's') + ' open' : ''}`; break;
     default: break;
   }
   if (opts.discreet) { title = 'OverVibez'; body = 'You have new activity'; }
