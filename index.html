@@ -778,6 +778,17 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   </div>
 </div>
 
+<div class="overlay" id="feedbackModal" onclick="if(event.target===this)closeModal('feedbackModal')">
+  <div class="sheet">
+    <h3>Report a problem or idea</h3>
+    <p>Something broken, confusing, or missing? Tell us — we read every message.</p>
+    <div class="chiprow" id="fbKinds" style="margin:6px 0 10px"></div>
+    <div class="field"><textarea id="fbText" rows="5" maxlength="2000" placeholder="What happened? What were you trying to do? The more detail the better." style="width:100%"></textarea></div>
+    <div class="err" id="fbErr"></div>
+    <button class="primary" id="fbSend" onclick="sendFeedback()">Send</button>
+    <button class="ghost" onclick="closeModal('feedbackModal')">Cancel</button>
+  </div>
+</div>
 <div class="overlay" id="topupModal" onclick="if(event.target===this)closeModal('topupModal')">
   <div class="sheet">
     <h3>Add funds</h3>
@@ -1560,6 +1571,23 @@ async function sendAppeal(){
   if(error) return err.textContent=friendly(error.message);
   closeModal('appealModal'); toast('Appeal sent — a person will reply within 48 hours');
 }
+let fbKind='bug';
+function openFeedback(){
+  fbKind='bug'; document.getElementById('fbText').value=''; document.getElementById('fbErr').textContent=''; fbPaint(); openModal('feedbackModal');
+}
+function fbPaint(){
+  document.getElementById('fbKinds').innerHTML=[['bug','🐞 Problem'],['idea','💡 Idea'],['other','💬 Other']].map(([k,l])=>`<button class="chip ${fbKind===k?'on':''}" onclick="fbKind='${k}';fbPaint()">${l}</button>`).join('');
+}
+async function sendFeedback(){
+  const t=document.getElementById('fbText').value.trim(), err=document.getElementById('fbErr'), b=document.getElementById('fbSend');
+  if(t.length<5){ err.textContent='Please tell us a little more.'; return; }
+  err.textContent=''; b.disabled=true;
+  const page=(document.querySelector('.nav-btn.on')||{dataset:{}}).dataset.page||'';
+  const {error}=await sb.rpc('send_feedback',{p_kind:fbKind,p_message:t,p_page:page,p_ua:navigator.userAgent.slice(0,200)});
+  b.disabled=false;
+  if(error){ err.textContent=friendly(error.message); return; }
+  closeModal('feedbackModal'); toast('Thank you — we got it 💜');
+}
 function helpContact(){
   if(settings.support_email) location.href='mailto:'+settings.support_email+'?subject='+encodeURIComponent('OverVibez support');
   else toast('Use the ⚑ report button on anything that worries you, or check back soon for our contact address');
@@ -1810,6 +1838,7 @@ const notifInfo=n=>{
     case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
+    case 'feedback': return [d.kind==='bug'?'🐞':d.kind==='idea'?'💡':'💬','@'+esc(d.username||'someone')+' sent feedback — see Admin → Feedback'];
     case 'email_help': return ['📧','@'+esc(d.username||'someone')+' ('+esc(d.email||'')+') can\'t get their confirmation email — confirm them in Admin → Users'];
     case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Profile'];
     case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b> — it has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
@@ -3303,6 +3332,7 @@ function renderMe(){
       <div class="row" onclick="openTwoStep()"><div class="r-ic">🛡️</div>Two-step login<span class="sub">${store.sec&&store.sec.mfa_enabled?'On ✅':u.staffRole?'Set up now →':'Off'}</span></div>
       <div class="row" onclick="go('money')"><div class="r-ic">🧾</div>Money &amp; receipts<span class="sub">History, CSV</span></div>
       <div class="row" onclick="openBlocked()"><div class="r-ic">⛔</div>Blocked &amp; muted<span class="sub">${store.blocks.size||''}</span></div>
+      <div class="row" onclick="openFeedback()"><div class="r-ic">🐞</div>Report a problem or idea<span class="sub">Tell us</span></div>
       <div class="row" onclick="helpContact()"><div class="r-ic">💬</div>Help &amp; contact</div>
       <div class="row" onclick="window.open('guidelines.html','_blank')"><div class="r-ic">📜</div>Community guidelines</div>
       <div class="row" onclick="window.open('terms.html','_blank')"><div class="r-ic">📄</div>Terms &amp; Privacy<span class="sub"><a href="privacy.html" target="_blank" onclick="event.stopPropagation()" style="color:var(--accent-2)">Privacy</a></span></div>
@@ -3568,7 +3598,7 @@ async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}
 const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['age','Age checks'],['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['age','Age checks'],['feedback','Feedback'],['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -3578,7 +3608,7 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,feedback:admFeedback,audit:admAudit})[adminTab](); }
 
 /* --- manual 18+ checks --- */
 async function admAge(){
@@ -3955,6 +3985,20 @@ async function admErrors(){
      <div style="font-size:12px;color:var(--muted);margin:4px 0">${ago(e.last_seen_at)} ago · ${esc(e.url||'')}${e.username?' · @'+esc(e.username):''}</div>
      ${e.stack?`<details><summary style="font-size:12px;color:var(--muted);cursor:pointer">Details</summary><pre style="white-space:pre-wrap;word-break:break-word;font-size:11px;color:var(--muted);margin:6px 0 0">${esc(e.stack)}\n${esc(e.ua||'')}</pre></details>`:''}</div>`).join(''):admEmpty('No errors reported — nice ✓')}</div>`;
 }
+/* --- feedback from members (admin only) --- */
+async function admFeedback(){
+  const st=adminSub.feedback||'open'; adminSub.feedback=st;
+  const {data,error}=await admCall('admin_list_feedback',{p_status:st}); if(error) return;
+  const icon={bug:'🐞 Problem',idea:'💡 Idea',other:'💬 Other'};
+  admBody().innerHTML=`<div class="admin-pad"><div class="chiprow" style="padding:0 0 10px">${[['open','To do'],['done','Done']].map(([k,l])=>`<button class="chip ${st===k?'on':''}" onclick="adminSub.feedback='${k}';admLoad()">${l}</button>`).join('')}</div>
+   ${data.length?data.map(f=>`<div class="chart-card"><div style="display:flex;justify-content:space-between;gap:8px"><b>${icon[f.kind]||f.kind}</b><span style="font-size:12px;color:var(--muted);white-space:nowrap">${ago(f.created_at)} ago</span></div>
+     <div style="font-size:12px;color:var(--muted);margin:2px 0 6px">${f.username?'@'+esc(f.username):'deleted account'}${f.page?' · on '+esc(f.page):''}</div>
+     <div style="font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word">${esc(f.message)}</div>
+     ${f.ua?`<details><summary style="font-size:11.5px;color:var(--muted);cursor:pointer;margin-top:6px">Device</summary><div style="font-size:11px;color:var(--muted);word-break:break-all">${esc(f.ua)}</div></details>`:''}
+     <div style="margin-top:8px"><button class="abtn ${f.handled_at?'':'ok'}" onclick="admHandleFeedback('${f.id}',${!f.handled_at})">${f.handled_at?'Reopen':'Mark done'}</button></div></div>`).join(''):admEmpty(st==='open'?'Nothing waiting 🎉':'Nothing here yet.')}</div>`;
+}
+async function admHandleFeedback(id,done){ const {error}=await admCall('admin_handle_feedback',{p_id:id,p_done:done}); if(!error) admLoad(); }
+
 async function admClearErrors(){ if(!confirm('Clear all recorded errors?')) return; const {error}=await admCall('admin_clear_errors'); if(!error){ toast('Cleared'); admLoad(); } }
 
 /* --- giveaways: campaign links, free raffles, prize delivery (admin only) --- */
