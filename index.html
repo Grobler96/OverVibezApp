@@ -507,6 +507,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
       <b>Can't see it?</b> Open your <b>Junk / Spam</b> folder. Outlook, Hotmail and Live often put new senders there. Tap <b>Not junk</b> so you get our emails in future.</div>
     <button class="primary" id="ceResend" onclick="resendConfirm()">Resend the email</button>
     <button class="ghost" onclick="authTab('login')">I've confirmed it — log in</button>
+    <button class="ghost" onclick="askEmailHelp()">Still nothing? Ask us to confirm you</button>
     <button class="ghost" onclick="authTab('signup')">Wrong email? Go back</button>
     <div class="err" id="ceMsg"></div>
   </div>
@@ -1328,6 +1329,13 @@ async function resendConfirm(em){
   if(error){ msg.textContent=/rate|seconds|too many/i.test(error.message)?'Please wait a minute before asking for another email.':error.message; return; }
   msg.style.color='var(--ok)'; msg.textContent='Sent! It can take a minute to arrive — check Junk / Spam too.'; resendCooldown(60);
 }
+async function askEmailHelp(){
+  const msg=document.getElementById('ceMsg'); if(!confirmEmail) return;
+  msg.style.color=''; msg.textContent='Sending…';
+  const {error}=await sb.rpc('request_email_help',{p_email:confirmEmail});
+  if(error){ msg.textContent='Could not send your request — please try again in a minute.'; return; }
+  msg.style.color='var(--ok)'; msg.textContent="Thanks — we've told our team. We'll confirm your account by hand, usually within a few hours. You can then log in.";
+}
 function pickRole(r){
   signupRole=r;
   document.getElementById('rcCreator').classList.toggle('on',r==='creator');
@@ -1772,6 +1780,7 @@ const notifInfo=n=>{
     case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+' — it is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done — you can now post, go live and add money'];
+    case 'email_help': return ['📧','@'+esc(d.username||'someone')+' ('+esc(d.email||'')+') can\'t get their confirmation email — confirm them in Admin → Users'];
     case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+' — you can request another from Profile'];
     case 'appeal_result': return ['⚖️','Your appeal was '+(d.action==='overturn'?'<b>accepted</b> — it has been put right':'reviewed and the decision stands')+(d.note?': “'+esc(d.note)+'”':'')];
     default: return ['🔔','New activity'];
@@ -3676,8 +3685,17 @@ async function admRestore(kind,id){
 /* --- users --- */
 function admUsers(){
   admBody().innerHTML=`<div class="admin-pad"><div class="field"><input id="admQ" placeholder="Search username…" value="${esc(adminUserQ)}" onkeydown="if(event.key==='Enter')admSearch()"></div>
-    <button class="primary" style="margin-top:0" onclick="admSearch()">Search</button></div><div id="admRes" class="admin-pad" style="padding-top:12px"></div>`;
-  admSearch();
+    <button class="primary" style="margin-top:0" onclick="admSearch()">Search</button></div><div id="admHelp" class="admin-pad" style="padding-top:0"></div><div id="admRes" class="admin-pad" style="padding-top:12px"></div>`;
+  admSearch(); admEmailHelp();
+}
+async function admEmailHelp(){
+  const {data,error}=await admCall('admin_email_help_list'); const el=document.getElementById('admHelp'); if(error||!el) return;
+  el.innerHTML=(data||[]).length?`<div class="chart-card" style="border-color:var(--accent)"><b>📧 Waiting for email confirmation</b><div style="font-size:12px;color:var(--muted);margin:4px 0 8px">These people asked for help — their confirmation email never reached them.</div>${data.map(r=>`<div style="display:flex;gap:8px;align-items:center;margin:6px 0"><div style="flex:1;min-width:0;font-size:13px"><b>@${esc(r.username||'?')}</b><br><span style="color:var(--muted);font-size:11.5px;word-break:break-all">${esc(r.email)}</span></div><button class="abtn ok" onclick="admConfirmEmail('${r.user_id}',true)">Confirm email</button></div>`).join('')}</div>`:'';
+}
+async function admConfirmEmail(id,fromList){
+  if(!confirm('Confirm this person\'s email address by hand? Only do this for someone you know is real.')) return;
+  const {error}=await admCall('admin_confirm_email',{p_user:id}); if(error) return;
+  toast('Email confirmed — they can log in now'); if(fromList) admEmailHelp(); else admOpenUser(id);
 }
 async function admSearch(){
   adminUserQ=document.getElementById('admQ').value.trim();
@@ -3702,7 +3720,8 @@ async function admOpenUser(id){
        <button class="abtn" onclick="admFlag('${d.id}',{p_verified:${!d.is_verified}})">${d.is_verified?'Remove badge':'Give verified badge'}</button>
        ${d.account_type==='creator'?`<button class="abtn" onclick="admBonus('${d.id}')">Pay creator a bonus</button><button class="abtn" onclick="admFeature('${d.id}')">⭐ Creator of the Week</button>`:''}
        <button class="abtn" onclick="admTransactions('${d.id}')">Transactions &amp; refunds</button>
-       <button class="abtn" onclick="admRole('${d.id}')">Set staff role</button>`:''}</div></div>
+       <button class="abtn" onclick="admRole('${d.id}')">Set staff role</button>
+       <button class="abtn" onclick="admConfirmEmail('${d.id}')">Confirm email manually</button>`:''}</div></div>
    <div class="section-title" style="padding:6px 0">Moderation history</div>
    <div class="list-card" style="margin:0">${d.history.length?d.history.map(h=>`<div class="row" style="cursor:default"><div style="flex:1;font-size:13px"><b>${esc(h.action)}</b> by @${esc(h.by||'system')}<br><span style="font-size:11.5px;color:var(--muted)">${new Date(h.at).toLocaleString()}${h.details&&h.details.reason?' · '+esc(h.details.reason):''}${h.details&&h.details.note?' · '+esc(h.details.note):''}</span></div></div>`).join(''):'<div class="row" style="cursor:default;color:var(--muted)">No actions yet</div>'}</div></div>`;
 }
