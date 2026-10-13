@@ -524,6 +524,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 
   <div id="banBanner" class="hidden" style="background:var(--live);color:#fff;padding:10px 14px;font-size:13px;text-align:center;line-height:1.45"></div>
   <div id="page-home">
+    <div id="pushPrompt"></div>
     <div class="stories" id="storiesRow"></div>
     <div class="feed" id="feed"></div>
   </div>
@@ -793,6 +794,13 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   </div>
 </div>
 
+<div class="overlay" id="pushModal" onclick="if(event.target===this)closeModal('pushModal')">
+  <div class="sheet" style="max-height:90vh;overflow-y:auto">
+    <h3>🔔 Push notifications</h3>
+    <div id="pushBody"></div>
+    <button class="ghost" onclick="closeModal('pushModal')">Close</button>
+  </div>
+</div>
 <div class="overlay" id="reviewModal" onclick="if(event.target===this)closeModal('reviewModal')">
   <div class="sheet" style="max-height:90vh;overflow-y:auto">
     <h3>Review content</h3>
@@ -1092,6 +1100,82 @@ function reportError(msg,stack){
 window.addEventListener('error',e=>reportError(e.message,e.error&&e.error.stack));
 window.addEventListener('unhandledrejection',e=>reportError('Unhandled: '+((e.reason&&e.reason.message)||e.reason),e.reason&&e.reason.stack));
 
+/* ═══════════ PUSH NOTIFICATIONS ═══════════
+   Browsers give each device a private push address; we store it against the signed-in member (server-side, never readable by others) and the
+   `send-push` function delivers every new notification to it. On iPhone this only works once the app is added to the Home Screen. */
+const pushSet={prefs:null,sub:null};
+const pushOk=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window&&location.protocol.startsWith('http');
+const pushKey=()=>'ov_push_'+store.session;
+function pushLabel(){ if(!pushOk()) return isIos()&&!isStandalone()?'Add to Home Screen first':'Not supported'; if(Notification.permission==='denied') return 'Blocked in browser'; return localStorage.getItem(pushKey())==='1'&&Notification.permission==='granted'?'On':'Off'; }
+function isIos(){ return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+const b64u=s=>{ const p='='.repeat((4-s.length%4)%4), b=atob((s+p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from([...b].map(c=>c.charCodeAt(0))); };
+async function pushReg(){ return navigator.serviceWorker.getRegistration().then(r=>r||navigator.serviceWorker.ready); }
+async function pushSync(){          // make sure the server knows this device (the browser can change its address now and then)
+  const reg=await pushReg(), sub=await reg.pushManager.getSubscription(); pushSet.sub=sub; if(!sub) return null;
+  const j=sub.toJSON(); await sb.rpc('save_push_subscription',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth,p_ua:navigator.userAgent}); return sub;
+}
+async function pushOnLogin(){
+  try{ if(pushOk()&&Notification.permission==='granted'&&localStorage.getItem(pushKey())==='1') await pushSync(); }catch(e){}
+  paintPushPrompt();
+}
+async function pushUnlinkDevice(){          // signing out stops this device receiving that account's pushes (shared phones, family computers)
+  try{ if(!pushOk()) return; const reg=await pushReg(), sub=await reg.pushManager.getSubscription(); if(sub) await sb.rpc('remove_push_subscription',{p_endpoint:sub.endpoint}); }catch(e){}
+}
+async function enablePush(){
+  if(!pushOk()) return toast(isIos()&&!isStandalone()?'On iPhone, tap Share → Add to Home Screen, then open OverVibez from there':'This browser cannot do push notifications');
+  const perm=await Notification.requestPermission(); if(perm!=='granted'){ paintPush(); return toast(perm==='denied'?'Notifications are blocked — allow them in your browser settings':'No problem — you can turn them on later in Me'); }
+  const {data:key}=await sb.rpc('push_public_key'); if(!key) return toast('Notifications are still being set up — try again in a minute');
+  try{
+    const reg=await pushReg(); let sub=await reg.pushManager.getSubscription();
+    if(sub){ const cur=sub.options&&sub.options.applicationServerKey; if(cur&&btoa(String.fromCharCode(...new Uint8Array(cur))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')!==key){ await sub.unsubscribe(); sub=null; } }
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(key)});
+    await pushSync(); localStorage.setItem(pushKey(),'1'); localStorage.removeItem('ov_pushno');
+    toast('Notifications are on 🔔'); await loadPushPrefs(); paintPush(); paintPushPrompt(); if(!document.getElementById('page-me').classList.contains('hidden')) renderMe();
+  }catch(e){ toast('Could not turn notifications on: '+(e.message||e)); }
+}
+async function disablePush(){
+  try{ const reg=await pushReg(), sub=await reg.pushManager.getSubscription(); if(sub){ await sb.rpc('remove_push_subscription',{p_endpoint:sub.endpoint}); await sub.unsubscribe(); } }catch(e){}
+  localStorage.removeItem(pushKey()); toast('Notifications are off on this device'); await loadPushPrefs(); paintPush(); paintPushPrompt(); if(!document.getElementById('page-me').classList.contains('hidden')) renderMe();
+}
+async function loadPushPrefs(){ const {data}=await sb.rpc('get_push_prefs'); if(data) pushSet.prefs=data; return pushSet.prefs; }
+async function openPush(){ openModal('pushModal'); document.getElementById('pushBody').innerHTML='<p style="color:var(--muted)">Loading…</p>'; await loadPushPrefs(); paintPush(); }
+function paintPush(){
+  const box=document.getElementById('pushBody'); if(!box) return; const p=pushSet.prefs||{}, on=pushLabel()==='On', isC=me()&&me().role==='creator';
+  const tg=(k,l,sub)=>`<label style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line);text-transform:none;letter-spacing:0;font-size:14px"><input type="checkbox" ${p[k]?'checked':''} onchange="setPushPref('${k}',this.checked)" style="width:auto;margin-top:3px"><span><b>${l}</b><br><span style="color:var(--muted);font-size:12.5px">${sub}</span></span></label>`;
+  box.innerHTML=`<p style="font-size:13.5px;line-height:1.55;color:var(--muted);margin:0 0 12px">Get a ping on this device when something happens — even when the app is closed.</p>
+    ${on?`<div style="background:var(--panel-2);border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:10px">✅ On for this device</div>
+      ${tg('money','Money',isC?'Sales, tips, unlocks, payouts, bonuses':'Renewals, refunds, wallet updates')}
+      ${tg('people','People',isC?'New followers, comments, collab invitations':'Replies and updates from creators')}
+      ${tg('messages','Messages','Someone sent you a message (the text is never shown)')}
+      ${tg('live','Live &amp; giveaways','Creators you follow going live, new giveaways and draws')}
+      ${tg('likes','Likes','Every like on your posts (can be a lot)')}
+      ${tg('discreet','Hide details on the lock screen','Notifications just say "You have new activity" — good for shared or visible screens')}
+      <button class="ghost" style="margin-top:10px" onclick="disablePush()">Turn off on this device</button>`
+    :`<button class="primary" onclick="enablePush()">Turn on notifications</button>
+      <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px">${pushOk()?(Notification.permission==='denied'?'Your browser is blocking notifications for this site. Allow them in the site settings, then try again.':'Your browser will ask for permission. Important account and safety messages are always sent.'):(isIos()?'On iPhone: tap Share → Add to Home Screen, open OverVibez from your Home Screen, then turn this on.':'This browser does not support push notifications.')}</p>`}`;
+}
+async function setPushPref(k,v){
+  const p=Object.assign({},pushSet.prefs,{[k]:v}); pushSet.prefs=p;
+  const {error}=await sb.rpc('set_push_prefs',{p_money:p.money,p_people:p.people,p_likes:p.likes,p_messages:p.messages,p_live:p.live,p_discreet:p.discreet}); if(error) toast(error.message);
+}
+/* a gentle one-time nudge on Home */
+function paintPushPrompt(){
+  const el=document.getElementById('pushPrompt'); if(!el) return;
+  const hide=!store.session||!pushOk()||localStorage.getItem(pushKey())==='1'||Notification.permission==='denied'||Date.now()-Number(localStorage.getItem('ov_pushno')||0)<14*864e5;
+  el.innerHTML=hide?'':`<div style="margin:10px 14px 0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;display:flex;gap:10px;align-items:center">
+    <div style="font-size:22px">🔔</div><div style="flex:1;min-width:0;font-size:13px;line-height:1.45"><b>Never miss a thing</b><br><span style="color:var(--muted)">${me()&&me().role==='creator'?'Get pinged for new followers, sales and tips.':'Get pinged for replies, live shows and giveaways.'}</span></div>
+    <button class="abtn" onclick="enablePush()">Turn on</button><button onclick="localStorage.setItem('ov_pushno',Date.now());paintPushPrompt()" title="Not now" style="color:var(--muted);font-size:16px;padding:2px 6px">✕</button></div>`;
+}
+/* tapping a push (or opening a link with ?go=...) lands on the right screen */
+function handleGo(href,clean){
+  let u; try{ u=new URL(href,location.origin); }catch(e){ return; } const g=u.searchParams.get('go'); if(!g||!store.session) return;
+  if(clean) history.replaceState(null,'',location.pathname+location.hash);
+  const map={notifs:'notifs',messages:'messages',studio:'studio',raffles:'raffles',wallet:'money',home:'home'};
+  if(g==='live'&&u.searchParams.get('id')) return loadLive().then(()=>openLive(u.searchParams.get('id'))).catch(()=>go('home'));
+  if(map[g]) go(map[g]);
+}
+if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message',e=>{ if(e.data&&e.data.type==='go') handleGo(e.data.url,false); });
+
 /* ═══════════ INSTALLABLE APP (PWA) ═══════════ */
 let installEvt=null;
 window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installEvt=e; if(store.session&&!document.getElementById('page-me').classList.contains('hidden')) renderMe(); });
@@ -1190,7 +1274,7 @@ async function savePassword(){
     closeModal('pwModal'); toast('Password updated ✓');
   } finally { btn.disabled=false; }
 }
-async function logOut(){ if(sb) await sb.auth.signOut(); }
+async function logOut(){ if(sb){ await pushUnlinkDevice(); await sb.auth.signOut(); } }
 /* ═══════════ TWO-STEP LOGIN (authenticator app) ═══════════ */
 let mfaState={mode:null,factorId:null,uid:null};
 const mfaErr=t=>{ document.getElementById('mfaErr').textContent=t||''; };
@@ -1610,6 +1694,7 @@ function enterApp(uid){
   renderShell();
   const hc=hashUser();
   if(hc&&hc.id!==uid) openProfile(hc.id); else go('home');
+  pushOnLogin(); handleGo(location.href,true);
 }
 function renderShell(){
   const u=me(), isC=u.role==='creator';
@@ -3012,6 +3097,7 @@ function renderMe(){
       ${isC?`<div class="row" onclick="copyText(pageLink(me().username))"><div class="r-ic">🔗</div>Your link page<span class="sub">${esc(pageLink(u.username).replace(/^https?:\/\//,''))}</span></div>
       <div class="row" onclick="openSwitchKit()"><div class="r-ic">🚀</div>Switch kit<span class="sub">Bring your audience over</span></div>`:''}
       ${isStandalone()?'':`<div class="row" onclick="installApp()"><div class="r-ic">📲</div>Install the app<span class="sub">Home screen</span></div>`}
+      <div class="row" onclick="openPush()"><div class="r-ic">🔔</div>Push notifications<span class="sub">${pushLabel()}</span></div>
       <div class="row" onclick="toggleEmailNotif()"><div class="r-ic">✉️</div>Email notifications<span class="sub">${u.emailNotif?'On':'Off'}</span></div>
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
       <div class="row" onclick="${u.ageVerified?`toast('Age verified ✅')`:(settings.id_check==='stripe'&&features.identity)?`if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.'))startVerification()`:`openAgeRequest()`}"><div class="r-ic">🪪</div>Identity &amp; age verification<span class="sub">${u.ageVerified?'Verified ✅':(settings.id_check==='stripe'&&features.identity)?'Verify now →':'Request a check →'}</span></div>
