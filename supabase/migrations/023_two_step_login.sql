@@ -1,5 +1,5 @@
 -- 023: two-step login (authenticator app) for everyone, enforced for staff.
--- * Anyone can turn on two-step login (Me -> Two-step login). Supabase Auth issues an "aal2" session once the code is entered.
+-- * Anyone can turn on two-step login (Profile -> Two-step login). Supabase Auth issues an "aal2" session once the code is entered.
 -- * Staff (moderators and admins) who have two-step login on can only use staff powers from an aal2 session, so a stolen
 --   password alone is not enough.
 -- * Admins can also REQUIRE it for all staff (Admin -> Invites -> Staff two-step): staff without it are locked out of staff powers

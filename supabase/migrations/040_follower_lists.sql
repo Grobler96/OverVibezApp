@@ -1,7 +1,7 @@
 -- 040: followers / following lists, with privacy that is actually enforced.
 -- * Tapping Followers or Following on a profile shows the accounts involved.
 -- * On an 18+ platform, who follows which creator is sensitive, so: a creator always sees ALL their own followers; everyone else sees only the followers who are
---   creators or fans who chose to appear (Me -> "Show me in followers lists", off by default). A creator's Following list is public (those are creators).
+--   creators or fans who chose to appear (Profile -> "Show me in followers lists", off by default). A creator's Following list is public (those are creators).
 --   A fan's own lists are visible only to that fan.
 -- * Until now any signed-in member could read the whole follows table directly (policy "using (true)"). That is closed: members can only read follows that
 --   involve themselves, so the lists can only be read through list_people(), which applies the rules above.

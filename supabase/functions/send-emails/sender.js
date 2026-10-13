@@ -6,8 +6,8 @@ export function renderEmail(subject, body, site) {
 <h2 style="margin:0 0 14px;color:#FF3D8A">${esc(subject)}</h2>
 <p style="font-size:15px;line-height:1.6;margin:0 0 18px">${esc(body).replace(/\n/g, '<br>')}</p>
 <p style="margin:0 0 24px"><a href="${esc(site)}" style="background:#8B5CF6;color:#fff;text-decoration:none;padding:11px 18px;border-radius:10px;font-weight:600">Open OverVibez</a></p>
-<p style="font-size:12px;color:#7A6C96;line-height:1.5;margin:0">You are getting this because email notifications are switched on for your account. You can turn them off any time in OverVibez under Me → Email notifications.</p></div>`;
-  const text = `${body}\n\nOpen OverVibez: ${site}\n\nYou are getting this because email notifications are switched on. Turn them off in OverVibez under Me → Email notifications.`;
+<p style="font-size:12px;color:#7A6C96;line-height:1.5;margin:0">You are getting this because email notifications are switched on for your account. You can turn them off any time in OverVibez under Profile → Email notifications.</p></div>`;
+  const text = `${body}\n\nOpen OverVibez: ${site}\n\nYou are getting this because email notifications are switched on. Turn them off in OverVibez under Profile → Email notifications.`;
   return { html, text };
 }
 

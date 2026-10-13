@@ -37,7 +37,7 @@ export function composePush(row, opts = {}) {
     case 'featured': title = '⭐ Creator of the Week'; body = 'You are featured at the top of Explore for 7 days!'; break;
     case 'bonus': title = '🎁 Bonus paid'; body = `OverVibez paid you a bonus of ${money(d.cents)}`; url = '/?go=studio'; break;
     case 'age_approved': title = '✅ 18+ check done'; body = 'You can now post, go live and add money'; break;
-    case 'age_rejected': title = '⚠️ 18+ check'; body = 'Your 18+ check was not approved — you can request another from Me'; break;
+    case 'age_rejected': title = '⚠️ 18+ check'; body = 'Your 18+ check was not approved — you can request another from Profile'; break;
     case 'appeal_result': title = '⚖️ Appeal reviewed'; body = d.action === 'overturn' ? 'Your appeal was accepted' : 'Your appeal has been reviewed'; break;
     default: break;
   }
