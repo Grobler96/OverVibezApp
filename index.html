@@ -1577,7 +1577,7 @@ async function startSession(uid){
 }
 function clearSession(){
   store.session=null; store.sec=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  startState=null; suggestIds=null; store.streak=null; store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
+  startState=null; suggestIds=null; store.streak=null; payBal={data:null,at:0}; store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -2205,7 +2205,7 @@ async function deleteComment(id){
 /* ═══════════ PAYMENTS ═══════════ */
 /* All money movement is server-side (purchase_post, subscribe_to_creator, tip_creator,
    buy_raffle_entries, request_payout). The client only asks; the database decides. */
-async function settled(){ await hydrate(); rerender(); }
+async function settled(){ payBal.at=0; await hydrate(); rerender(); }
 function startUnlock(pid){
   const p=store.posts.find(x=>x.id===pid), u=me();
   payBtn(); document.getElementById('payTitle').textContent='Unlock this post';
@@ -2779,10 +2779,13 @@ function renderStudio(){
   if(u.role!=='creator'){ document.getElementById('studioBody').innerHTML='<p style="color:var(--muted);padding:10px 4px">Studio is for Vibe Creator accounts.</p>'; return; }
   const myPosts=store.posts.filter(p=>p.by===u.id);
   const gross=Math.round(u.earnings/(1-FEE));
+  if(!payBal.data||Date.now()-payBal.at>20000) loadPayBal();
+  const pb=payBal.data, avail=pb?pb.available_cents:u.earnings, held=pb?pb.held_cents:0;
   document.getElementById('studioBody').innerHTML=`
     <div class="earn-hero">
       <div class="lbl">Available to withdraw</div>
-      <div class="amt">${$$(u.earnings)}</div>
+      <div class="amt">${$$(avail)}</div>
+      ${held>0?`<div class="split">+ ${$$(held)} on hold${pb.release_at?' until '+new Date(pb.release_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):''}. New earnings are held for ${pb.hold_days} days so payments can land.</div>`:''}
       <div class="split">You keep 85% · platform fee ${$$(Math.round(gross*FEE))} · gross ${$$(gross)}</div>
     </div>
     <div class="stat-row">
@@ -2802,7 +2805,7 @@ function renderStudio(){
     <div id="insightsBox"></div>
     <div id="timesBox"></div>
     <div id="postsBox"></div>
-    <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(u.earnings)}</button>
+    <button class="payout-btn" onclick="requestPayout()">Withdraw ${$$(avail)}</button>
     <button class="ghost" style="margin-top:10px" onclick="go('money')">💳 Money &amp; receipts</button>`;
   paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
   paintLevel(); loadLevel(); paintSched(); if(!schedSet.data||Date.now()-schedSet.at>30000) loadSched(); paintTimes(); if(!timesSet.data) loadTimes();
@@ -2886,18 +2889,26 @@ async function payoutSetup(){
 async function refreshPayoutStatus(){
   try{ store.payout=await payoutCall('status'); rerender(); return store.payout; }catch(e){ return null; }
 }
+let payBal={data:null,at:0};
+async function loadPayBal(){
+  payBal.at=Date.now(); const {data}=await sb.rpc('my_payout_balance');
+  if(data){ payBal.data=data; const st=document.getElementById('page-studio'); if(st&&!st.classList.contains('hidden')) renderStudio(); }
+}
 async function requestPayout(){
   const u=me();
-  if(u.earnings<1000) return toast('Minimum payout is £10.00');
+  const {data:bal}=await sb.rpc('my_payout_balance'); payBal={data:bal||payBal.data,at:Date.now()};
+  const avail=bal?bal.available_cents:u.earnings;
+  if(bal&&avail<1000&&bal.held_cents>0&&u.earnings>=1000) return toast('Your latest earnings are held for '+bal.hold_days+' days so payments can land'+(bal.release_at?'. The first of it is ready on '+new Date(bal.release_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):''));
+  if(avail<1000) return toast('Minimum payout is £10.00');
   if(!features.payouts){   // not connected yet: the request is saved and an admin sends it by hand
-    if(await rpc('request_payout',{p_amount:u.earnings})){ await settled(); toast('Payout requested. It will be sent once bank payouts are connected'); }
+    if(await rpc('request_payout',{p_amount:avail})){ await settled(); toast('Payout requested. It will be sent once bank payouts are connected'); }
     return;
   }
   if(!store.payout.payouts_enabled){
     if(confirm('Set up your payout account first. It takes a few minutes with Stripe and you only do it once. Start now?')) payoutSetup();
     return;
   }
-  if(!confirm('Send '+$$(u.earnings)+' to your bank account?\n\nIt usually arrives in 1 to 3 working days.')) return;
+  if(!confirm('Send '+$$(avail)+' to your bank account?'+(bal&&bal.held_cents>0?'\n\n'+$$(bal.held_cents)+' of newer earnings stays on hold for now.':'')+'\n\nIt usually arrives in 1 to 3 working days.')) return;
   toast('Sending your payout…');
   try{ const r=await payoutCall('payout'); toast('Payout of '+$$(r.amount_cents)+' sent 🎉 It should reach your bank in 1 to 3 working days'); await settled(); }
   catch(e){ toast(e.message); await settled(); }
