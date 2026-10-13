@@ -490,7 +490,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 
   <!-- LOGIN -->
   <div id="loginForm">
-    <div class="field"><label>Email</label><input id="liUser" type="email" placeholder="you@example.com" autocomplete="email"></div>
+    <div class="field"><label>Email or username</label><input id="liUser" type="text" placeholder="you@example.com or username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
     <div class="field"><label>Password</label><input id="liPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
     <button class="primary" onclick="doLogin()">Log in</button>
     <button class="ghost" onclick="doForgot()">Forgot password?</button>
@@ -1385,12 +1385,19 @@ async function doSignup(){
 async function doLogin(){
   const err=document.getElementById('liErr');
   if(!sb) return err.textContent='Cannot reach OverVibez servers — check your connection and reload.';
-  const em=document.getElementById('liUser').value.trim(), pw=document.getElementById('liPass').value;
-  if(!em||!pw) return err.textContent='Enter your email and password.';
+  let em=document.getElementById('liUser').value.trim(), pw=document.getElementById('liPass').value;
+  if(!em||!pw) return err.textContent='Enter your email (or username) and password.';
   err.textContent='';
-  const {error}=await sb.auth.signInWithPassword({email:em,password:pw});
+  let loginEmail=em;
+  if(!em.includes('@')){      // a username: the server gives back the email only when the password is right
+    const {data:found,error:re}=await sb.rpc('resolve_login',{p_name:em,p_password:pw});
+    if(re) return err.textContent=/too many/i.test(re.message)?re.message:'Could not log in right now — please try again.';
+    if(!found) return err.textContent='Invalid login credentials';
+    loginEmail=found;
+  }
+  const {error}=await sb.auth.signInWithPassword({email:loginEmail,password:pw});
   if(error){
-    if(/not confirmed/i.test(error.message)){ confirmEmail=em;
+    if(/not confirmed/i.test(error.message)){ confirmEmail=loginEmail; em=loginEmail;
       err.innerHTML='Your email isn\'t confirmed yet. We sent a link to <b>'+esc(em)+'</b> — check your inbox <b>and Junk / Spam</b>.<br><a href="#" onclick="resendConfirm(confirmEmail);return false" style="color:var(--accent-2);font-weight:700">Resend the email</a>'; }
     else err.textContent=error.message;
   }
