@@ -216,3 +216,12 @@ Profile → **Report a problem or idea** (every account) sends a problem / idea 
 
 ### 045 — plain-English wording
 No long dashes in anything members see: the app, the legal pages, emails, push text, edge-function messages and database error/email text. Sentences are split with full stops or commas and number ranges read "1 to 3". Migration 045 rewrites the affected database functions from their current definitions. Ordinary hyphens inside words (sign-up, two-step, 18+) are left alone. The payouts function's two error messages in the repo use the new wording but that function has not been redeployed.
+
+### 046 — growth basics
+* **Get started checklist** on Home (`my_checklist`): creators see photo, bio, 18+ check, first post, notifications, payouts; followers see photo, follow 3 creators, enter a giveaway, notifications. Worked out from real data, hides itself when done, or with the ✕.
+* **Creators to follow** (`suggested_creators`): a strip on Home for followers who follow fewer than 3 people. Skips blocked and banned creators and anyone with no posts.
+* **18+ nudge** (`nudge_unverified_creators`, daily 10:30 UTC): creators 1 to 30 days old with no 18+ check started get a notification and email, at most 2, a week apart.
+* **Monday round-up** (`send_weekly_summaries`, Mondays 08:00 UTC): creators get new followers and earnings, followers get new posts from people they follow and open free giveaways. Only sent when there is something to say, never twice in 5 days, email follows the member's email setting, push follows the "people" push setting.
+* **Streaks** (`user_streaks`, `touch_streak`): consecutive UK days the app was opened. A chip appears on Profile from 2 days and a toast at 3, 7, 14, 30, 60 and 100. Cosmetic only, no money.
+* **Admin → Overview** (`admin_overview`, admins only, the first tab): what needs attention (reports, appeals, 18+ checks, feedback, stuck emails, payouts, app errors) with overdue counts, growth numbers, a 14 day sign-up chart and 7 day money totals.
+* Two new notification types (`age_nudge`, `weekly_summary`) are wired into push text (`send-push` v4) and the in-app list.

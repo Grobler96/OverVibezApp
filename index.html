@@ -556,6 +556,8 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
   <div id="banBanner" class="hidden" style="background:var(--live);color:#fff;padding:10px 14px;font-size:13px;text-align:center;line-height:1.45"></div>
   <div id="page-home">
     <div id="pushPrompt"></div>
+    <div id="startBox"></div>
+    <div id="suggestBox"></div>
     <div class="stories" id="storiesRow"></div>
     <div class="feed" id="feed"></div>
   </div>
@@ -1267,6 +1269,66 @@ function paintPushPrompt(){
     <div style="font-size:22px">🔔</div><div style="flex:1;min-width:0;font-size:13px;line-height:1.45"><b>Never miss a thing</b><br><span style="color:var(--muted)">${me()&&me().role==='creator'?'Get pinged for new followers, sales and tips.':'Get pinged for replies, live shows and giveaways.'}</span></div>
     <button class="abtn" onclick="enablePush()">Turn on</button><button onclick="localStorage.setItem('ov_pushno',Date.now());paintPushPrompt()" title="Not now" style="color:var(--muted);font-size:16px;padding:2px 6px">✕</button></div>`;
 }
+/* ═══════════ GET STARTED CHECKLIST, CREATORS TO FOLLOW, STREAKS ═══════════ */
+let startState=null, startAt=0, suggestIds=null, suggestAt=0;
+const clKey=()=>'ov_cl_'+(store.session||'');
+const CL_TEXT={
+  photo:['📸','Add a profile photo','openEditProfile()'],
+  bio:['✏️','Write a short bio','openEditProfile()'],
+  age:['🪪','Pass the 18+ check','clAge()'],
+  post:['🚀','Publish your first post','openCreate()'],
+  push:['🔔','Turn on notifications','openPush()'],
+  payout:['🏦','Set up payouts','payoutSetup()'],
+  follow3:['👥','Follow 3 creators',"go('explore')"],
+  giveaway:['🎁','Enter a free giveaway',"go('raffles')"]};
+function clAge(){ const u=me(); if(u.ageVerified) return toast('Age verified ✅'); if(settings.id_check==='stripe'&&features.identity){ if(confirm('Verify you are 18+ with a government ID and a selfie? This is done securely by Stripe and takes a couple of minutes.')) startVerification(); } else openAgeRequest(); }
+async function loadStart(force){
+  if(!store.session||!me()) return;
+  if(!force&&Date.now()-startAt<15000){ paintStart(); return; }
+  startAt=Date.now();
+  const {data}=await sb.rpc('my_checklist'); if(data) startState=data; paintStart();
+  loadSuggested();
+}
+function paintStart(){
+  const el=document.getElementById('startBox'); if(!el) return;
+  const st=startState;
+  if(!store.session||!st||st.done>=st.total||localStorage.getItem(clKey())==='1'){ el.innerHTML=''; return; }
+  const pct=Math.round(st.done/st.total*100), isC=st.role==='creator';
+  el.innerHTML=`<div style="margin:10px 14px 0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px">
+    <div style="display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:15px">${isC?'Get your page ready':'Get started'}</b><span style="font-size:12px;color:var(--muted)">${st.done} of ${st.total}</span>
+      <button onclick="localStorage.setItem(clKey(),'1');paintStart()" title="Hide" style="color:var(--muted);font-size:16px;background:none;border:0;cursor:pointer">✕</button></div>
+    <div style="height:6px;border-radius:6px;background:var(--panel-2);margin:8px 0 6px;overflow:hidden"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#FF3D8A,#8B5CF6)"></div></div>
+    ${st.steps.map(x=>{ const t=CL_TEXT[x.key]; if(!t) return ''; const sub=x.key==='age'&&x.pending&&!x.done?'<span style="color:var(--muted);font-size:12px"> · being reviewed</span>':'';
+      return `<div ${x.done?'':`onclick="${t[2]}"`} style="display:flex;align-items:center;gap:10px;padding:8px 0;${x.done?'opacity:.5':'cursor:pointer'}"><span style="font-size:18px">${x.done?'✅':t[0]}</span><span style="flex:1;font-size:14px;${x.done?'text-decoration:line-through':''}">${t[1]}${sub}</span>${x.done?'':'<span style="color:var(--muted)">›</span>'}</div>`; }).join('')}</div>`;
+}
+async function loadSuggested(){
+  const u=me(); const box=document.getElementById('suggestBox'); if(!u||!box) return;
+  if(u.role==='creator'||store.following.size>=3){ box.innerHTML=''; return; }
+  if(!suggestIds||Date.now()-suggestAt>60000){
+    const {data}=await sb.rpc('suggested_creators',{p_limit:8}); suggestIds=(data||[]).map(x=>x.id); suggestAt=Date.now();
+    await ensureUsers(suggestIds);
+  }
+  paintSuggested();
+}
+function paintSuggested(){
+  const u=me(), box=document.getElementById('suggestBox'); if(!u||!box) return;
+  const list=(suggestIds||[]).map(id=>user(id)).filter(c=>c&&!store.following.has(c.id));
+  if(u.role==='creator'||store.following.size>=3||!list.length||localStorage.getItem('ov_sg_'+u.id)==='1'){ box.innerHTML=''; return; }
+  box.innerHTML=`<div style="margin:10px 0 0"><div style="display:flex;align-items:center;padding:0 14px"><b style="flex:1;font-size:15px">Creators to follow</b>
+    <button onclick="localStorage.setItem('ov_sg_${u.id}','1');paintSuggested()" title="Hide" style="color:var(--muted);font-size:16px;background:none;border:0;cursor:pointer">✕</button></div>
+    <div style="display:flex;gap:10px;overflow-x:auto;padding:8px 14px 2px">${list.map(c=>`<div style="flex:0 0 140px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;text-align:center">
+      <div class="av ${c.av}" style="margin:0 auto 6px;cursor:pointer" onclick="openProfile('${c.id}')">${avInner(c)}</div>
+      <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.name)}</div>
+      <div style="color:var(--muted);font-size:11.5px;margin-bottom:8px">${fmtN(c.followers)} follower${c.followers===1?'':'s'}</div>
+      <button class="fbtn" onclick="toggleFollow('${c.id}').then(()=>{paintSuggested();loadStart(true)})">Follow</button></div>`).join('')}</div></div>`;
+}
+async function touchStreak(){
+  if(!store.session) return;
+  const {data}=await sb.rpc('touch_streak'); if(!data) return;
+  store.streak=data; if(document.getElementById('page-me')&&!document.getElementById('page-me').classList.contains('hidden')) renderMe();
+  if(data.milestone) toast('🔥 '+data.milestone+' day streak! Keep it going');
+}
+function streakChip(){ const s=store.streak; return s&&s.current>=2?`<div style="display:inline-block;margin:6px 0 0;padding:3px 10px;border-radius:20px;background:var(--panel-2);font-size:12.5px">🔥 ${s.current} day streak</div>`:''; }
 /* tapping a push (or opening a link with ?go=...) lands on the right screen */
 function handleGo(href,clean){
   let u; try{ u=new URL(href,location.origin); }catch(e){ return; } const g=u.searchParams.get('go'); if(!g||!store.session) return;
@@ -1510,12 +1572,12 @@ async function startSession(uid){
   store.session=uid;
   try{ await hydrate(); }
   catch(e){ store.session=null; toast('Could not load your data: '+(e.message||e)); await sb.auth.signOut(); return; }
-  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); loadSecurity().then(()=>{ if(store.session){ refresh(); maybeIntro(); } }); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
+  document.getElementById('landing').classList.add('hidden'); enterApp(uid); document.documentElement.classList.remove('booting'); loadSecurity().then(()=>{ if(store.session){ refresh(); maybeIntro(); loadStart(true); touchStreak(); } }); subscribeRealtime(); handleStripeReturn(); loadFeatures(); refreshBadges(); showFreeWelcome(); checkWins();
   if(recoveryMode){ recoveryMode=false; go('me'); openPassword(true); }
 }
 function clearSession(){
   store.session=null; store.sec=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
+  startState=null; suggestIds=null; store.streak=null; store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -1838,6 +1900,8 @@ const notifInfo=n=>{
     case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+'. It is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done. You can now post, go live and add money'];
+    case 'age_nudge': return ['🪪','Finish your 18+ check to start posting. Tap Profile, then Identity & age verification'];
+    case 'weekly_summary': return d.role==='creator'?['📈','Your week: '+(d.followers||0)+' new follower'+((d.followers||0)===1?'':'s')+' and '+$$(d.earned_cents||0)+' earned']:['📰','This week: '+(d.posts||0)+' new post'+((d.posts||0)===1?'':'s')+' from creators you follow'+(d.giveaways?' and '+d.giveaways+' free giveaway'+(d.giveaways===1?'':'s')+' open':'')];
     case 'feedback': return [d.kind==='bug'?'🐞':d.kind==='idea'?'💡':'💬','@'+esc(d.username||'someone')+' sent feedback. See Admin → Feedback'];
     case 'email_help': return ['📧','@'+esc(d.username||'someone')+' ('+esc(d.email||'')+') can\'t get their confirmation email. Confirm them in Admin → Users'];
     case 'age_rejected': return ['⚠️','Your 18+ check was not approved'+(d.note?': '+esc(d.note):'')+'. You can request another from Profile'];
@@ -1931,7 +1995,7 @@ function go(page,btn){
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
   if(btn) btn.classList.add('on');
-  if(page==='home'){renderStories();renderFeed()}
+  if(page==='home'){renderStories();renderFeed();loadStart();}
   if(page==='explore')renderExplore(true);
   if(page==='raffles')renderRaffles();
   if(page==='messages')renderThreads();
@@ -3295,6 +3359,7 @@ function renderMe(){
       <div class="av ${u.av}" ${u.avatarUrl?`style="cursor:zoom-in" onclick="openImage('${esc(u.avatarUrl)}')"`:''}>${avInner(u)}</div>
       <h2>${esc(u.name)} ${u.verified?'<span class="verified">✔</span>':''} <span class="role-badge ${isC?'':'f'}">${isC?'✦ CREATOR':'♥ FOLLOWER'}</span></h2>
       <div class="u">@${esc(u.username)}${u.bio?' · '+esc(u.bio):''}</div>
+      ${streakChip()}
       <div class="me-stats">
         ${isC?`<div class="tap" onclick="openPeople('${u.id}','followers')"><b>${fmtN(u.followers)}</b><span>Followers</span></div>
                <div class="tap" onclick="openPeople('${u.id}','following')"><b class="fgCount">${fgCache[u.id]??'·'}</b><span>Following</span></div>
@@ -3590,7 +3655,7 @@ window.addEventListener('hashchange',()=>{ const c=hashUser(); if(c&&store.sessi
    Everything here calls admin_* database functions. Those functions re-check the caller's role on the server,
    so hiding this screen from non-staff is only cosmetic. It is not the security boundary. */
 const isStaff=()=>!!(me()&&me().staffRole), isAdmin=()=>!!(me()&&me().staffRole==='admin');
-let adminTab='reports', adminSub={reports:'open',appeals:'open',content:'review'}, adminUserQ='';
+let adminSeen=false; let adminTab='reports', adminSub={reports:'open',appeals:'open',content:'review'}, adminUserQ='';
 const admBody=()=>document.getElementById('adminBody');
 const admLoading=()=>{ const b=admBody(); if(b) b.innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">Loading…</p>'; };
 const admEmpty=t=>`<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">${t}</p>`;
@@ -3598,7 +3663,8 @@ async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}
 const admMoney=c=>$$(c);
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['age','Age checks'],['feedback','Feedback'],['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  if(!adminSeen){ adminSeen=true; if(isAdmin()) adminTab='overview'; }
+  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['overview','Overview'],['age','Age checks'],['feedback','Feedback'],['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
     <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
@@ -3608,7 +3674,7 @@ function renderAdmin(){
   admLoad();
 }
 function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,feedback:admFeedback,audit:admAudit})[adminTab](); }
+function admLoad(){ admLoading(); ({overview:admOverview,reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,feedback:admFeedback,audit:admAudit})[adminTab](); }
 
 /* --- manual 18+ checks --- */
 async function admAge(){
@@ -3752,6 +3818,22 @@ async function admRestore(kind,id){
   const {error}=await admCall('admin_restore_content',{p_kind:kind,p_id:id}); if(!error){ toast('Restored'); admLoad(); }
 }
 
+/* --- overview: what needs attention, growth and money in one place (admin only) --- */
+async function admOverview(){
+  const {data:o,error}=await admCall('admin_overview'); if(error||!o) return;
+  const todo=[['reports','🚩','Open reports',o.open_reports,0],['appeals','⚖️','Open appeals',o.open_appeals,o.overdue_appeals],['age','🪪','18+ checks waiting',o.age_pending,o.age_overdue],
+    ['feedback','💬','Feedback to read',o.feedback_open,0],['users','📧','People who can\'t confirm their email',o.email_help_open,0],['payouts','🏦','Payouts to send',o.payouts_pending,0],['errors','🐞','App errors (24 hours)',o.errors_24h,0]];
+  const act=todo.filter(t=>t[3]>0), mx=Math.max(1,...(o.signups||[0]));
+  admBody().innerHTML=`<div class="admin-pad"><div class="section-title" style="padding:0 0 6px">Needs attention</div>
+   ${act.length?`<div class="list-card" style="margin:0">${act.map(t=>`<div class="row" onclick="admTab('${t[0]}')"><div class="r-ic">${t[1]}</div>${t[2]}${t[4]?` <span style="color:var(--live);font-size:12px">· ${t[4]} overdue</span>`:''}<span class="sub"><b>${t[3]}</b> ›</span></div>`).join('')}</div>`:admEmpty('Nothing waiting. Nice work 🎉')}
+   <div class="section-title" style="padding:14px 0 6px">Growth</div>
+   <div class="admin-grid">${[['Members',o.users],['New today',o.new_24h],['New (7 days)',o.new_7d],['New (30 days)',o.new_30d],['Creators',o.creators],['Posting this week',o.creators_posting_7d],['Creators not yet 18+ checked',o.creators_unverified],['Live now',o.live_now]].map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+   <div class="chart-card" style="margin-top:10px"><h4 style="font-size:13px">Sign-ups, last 14 days</h4>
+     <div style="display:flex;align-items:flex-end;gap:4px;height:70px;margin-top:8px">${(o.signups||[]).map(n=>`<div title="${n}" style="flex:1;height:${Math.max(3,Math.round(n/mx*100))}%;background:linear-gradient(180deg,#FF3D8A,#8B5CF6);border-radius:3px 3px 0 0"></div>`).join('')}</div></div>
+   <div class="section-title" style="padding:14px 0 6px">Money, last 7 days</div>
+   <div class="admin-grid">${[['Sales',admMoney(o.sales_7d_cents)],['Our 15%',admMoney(o.fees_7d_cents)],['Wallet top-ups',admMoney(o.topups_7d_cents)]].map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
+   <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px">Full figures, including what you hold on behalf of members, are under Stats.</p></div>`;
+}
 /* --- users --- */
 function admUsers(){
   admBody().innerHTML=`<div class="admin-pad"><div class="field"><input id="admQ" placeholder="Search username…" value="${esc(adminUserQ)}" onkeydown="if(event.key==='Enter')admSearch()"></div>
