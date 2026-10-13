@@ -936,7 +936,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 <div class="overlay" id="cropModal" style="z-index:140">
   <div class="sheet">
     <h3 id="cropTitle">Position your photo</h3>
-    <p>Drag the photo to move it and use the slider to zoom. What you see inside the frame is what everyone will see.</p>
+    <p>Drag the photo to move it and use the slider to zoom. What you see inside the frame is what everyone will see<span id="cropHint">.</span></p>
     <div id="cropFrame" style="position:relative;margin:0 auto 14px;overflow:hidden;background:#000;touch-action:none;cursor:grab;border:2px solid var(--accent)"><canvas id="cropCv" style="display:block;width:100%;height:100%"></canvas></div>
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px"><span style="color:var(--muted)">－</span><input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1" style="flex:1;padding:0" aria-label="Zoom"><span style="color:var(--muted)">＋</span></div>
     <button class="primary" onclick="cropApply()">Use this photo</button>
@@ -961,7 +961,7 @@ const FEE = 0.15; // platform share — creators keep 85% (enforced server-side 
 const $$ = c => '£' + ((Number(c)||0)/100).toFixed(2);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtN = n => n>=1000 ? (n/1000).toFixed(1)+'k' : String(n);
-const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,account_type,is_verified,sub_price_cents,created_at,follower_count,category';
+const PUB_COLS='id,username,display_name,bio,avatar_url,cover_url,cover_full_url,account_type,is_verified,sub_price_cents,created_at,follower_count,category';
 const CATS=[['music','🎵','Music'],['fitness','💪','Fitness'],['art','🎨','Art'],['food','🍳','Food'],['photography','📷','Photography'],['fashion','👗','Fashion'],['gaming','🎮','Gaming'],['comedy','😂','Comedy'],['lifestyle','✨','Lifestyle'],['other','','Other']];
 
 const store = {users:[],posts:[],raffles:[],raffleResults:[],live:[],following:new Set(),unread:0,unreadMsgs:0,freeStatus:{eligible:false},prizes:[],myTickets:{},blocks:new Map(),payout:{connected:false,details_submitted:false,payouts_enabled:false},debt:0,likes:{},unlocks:{},subs:{},subEnds:{},subCanceled:{},threads:[],session:null};
@@ -979,7 +979,7 @@ function mapUser(p,followers){
     subPrice:p.sub_price_cents,followers:p.follower_count!=null?p.follower_count:(followers||0),category:p.category||null,createdAt:p.created_at,earnings:Number(p.earnings_cents||0),bonus:Number(p.bonus_cents||0),
     wallet:Number(p.wallet_cents||0),emailNotif:p.email_notifications!==false,ageVerified:!!p.age_verified,bio:p.bio||'',live:false,
     staffRole:p.staff_role||null,isBanned:!!p.is_banned,banReason:p.ban_reason||'',
-    avatarPath:p.avatar_url||null,avatarUrl:p.avatar_url?pubUrl(p.avatar_url):null,coverUrl:p.cover_url?pubUrl(p.cover_url):null};
+    avatarPath:p.avatar_url||null,avatarUrl:p.avatar_url?pubUrl(p.avatar_url):null,coverUrl:p.cover_url?pubUrl(p.cover_url):null,coverPath:p.cover_url||null,coverFullPath:p.cover_full_url||null,coverFullUrl:p.cover_full_url?pubUrl(p.cover_full_url):null};
 }
 function friendly(m){
   if(/Insufficient wallet/i.test(m)) return 'Not enough balance in your wallet';
@@ -3083,7 +3083,7 @@ function renderMe(){
   const mySubs=Object.keys(store.subs).filter(k=>store.subs[k]&&k.startsWith(u.id)).map(k=>user(k.replace(u.id,''))).filter(Boolean);
   document.getElementById('page-me').innerHTML=`
     <div class="me-head">
-      ${u.coverUrl?`<div class="cover" style="background-image:url('${esc(u.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px;cursor:zoom-in" onclick="openImage('${esc(u.coverUrl)}')"></div>`:''}
+      ${u.coverUrl?`<div class="cover" style="background-image:url('${esc(u.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px;cursor:zoom-in" onclick="openImage('${esc(u.coverFullUrl||u.coverUrl)}')"></div>`:''}
       <div class="av ${u.av}" ${u.avatarUrl?`style="cursor:zoom-in" onclick="openImage('${esc(u.avatarUrl)}')"`:''}>${avInner(u)}</div>
       <h2>${esc(u.name)} ${u.verified?'<span class="verified">✔</span>':''} <span class="role-badge ${isC?'':'f'}">${isC?'✦ CREATOR':'♥ FOLLOWER'}</span></h2>
       <div class="u">@${esc(u.username)}${u.bio?' · '+esc(u.bio):''}</div>
@@ -3193,7 +3193,7 @@ async function openCrop(file,kind){
   const fw=isAv?250:Math.max(220,Math.min(window.innerWidth-48,470)), fh=isAv?250:Math.round(fw/3);
   fr.style.width=fw+'px'; fr.style.height=fh+'px'; fr.style.borderRadius=isAv?'50%':'14px'; cv.width=fw*2; cv.height=fh*2;
   crop={img,kind,fw,fh,ow:isAv?512:1200,oh:isAv?512:400,zoom:1,ox:0,oy:0};
-  document.getElementById('cropZoom').value=1; document.getElementById('cropTitle').textContent=isAv?'Position your profile picture':'Position your cover photo';
+  document.getElementById('cropZoom').value=1; document.getElementById('cropTitle').textContent=isAv?'Position your profile picture':'Position your cover photo'; document.getElementById('cropHint').textContent=isAv?'.':' on your profile. When someone taps your cover they see the whole photo.';
   openModal('cropModal'); cropPaint();
 }
 (function(){
@@ -3212,6 +3212,10 @@ function cropApply(){
   out.toBlob(b=>{
     if(!b) return toast('Could not process the image');
     pendingImg[c.kind]=b; const url=URL.createObjectURL(b);       // re-encoding drops EXIF/GPS data
+    if(c.kind==='cover'){                                        // keep the whole photo too, so tapping the cover can show all of it
+      const k=Math.min(1,2400/Math.max(c.img.width,c.img.height)), full=document.createElement('canvas'); full.width=Math.round(c.img.width*k); full.height=Math.round(c.img.height*k);
+      const fx=full.getContext('2d'); fx.fillStyle='#000'; fx.fillRect(0,0,full.width,full.height); fx.drawImage(c.img,0,0,full.width,full.height);
+      pendingImg.coverFull=new Promise(r=>full.toBlob(b2=>r(b2||null),'image/jpeg',0.88)); }
     if(c.kind==='avatar') document.getElementById('epAvPrev').innerHTML=`<img src="${url}" alt="">`;
     else document.getElementById('epCoverPrev').style.backgroundImage=`url('${url}')`;
     crop=null; closeModal('cropModal');
@@ -3233,7 +3237,8 @@ async function saveProfile(){
       return path;
     };
     if(pendingImg.avatar){ patch.avatar_url=await up(pendingImg.avatar,'avatar'); if(u.avatarPath) old.push(u.avatarPath); }
-    if(pendingImg.cover){ patch.cover_url=await up(pendingImg.cover,'cover'); }
+    if(pendingImg.cover){ patch.cover_url=await up(pendingImg.cover,'cover'); if(u.coverPath) old.push(u.coverPath); if(u.coverFullPath) old.push(u.coverFullPath);
+      const fullBlob=await pendingImg.coverFull; patch.cover_full_url=fullBlob?await up(fullBlob,'coverfull'):null; }
     const {error}=await sb.from('profiles').update(patch).eq('id',u.id); if(error) throw new Error(error.message);
     if(u.role==='creator'){ const {error:le}=await sb.rpc('set_my_links',{p_links:epLinkRows.filter(l=>(l.title||'').trim()||((l.url||'').trim()&&(l.url||'').trim()!=='https://')).map(l=>({id:l.id||null,title:l.title,url:l.url}))}); if(le) throw new Error(le.message); }
     if(old.length) sb.storage.from('public-media').remove(old).then(()=>{});          // tidy the replaced picture
@@ -3319,7 +3324,7 @@ function renderProfile(){
   document.getElementById('page-profile').innerHTML=`
     <button class="back-btn" onclick="go('home')" style="padding:14px 18px 0">← Home</button>
     <div class="me-head">
-      ${c.coverUrl?`<div class="cover" style="background-image:url('${esc(c.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px;cursor:zoom-in" onclick="openImage('${esc(c.coverUrl)}')"></div>`:''}
+      ${c.coverUrl?`<div class="cover" style="background-image:url('${esc(c.coverUrl)}');margin:-26px -18px 14px;border-radius:0 0 18px 18px;cursor:zoom-in" onclick="openImage('${esc(c.coverFullUrl||c.coverUrl)}')"></div>`:''}
       <div class="av ${c.av}" ${c.avatarUrl?`style="cursor:zoom-in" onclick="openImage('${esc(c.avatarUrl)}')"`:''}>${avInner(c)}</div>
       <h2>${esc(c.name)} ${c.verified?'<span class="verified">✔</span>':''} ${c.role==='creator'?'<span class="role-badge">✦ CREATOR</span>':'<span class="role-badge f">♥ FOLLOWER</span>'}</h2>
       <div class="u">@${esc(c.username)}${c.bio?' · '+esc(c.bio):''}</div>
@@ -3332,9 +3337,9 @@ function renderProfile(){
       ${(()=>{ const l=store.live.find(x=>x.creator_id===c.id); return l&&!isMe?`<button class="enter-btn" style="margin:2px 0 10px;background:var(--live)" onclick="openLive('${l.id}')">● LIVE now — tap to join</button>`:''; })()}
       ${!isMe&&c.role==='creator'?`
       <div style="display:flex;gap:8px;width:100%;padding:2px 0 4px">
-        <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text);flex:1 1 0;width:auto;min-width:0;padding:0 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="toggleFollow('${c.id}')">${store.following.has(c.id)?'Following ✓':'Follow'}</button>
-        <button class="primary" style="margin:0;flex:1.8 1 0;width:auto;min-width:0;padding:0 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="subscribe('${c.id}')">${subbed?(store.subCanceled[c.id]?'Ends '+new Date(store.subEnds[c.id]).toLocaleDateString():'Subscribed ✓'):'Subscribe '+$$(c.subPrice)+'/mo'}</button>
-        <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text);flex:1 1 0;width:auto;min-width:0;padding:0 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="msgFromProfile('${c.id}')">Message</button>
+        <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text);flex:1 1 0;width:auto;min-width:0;padding:13px 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="toggleFollow('${c.id}')">${store.following.has(c.id)?'Following ✓':'Follow'}</button>
+        <button class="primary" style="margin:0;flex:1.8 1 0;width:auto;min-width:0;padding:13px 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="subscribe('${c.id}')">${subbed?(store.subCanceled[c.id]?'Ends '+new Date(store.subEnds[c.id]).toLocaleDateString():'Subscribed ✓'):'Subscribe '+$$(c.subPrice)+'/mo'}</button>
+        <button class="primary" style="margin:0;background:var(--panel-2);color:var(--text);flex:1 1 0;width:auto;min-width:0;padding:13px 6px;white-space:nowrap;font-size:clamp(11px,3.4vw,13.5px)" onclick="msgFromProfile('${c.id}')">Message</button>
       </div>`:''}
       <button class="ghost" style="margin-top:2px" onclick="shareProfile('${esc(c.username)}')">🔗 Copy shareable link</button>
       ${!isMe?`<div style="display:flex;gap:8px;width:100%"><button class="ghost" style="margin:0;flex:1" onclick="toggleBlock('${c.id}','mute')">${store.blocks.get(c.id)==='mute'?'Unmute':'Mute'}</button><button class="ghost" style="margin:0;flex:1" onclick="toggleBlock('${c.id}','block')">${store.blocks.get(c.id)==='block'?'Unblock':'Block'}</button></div>
