@@ -256,6 +256,9 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 .me-head .u{color:var(--muted);font-size:13.5px;margin:3px 0 10px}
 .me-stats{display:flex;gap:26px;justify-content:center;padding:6px 0 16px}
 .me-stats div{text-align:center}
+.me-stats .tap{cursor:pointer}
+.me-stats .tap:active{opacity:.6}
+.me-stats{gap:20px}
 .me-stats b{font-family:'Unbounded';font-size:15px;display:block}
 .me-stats span{font-size:11px;color:var(--muted)}
 .list-card{margin:0 14px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
@@ -800,6 +803,13 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 </div>
 
 <div class="imgv" id="imgViewer" onclick="closeImage()" role="dialog" aria-label="Photo"><button class="x" onclick="closeImage()" aria-label="Close">✕</button><img id="imgViewerImg" alt=""></div>
+<div class="overlay" id="peopleModal" onclick="if(event.target===this)closeModal('peopleModal')">
+  <div class="sheet" style="max-height:85vh;display:flex;flex-direction:column">
+    <h3 id="peopleTitle">People</h3>
+    <div id="peopleBody" style="overflow-y:auto;flex:1;min-height:120px;margin:4px 0 8px"></div>
+    <button class="ghost" onclick="closeModal('peopleModal')">Close</button>
+  </div>
+</div>
 <div class="overlay" id="pushModal" onclick="if(event.target===this)closeModal('pushModal')">
   <div class="sheet" style="max-height:90vh;overflow-y:auto">
     <h3>🔔 Push notifications</h3>
@@ -979,7 +989,7 @@ function mapUser(p,followers){
     subPrice:p.sub_price_cents,followers:p.follower_count!=null?p.follower_count:(followers||0),category:p.category||null,createdAt:p.created_at,earnings:Number(p.earnings_cents||0),bonus:Number(p.bonus_cents||0),
     wallet:Number(p.wallet_cents||0),emailNotif:p.email_notifications!==false,ageVerified:!!p.age_verified,bio:p.bio||'',live:false,
     staffRole:p.staff_role||null,isBanned:!!p.is_banned,banReason:p.ban_reason||'',
-    avatarPath:p.avatar_url||null,avatarUrl:p.avatar_url?pubUrl(p.avatar_url):null,coverUrl:p.cover_url?pubUrl(p.cover_url):null,coverPath:p.cover_url||null,coverFullPath:p.cover_full_url||null,coverFullUrl:p.cover_full_url?pubUrl(p.cover_full_url):null};
+    avatarPath:p.avatar_url||null,avatarUrl:p.avatar_url?pubUrl(p.avatar_url):null,coverUrl:p.cover_url?pubUrl(p.cover_url):null,showInLists:!!p.show_in_lists,coverPath:p.cover_url||null,coverFullPath:p.cover_full_url||null,coverFullUrl:p.cover_full_url?pubUrl(p.cover_full_url):null};
 }
 function friendly(m){
   if(/Insufficient wallet/i.test(m)) return 'Not enough balance in your wallet';
@@ -1105,6 +1115,43 @@ function reportError(msg,stack){
 }
 window.addEventListener('error',e=>reportError(e.message,e.error&&e.error.stack));
 window.addEventListener('unhandledrejection',e=>reportError('Unhandled: '+((e.reason&&e.reason.message)||e.reason),e.reason&&e.reason.stack));
+
+/* followers / following lists. The database decides who may see what: a creator sees all their own followers; everyone else sees creators and
+   the fans who chose to appear. A fan's own lists are only visible to that fan. */
+const fgCache={}; let peopleSt={id:null,kind:null,off:0,done:false};
+async function loadFollowingCount(id){
+  const {data}=await sb.rpc('following_count',{p_user:id}); if(data==null) return; fgCache[id]=data;
+  document.querySelectorAll('.fgCount').forEach(el=>{ if(el.textContent==='–') el.textContent=data; });
+}
+async function openPeople(id,kind){
+  peopleSt={id,kind,off:0,done:false}; const mine=id===store.session, c=user(id);
+  document.getElementById('peopleTitle').textContent=kind==='followers'?(mine?'Your followers':'Followers'):(mine?'You follow':'Following');
+  document.getElementById('peopleBody').innerHTML='<p style="color:var(--muted);text-align:center;padding:24px">Loading…</p>';
+  openModal('peopleModal'); await morePeople(true);
+}
+async function morePeople(first){
+  const st=peopleSt, box=document.getElementById('peopleBody');
+  const {data,error}=await sb.rpc('list_people',{p_user:st.id,p_kind:st.kind,p_limit:50,p_offset:st.off});
+  if(st!==peopleSt) return;
+  if(error){ box.innerHTML='<p style="color:var(--muted);text-align:center;padding:24px">'+esc(error.message)+'</p>'; return; }
+  (data||[]).forEach(p=>{ if(!user(p.id)) store.users.push(mapUser(p)); });
+  st.off+=(data||[]).length; st.done=(data||[]).length<50;
+  const rows=(data||[]).filter(p=>!store.blocks.has(p.id)).map(p=>{ const u=user(p.id);
+    return `<div class="pcard" onclick="closeModal('peopleModal');openProfile('${u.id}')"><div class="av ${u.av}">${avInner(u)}</div>
+      <div class="tx"><b>${esc(u.name)} ${u.verified?'<span class="verified">✔</span>':''}</b><span>@${esc(u.username)}${u.role==='creator'?' · ✦ creator':''}</span></div></div>`; }).join('');
+  const old=first?'':box.querySelector('.plist')?.innerHTML||'';
+  const mine=st.id===store.session, c=user(st.id);
+  const note=st.kind==='followers'&&!mine&&c&&c.role==='creator'?'<p style="font-size:12px;color:var(--muted);line-height:1.5;margin:10px 4px 0">Fans can choose whether they appear here, so this may not show everyone who follows.</p>'
+    :st.kind==='followers'&&mine&&me().role!=='creator'?'':'';
+  const empty=st.kind==='followers'?(mine?'No followers yet — share your link to get your first.':'Nobody to show here yet.'):(mine?'You are not following anyone yet. Find creators in Explore.':'Not following anyone yet.');
+  box.innerHTML=((old+rows)?`<div class="plist list-card" style="margin:0">${old+rows}</div>`:`<p style="color:var(--muted);text-align:center;padding:30px 12px;font-size:13.5px;line-height:1.5">${empty}</p>`)
+    +(st.done?'':'<button class="ghost" onclick="morePeople()">Show more</button>')+note;
+}
+async function toggleListVisibility(){
+  const u=me(), on=!u.showInLists;
+  const {error}=await sb.rpc('set_list_visibility',{p_show:on}); if(error) return toast(error.message);
+  u.showInLists=on; toast(on?'You now appear in creators\' followers lists':'You are hidden from creators\' followers lists'); renderMe();
+}
 
 /* tap a profile picture or cover photo to see it full size */
 function openImage(url){ if(!url) return; document.getElementById('imgViewerImg').src=url; document.getElementById('imgViewer').classList.add('open'); }
@@ -3080,6 +3127,7 @@ async function liveClose(){ liveCleanup(); await loadLive().catch(()=>{}); settl
 /* ═══════════ ME ═══════════ */
 function renderMe(){
   const u=me(), isC=u.role==='creator';
+  if(isC) loadFollowingCount(u.id);
   const mySubs=Object.keys(store.subs).filter(k=>store.subs[k]&&k.startsWith(u.id)).map(k=>user(k.replace(u.id,''))).filter(Boolean);
   document.getElementById('page-me').innerHTML=`
     <div class="me-head">
@@ -3088,10 +3136,12 @@ function renderMe(){
       <h2>${esc(u.name)} ${u.verified?'<span class="verified">✔</span>':''} <span class="role-badge ${isC?'':'f'}">${isC?'✦ CREATOR':'♥ FOLLOWER'}</span></h2>
       <div class="u">@${esc(u.username)}${u.bio?' · '+esc(u.bio):''}</div>
       <div class="me-stats">
-        ${isC?`<div><b>${fmtN(u.followers)}</b><span>Followers</span></div>
+        ${isC?`<div class="tap" onclick="openPeople('${u.id}','followers')"><b>${fmtN(u.followers)}</b><span>Followers</span></div>
+               <div class="tap" onclick="openPeople('${u.id}','following')"><b class="fgCount">${fgCache[u.id]??'–'}</b><span>Following</span></div>
                <div><b>${$$(u.earnings)}</b><span>Earnings</span></div>
                <div><b>${$$(u.subPrice)}</b><span>Sub price</span></div>`
              :`<div><b>${$$(u.wallet)}</b><span>Wallet</span></div>
+               <div class="tap" onclick="openPeople('${u.id}','following')"><b class="fgCount">${store.following.size}</b><span>Following</span></div>
                <div><b>${mySubs.length}</b><span>Subscriptions</span></div>
                <div><b>${Object.keys(store.unlocks).filter(k=>store.unlocks[k]&&k.startsWith(u.id)).length}</b><span>Unlocks</span></div>`}
       </div>
@@ -3108,6 +3158,7 @@ function renderMe(){
       ${isC?`<div class="row" onclick="copyText(pageLink(me().username))"><div class="r-ic">🔗</div>Your link page<span class="sub">${esc(pageLink(u.username).replace(/^https?:\/\//,''))}</span></div>
       <div class="row" onclick="openSwitchKit()"><div class="r-ic">🚀</div>Switch kit<span class="sub">Bring your audience over</span></div>`:''}
       ${isStandalone()?'':`<div class="row" onclick="installApp()"><div class="r-ic">📲</div>Install the app<span class="sub">Home screen</span></div>`}
+      ${isC?'':`<div class="row" onclick="toggleListVisibility()"><div class="r-ic">👥</div>Show me in followers lists<span class="sub">${u.showInLists?'On':'Off'}</span></div>`}
       <div class="row" onclick="openPush()"><div class="r-ic">🔔</div>Push notifications<span class="sub">${pushLabel()}</span></div>
       <div class="row" onclick="toggleEmailNotif()"><div class="r-ic">✉️</div>Email notifications<span class="sub">${u.emailNotif?'On':'Off'}</span></div>
       <div class="row" onclick="toggleTheme()"><div class="r-ic">🌗</div>Appearance<span class="sub">Dark / light</span></div>
@@ -3319,6 +3370,7 @@ async function loadProfBadges(id){ if(levelSet[id]&&Date.now()-(levelSet[id].at|
 function renderProfile(){
   const c=user(currentProfile); if(!c) return go('home');
   if(c.role==='creator') loadProfBadges(c.id);
+  if(c.role==='creator') loadFollowingCount(c.id);
   const u=me(), isMe=c.id===u.id, subbed=store.subs[u.id+c.id];
   const theirPosts=store.posts.filter(p=>p.by===c.id||(p.collab===c.id&&p.collabStatus==='accepted'));
   document.getElementById('page-profile').innerHTML=`
@@ -3330,7 +3382,8 @@ function renderProfile(){
       <div class="u">@${esc(c.username)}${c.bio?' · '+esc(c.bio):''}</div>
       ${c.role==='creator'?`<div id="profBadges" style="margin:8px 0 2px">${levelSet[c.id]?profBadges(levelSet[c.id]):''}</div>`:''}
       <div class="me-stats">
-        <div><b>${fmtN(c.followers)}</b><span>Followers</span></div>
+        ${c.role==='creator'||isMe?`<div class="tap" onclick="openPeople('${c.id}','followers')"><b>${fmtN(c.followers)}</b><span>Followers</span></div>
+        <div class="tap" onclick="openPeople('${c.id}','following')"><b class="fgCount">${isMe&&c.role!=='creator'?store.following.size:(fgCache[c.id]??'–')}</b><span>Following</span></div>`:`<div><b>${fmtN(c.followers)}</b><span>Followers</span></div>`}
         <div><b>${theirPosts.length}</b><span>Drops</span></div>
         ${c.role==='creator'?`<div><b>${$$(c.subPrice)}</b><span>Per month</span></div>`:''}
       </div>

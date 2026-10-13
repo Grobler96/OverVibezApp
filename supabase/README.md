@@ -195,3 +195,6 @@ Members turn on push in Me → Push notifications (or the nudge on Home). Every 
 
 ### 039 — whole cover photo
 The cover banner is a 3:1 crop the creator frames; we now also store the full photo (`profiles.cover_full_url`, resized, hidden camera data removed) and tapping a cover shows that. Covers set before this have no full copy and show the banner until the creator picks the photo again in Edit profile.
+
+### 040 — followers / following lists
+Tapping Followers or Following on a profile lists the accounts (`list_people`, `following_count`). Privacy rules, enforced in the database: a creator sees all their own followers; everyone else sees only followers who are creators or fans who opted in (`profiles.show_in_lists`, Me → "Show me in followers lists", off by default; `set_list_visibility`); a creator's Following list is public; a fan's lists are visible only to that fan. Blocked and banned accounts are left out. Also closed a leak: the `follows_read` policy was `using (true)`, so any signed-in member could read the entire follows table directly; it is now limited to rows that involve the member.
