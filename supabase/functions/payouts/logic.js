@@ -62,7 +62,15 @@ export async function runPayout(deps, source = 'earnings') {
   if (!acct) return { error: 'Set up your payout account first', code: 'no_account' };
   const fresh = await refreshAccount(deps, acct.stripe_account_id);
   if (!fresh.payouts_enabled) return { error: 'Finish setting up your payout account first', code: 'not_enabled' };
-  const amount = Number(bonus ? p.bonus_cents : p.earnings_cents);
+  let amount = Number(p.bonus_cents);
+  if (!bonus) {      // sales earnings: only what is old enough (the payout hold) can be sent. The database enforces the same rule.
+    const { data: bal } = await userClient.rpc('my_payout_balance');
+    amount = Number(bal?.available_cents ?? 0);
+    if (!(amount >= 1000) && Number(bal?.held_cents) > 0 && Number(bal?.earnings_cents) >= 1000) {
+      const when = bal.release_at ? ' The first of it is ready on ' + new Date(bal.release_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'Europe/London' }) + '.' : '';
+      return { error: 'Your latest earnings are held for ' + bal.hold_days + ' days so payments can land.' + when, code: 'held' };
+    }
+  }
   if (!(amount >= 1000)) return { error: 'The minimum payout is £10.00', code: 'too_small' };
 
   // 1) take the money out of earnings and record the payout (atomic, in the database)

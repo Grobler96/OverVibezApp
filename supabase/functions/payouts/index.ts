@@ -1,7 +1,7 @@
 // POST { action: 'onboard' | 'status' | 'payout' | 'payout_bonus' } with the member's login.
 //   onboard -> { url }   Stripe-hosted onboarding for the creator's payout account
 //   status  -> { connected, details_submitted, payouts_enabled }
-//   payout  -> { ok, amount_cents } | { error, code }   Sends the whole earnings balance to the creator's account
+//   payout  -> { ok, amount_cents } | { error, code }   Sends the earnings that are old enough (the payout hold) to the creator's account
 // Secrets: STRIPE_SECRET_KEY (required), SITE_URL, STRIPE_CURRENCY (default gbp). Fails closed (503) without the key.
 // Requires "Connect" to be switched on in the Stripe dashboard.
 import { createClient } from 'npm:@supabase/supabase-js@2';
