@@ -15,6 +15,8 @@ const assert = require('assert');
   assert.strictEqual(composePush({ type: 'weekly_summary', data: { role: 'creator', followers: 1, earned_cents: 2550 } }).body, '1 new follower and £25.50 earned');
   assert.strictEqual(composePush({ type: 'weekly_summary', data: { role: 'follower', posts: 3, giveaways: 2 } }).body, '3 new posts from creators you follow and 2 free giveaways open');
   assert.ok(/18\+/.test(composePush({ type: 'age_nudge' }).title));
+  assert.ok(/Urgent/.test(composePush({ type: 'scan_held', data: { severity: 'urgent' } }).title));
+  assert.ok(/checked/.test(composePush({ type: 'held' }).title));
   assert.strictEqual(composePush({ type: 'something_new' }).body, 'You have new activity');
   console.log('push tests passed');
 })().catch((e) => { console.error(e); process.exit(1); });
