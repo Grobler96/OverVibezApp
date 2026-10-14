@@ -376,7 +376,13 @@ body.vibe-open #floatLayer{bottom:215px}
 .notif.unread{background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .notif .ni{font-size:20px;flex:none;width:30px;text-align:center}
 .notif small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
-.tile.img{background-size:cover;background-position:center}
+.tile .t-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-touch-callout:none;user-select:none}
+.tile .t-play{position:absolute;top:7px;left:7px;font-size:10px;line-height:1;background:rgba(0,0,0,.55);color:#fff;padding:5px 6px 5px 7px;border-radius:50%;backdrop-filter:blur(4px)}
+.tile .t-foot{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;gap:6px;padding:16px 8px 6px;font-size:11px;font-weight:600;color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.6));text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.tile .t-who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tile.big .t-foot{font-size:13px;padding:22px 10px 8px}
+.explore-grid{gap:5px}
+.pcard .tx b{display:flex;align-items:center;gap:5px;min-width:0} .pcard .tx b .verified{flex:none}
 .abtn{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:4px 6px 0 0}
 .abtn.danger{color:var(--live);border-color:var(--live)} .abtn.ok{color:var(--ok);border-color:var(--ok)}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px}
@@ -2765,10 +2771,16 @@ function personCard(c){
     <div class="tx"><b>${esc(c.name)} ${c.verified?'<span class="verified">✔</span>':''}</b><span>@${esc(c.username)}${c.category?' · '+esc((CATS.find(x=>x[0]===c.category)||[0,'',c.category])[2]):''} · ${fmtN(c.followers)} followers</span>${c.bio?`<span>${esc(c.bio)}</span>`:''}</div>
     ${!mine&&c.role==='creator'?`<button class="fbtn ${store.following.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleFollow('${c.id}')">${store.following.has(c.id)?'Following':'Follow'}</button>`:''}</div>`;
 }
-function tileHtml(p,i){
+function tileHtml(p,i,arr){
   const c=user(p.by); if(!c) return '';
-  const img=!p.paid&&p.mediaUrl&&p.mediaKind==='image';
-  return `<div class="tile ${i%7===0?'big':''} ${img?'img':c.av}" ${img?`style="background-image:url('${esc(p.mediaUrl)}')"`:''} onclick="openProfile('${p.by}')">${img?'':p.scene}${p.paid?`<span class="t-lock">${p.subsOnly?'💜 Subs':'🔒 '+$$(p.price)}</span>`:''}</div>`;
+  const open=p.mediaUrl&&canView(p), isVid=p.mediaKind==='video', big=(arr&&arr.length>=5&&i%7===0);
+  const media=open?(isVid
+    ?`<video class="t-media" src="${esc(p.mediaUrl)}#t=0.1" preload="metadata" muted playsinline disablePictureInPicture tabindex="-1"></video>`
+    :`<img class="t-media" src="${esc(p.mediaUrl)}" alt="" loading="lazy" draggable="false">`):'';
+  return `<div class="tile ${big?'big':''} ${open?'':c.av}" onclick="openProfile('${p.by}')">${open?media:p.scene}
+    ${open&&isVid?'<span class="t-play">▶</span>':''}
+    ${p.paid?`<span class="t-lock">${p.subsOnly?'💜 Subs':'🔒 '+$$(p.price)}</span>`:''}
+    <span class="t-foot"><span class="t-who">${esc(c.username)}</span><span>♥ ${fmtN(p.likes||0)}</span></span></div>`;
 }
 async function renderExplore(reset){
   if(reset){ document.getElementById('exploreQ').value=''; }
