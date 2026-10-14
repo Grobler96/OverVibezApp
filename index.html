@@ -4193,7 +4193,7 @@ function meterTermsAsk(c){
   document.getElementById('meterTermsBody').innerHTML=`<div style="text-align:center;font-size:42px">🔥</div><h3 style="text-align:center;margin:4px 0 8px">The Vibe Meter</h3>
     <p style="text-align:left">Every live has a Vibe Meter that your audience fills together. It only fills once <b>all three</b> of these are reached:</p>
     <ul style="text-align:left;margin:0 0 10px 18px;line-height:1.7;font-size:14px"><li><b>${c.viewers} people watching right now</b>, each for at least ${c.watch_secs} seconds</li><li><b>${fmtV(c.likes)} likes</b> from people who are still watching (each person's first ${c.like_cap} taps count)</li><li><b>${$$(c.gift_cents)} in vibes</b> sent to you</li></ul>
-    <p style="text-align:left">It is a live meter. <b>If people leave, the meter goes down, and when someone leaves all their likes go with them.</b> When all three are reached it has to stay full for <b>${c.hold_secs} seconds</b> before it counts. It can fill <b>once per live</b>. When it does you get <b>${fmtV(c.bonus)} bonus Vibez</b> that count towards your weekly and monthly leaderboards. You can earn this up to ${c.weekly_max} times in any 7 days. Everyone sees that the meter is full, but only you see your bonus.</p>
+    <p style="text-align:left">It is a live meter. <b>If people leave, the meter goes down, and when someone leaves their likes stop counting towards it</b> (the live keeps its like total). When all three are reached it has to stay full for <b>${c.hold_secs} seconds</b> before it counts. It can fill <b>once per live</b>. When it does you get <b>${fmtV(c.bonus)} bonus Vibez</b> that count towards your weekly and monthly leaderboards. You can earn this up to ${c.weekly_max} times in any 7 days. Everyone sees that the meter is full, but only you see your bonus.</p>
     <p style="text-align:left">Only real engagement counts. If we find fake accounts, bought or swapped likes, viewers or vibes, or gifts sent from your own or linked accounts, we can remove the bonus and the Vibez and take action on the account. We can change or stop the meter at any time and our decision is final. See the Terms for more.</p>
     <button class="primary" onclick="meterTermsAnswer(true)">I agree, go live</button><button class="ghost" onclick="meterTermsAnswer(false)">Go live without the bonus</button>`;
   openModal('meterTermsModal');
@@ -4211,7 +4211,7 @@ function meterStart(streamId,role){
 }
 function meterReset(){
   clearInterval(lmT.poll); clearInterval(lmT.tick); clearTimeout(lmT.dip);
-  if(lmT.id&&liveMeter&&!liveMeter.creator){ sb.rpc('live_meter_leave',{p_stream:lmT.id}).then(()=>{},()=>{}); }   // leaving takes your likes with you
+  if(lmT.id&&liveMeter&&!liveMeter.creator){ sb.rpc('live_meter_leave',{p_stream:lmT.id}).then(()=>{},()=>{}); }   // leaving stops you counting towards the meter (the live keeps your likes)
   else if(lmPending&&lmT.id){ sb.rpc('live_like',{p_stream:lmT.id,p_taps:Math.min(lmPending,10)}).then(()=>{},()=>{}); }
   lmPending=0; lmT={}; liveMeter=null;
   ['lvMeter','lvLikeBtn'].forEach(id=>{ const e=document.getElementById(id); if(e) e.classList.add('hidden'); });
@@ -4259,7 +4259,7 @@ function meterFull(name){
 function meterInfo(){
   const m=liveMeter; if(!m) return; const el=document.getElementById('meterBody'), bar=(p,c)=>`<div style="height:8px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin:4px 0 10px"><i style="display:block;height:100%;width:${Math.min(100,p)}%;background:${c||'linear-gradient(90deg,#FFB443,#FF3D8A)'}"></i></div>`;
   if(m.creator){ const t=m.targets||{};
-    el.innerHTML=`<p>${m.filled?'<b>The meter is full! 🎉</b> It fills once per live.':'It is live: if viewers leave, the meter and their likes go down. When all three reach their target it has to stay full for a few seconds to count.'}</p>
+    el.innerHTML=`<p>${m.filled?'<b>The meter is full! 🎉</b> It fills once per live.':'It is live: if viewers leave, they and their likes stop counting towards the meter (the like total on your live stays). When all three reach their target it has to stay full for a few seconds to count.'}</p>
       <div style="font-size:13.5px;display:flex;justify-content:space-between"><span>👁 People watching (${t.viewers||0} needed)</span><b>${m.viewers||0}</b></div>${bar(m.parts.viewers)}
       <div style="font-size:13.5px;display:flex;justify-content:space-between"><span>❤️ Likes (${fmtV(t.likes||0)} needed)</span><b>${fmtV(m.likes_counted||0)}</b></div>${bar(m.parts.likes)}
       <div style="font-size:13.5px;display:flex;justify-content:space-between"><span>✨ Vibes sent (${$$(t.gift_cents||0)} needed)</span><b>${$$(m.gift_cents||0)}</b></div>${bar(m.parts.gifts)}
@@ -4267,8 +4267,8 @@ function meterInfo(){
       ${m.terms_ok?'':'<p style="color:var(--live);font-size:13px">You have not agreed to the Vibe Meter terms, so a full meter will not pay a bonus. Agree next time you go live.</p>'}
       <p style="font-size:12.5px;color:var(--muted);line-height:1.5">Only real engagement counts. Fake accounts or swapped likes, viewers and vibes mean no bonus. Everyone sees that the meter is full but only you see your bonus.</p>`;
   } else {
-    el.innerHTML=`<p>The Vibe Meter fills up when the audience comes together: <b>lots of people watching</b>, <b>lots of likes</b> ❤️ and <b>vibes</b> ✨ sent to the creator. It goes down when people leave, and your likes go when you do, so stay and keep it full! When it is full the creator gets a bonus.</p>
-      ${bar(m.pct)}<p style="text-align:center;font-weight:800">${m.filled?'FULL 🎉':m.pct+'%'}</p><p style="font-size:12.5px;color:var(--muted)">Tap the heart as many times as you like, up to ${m.like_cap} taps each live. Your likes only count while you are in the live.</p>`;
+    el.innerHTML=`<p>The Vibe Meter fills up when the audience comes together: <b>lots of people watching</b>, <b>lots of likes</b> ❤️ and <b>vibes</b> ✨ sent to the creator. It goes down when people leave, and your likes only count towards it while you are in the live, so stay and keep it full! When it is full the creator gets a bonus.</p>
+      ${bar(m.pct)}<p style="text-align:center;font-weight:800">${m.filled?'FULL 🎉':m.pct+'%'}</p><p style="font-size:12.5px;color:var(--muted)">Tap the heart as many times as you like, up to ${m.like_cap} taps each live. Your likes always stay on the live, but they only count towards the meter while you are in it.</p>`;
   }
   openModal('meterModal');
 }

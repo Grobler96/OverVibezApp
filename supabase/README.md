@@ -310,3 +310,6 @@ If a tournament champion does not get bonus Vibez (not enough gifts, weekly limi
 - The meter must stay at 100% (all three parts at target at the same time) for `lm_hold_secs` (30) before it fills (`live_meter_hold`); if it dips the clock is cleared.
 - Harder defaults: 75 people, 750 likes (each person's first 25 taps), £50 in vibes. Terms are now version 2, so creators agree again before they can earn the bonus.
 
+### 064 — a leaver's likes leave the meter, not the live
+Taps stay on the live (`live_likes`) so the live's like total never goes down. The meter (`likes_counted` in `_lm_stats`) only counts taps from people who are in the live right now, so likes drop off the meter when people leave and count again if they come back. This replaces the "taps are reset to 0" behaviour described in 063.
+
