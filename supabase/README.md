@@ -304,3 +304,12 @@ Month-end prizes now go to the top 3 (`lb_prizes` has a `place` and `pct`): 1st 
 
 ### 061 — the "no bonus" reason is private to the champion
 If a tournament champion does not get bonus Vibez (not enough gifts, weekly limit), the reason is only in their own notification and their own copy of the tournament state. `_tourney_json` leaves `bonus_note` out for everyone else, and `bonus_note` is no longer readable from the `live_tournaments` table (column grants). Everyone sees who won, and the bonus only if it was paid.
+
+### 063 — the Vibe Meter is live and harder
+- Viewers count only while they are in the live (seen in the last `lm_presence_secs` = 35 seconds; clients ask `live_meter` every 6 seconds and `live_meter_leave` when they leave). Likes only count from people who are still in the live; when someone leaves, or comes back after being gone for more than the presence window, their taps are reset to 0 (`_lm_touch`). So the meter goes down when people drop out.
+- The meter must stay at 100% (all three parts at target at the same time) for `lm_hold_secs` (30) before it fills (`live_meter_hold`); if it dips the clock is cleared.
+- Harder defaults: 75 people, 750 likes (each person's first 25 taps), £50 in vibes. Terms are now version 2, so creators agree again before they can earn the bonus.
+
+### 064 — a leaver's likes leave the meter, not the live
+Taps stay on the live (`live_likes`) so the live's like total never goes down. The meter (`likes_counted` in `_lm_stats`) only counts taps from people who are in the live right now, so likes drop off the meter when people leave and count again if they come back. This replaces the "taps are reset to 0" behaviour described in 063.
+
