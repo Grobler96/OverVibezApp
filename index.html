@@ -415,7 +415,20 @@ body.vibe-open #floatLayer{bottom:215px}
 .lv-bbig .bb-n{font-family:'Unbounded';font-weight:800;font-size:clamp(70px,26vw,130px);line-height:1;color:#fff;text-shadow:0 6px 30px rgba(255,61,138,.8);animation:goldpop .6s cubic-bezier(.2,1.5,.4,1) both}
 .lv-bbig .bb-t{margin-top:12px;font-size:20px;font-weight:800;color:#FFE9A0;text-shadow:0 2px 10px rgba(0,0,0,.6)}
 .lv-bbig .bb-s{margin-top:6px;font-size:14px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6)}
-.lv-owner{position:absolute;right:14px;bottom:78px;display:flex;flex-direction:column;gap:10px;z-index:7}
+.lv-meter{position:absolute;left:10px;top:158px;width:38px;z-index:5;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:6px 0;border-radius:14px;background:rgba(0,0,0,.35);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12)}
+.lv-meter .lm-ic{font-size:16px;line-height:1}
+.lv-meter .lm-bar{position:relative;width:12px;height:110px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+.lv-meter .lm-bar i{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,#FFB443,#FF3D8A);transition:height .8s ease;border-radius:999px}
+.lv-meter span{font-size:10.5px;font-weight:800;color:#fff}
+.lv-meter.full .lm-bar i{background:linear-gradient(180deg,#FFF2B3,#FFD700);box-shadow:0 0 14px #FFD700}
+.lv-meter.full{border-color:rgba(255,215,0,.7);animation:lmglow 1.4s ease-in-out infinite}
+@keyframes lmglow{50%{box-shadow:0 0 22px rgba(255,215,0,.7)}}
+.lv-like{position:absolute;right:14px;bottom:76px;z-index:7;min-width:52px;height:52px;border-radius:26px;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.18);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;line-height:1;padding:0 10px}
+.lv-like small{font-size:10.5px;font-weight:800;margin-top:2px}
+.lv-like:active:not(.ro){transform:scale(.9)}
+.lv-like.ro{pointer-events:none;height:38px;border-radius:19px;flex-direction:row;gap:6px;font-size:16px}
+.lv-like.ro small{margin:0;font-size:12.5px}
+.lv-owner{position:absolute;right:14px;bottom:140px;display:flex;flex-direction:column;gap:10px;z-index:7}
 .lv-owner button{width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);border:1px solid rgba(255,215,0,.55);font-size:20px;color:#fff}
 .lv-ownerpill{position:absolute;top:188px;left:14px;z-index:5;background:linear-gradient(135deg,#FFE35C,#FFB443);color:#3a2600;font-weight:800;font-size:12px;border-radius:999px;padding:6px 12px;box-shadow:0 4px 14px rgba(255,180,0,.4)}
 .vbanner.gold{background:linear-gradient(135deg,#FFD700,#E0A800);color:#3a2600}
@@ -840,6 +853,8 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div id="lvGold" class="lv-gold hidden"></div>
     <div id="lvBattle" class="lv-battle hidden"></div>
     <div id="lvTourney" class="lv-tourney hidden" onclick="openBracket()"></div>
+    <div id="lvMeter" class="lv-meter hidden" onclick="meterInfo()" title="Vibe Meter"><b class="lm-ic">🔥</b><div class="lm-bar"><i id="lvMeterFill"></i></div><span id="lvMeterPct">0%</span></div>
+    <button id="lvLikeBtn" class="lv-like hidden" onclick="liveLike()" aria-label="Like this live"><span>❤️</span><small id="lvLikes">0</small></button>
     <div id="lvBattleBig" class="lv-bbig hidden"></div>
     <div class="lchat" id="lvChat"></div>
     <div class="live-bottom">
@@ -895,6 +910,10 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 <div class="overlay" id="battleInviteModal">
   <div class="sheet" style="text-align:center" id="battleInviteBody"></div>
 </div>
+<div class="overlay" id="meterModal" onclick="if(event.target===this)closeModal('meterModal')">
+  <div class="sheet" style="max-height:84vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center"><h3>🔥 Vibe Meter</h3><button onclick="closeModal('meterModal')" style="color:var(--muted);font-size:20px;padding:0 4px">✕</button></div><div id="meterBody"></div></div>
+</div>
+<div class="overlay" id="meterTermsModal"><div class="sheet" style="max-height:88vh;overflow-y:auto" id="meterTermsBody"></div></div>
 <div class="overlay" id="tourneyModal" onclick="if(event.target===this)closeModal('tourneyModal')">
   <div class="sheet" style="max-height:84vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center"><h3>🏆 Knockout tournament</h3><button onclick="closeModal('tourneyModal')" style="color:var(--muted);font-size:20px;padding:0 4px">✕</button></div>
@@ -2317,6 +2336,7 @@ const notifInfo=n=>{
     case 'leaderboard_prize': return ['🏆','You came <b>'+(['','1st','2nd','3rd'][d.place||1]||'top 3')+'</b> on the '+esc(d.month||'month')+' leaderboard! <b>'+$$(d.cents||0)+'</b> has been added to your bonus balance'];
     case 'leaderboard_prize_held': return ['🏆','You came <b>'+(['','1st','2nd','3rd'][d.place||1]||'top 3')+'</b> on the '+esc(d.month||'month')+' leaderboard! Your <b>'+$$(d.cents||0)+'</b> prize has been approved and will be added to your bonus balance on <b>'+(d.release_at?new Date(d.release_at).toLocaleDateString('en-GB',{day:'numeric',month:'long'}):'in 14 days')+'</b>'];
     case 'leaderboard_prize_review': return ['🏆','The '+esc(d.month||'month')+' leaderboard prizes ('+$$(d.cents||0)+' in total) need checking before they are paid. Open Admin → Leaderboard'];
+    case 'live_meter_full': return ['🔥','Your live '+(d.title?'“'+esc(d.title)+'” ':'')+'filled the Vibe Meter!'+(Number(d.vibez)>0?' <b>+'+fmtV(d.vibez)+' Vibez</b> added to your weekly and monthly meter':(d.note?' '+esc(d.note)+'.':''))];
     case 'tournament_invite': return ['🏆',who+' invited you to a '+(d.size||8)+' creator knockout tournament. Open your live to answer'];
     case 'tournament_won': return ['🏆','You won the knockout tournament!'+(Number(d.vibez)>0?' <b>+'+fmtV(d.vibez)+' Vibez</b> added to your meter':(d.note?' No bonus Vibez this time: '+esc(d.note)+'.':''))];
     case 'battle_invite': return ['⚔️',who+' challenged you to a '+(d.minutes||5)+' minute battle. Open your live to answer'];
@@ -3613,7 +3633,7 @@ async function liveToken(streamId,battleId){
 }
 const liveFail=e=>toast(e.message==='NOT_CONFIGURED'?'Live streaming is not switched on yet':(e.message||'Something went wrong'));
 
-async function startBroadcast(){
+async function startBroadcastGo(){
   const u=me();
   if(!u.ageVerified) return toast('Verify your age first. Tap Profile → Identity & age verification');
   const title=document.getElementById('liveTitle').value.trim(); if(!title) return toast('Give your stream a title');
@@ -3709,7 +3729,7 @@ async function connectLive(streamId,role,meta){
   }
   count();
   liveTimer=setInterval(()=>{ if(!liveState) return; const el=Date.now()-liveState.start; document.getElementById('lvTime').textContent=String(Math.floor(el/60000)).padStart(2,'0')+':'+String(Math.floor(el/1000%60)).padStart(2,'0'); },1000);
-  liveChatStart(streamId);
+  liveChatStart(streamId); meterStart(streamId,role);
 }
 
 /* chat */
@@ -3860,7 +3880,8 @@ function liveEventArrived(ev){
     liveSystemLine(ev.cohost?'👑 OverVibez Owner is on camera':'👑 OverVibez Owner joined',true);
   } else if(ev.kind==='owner_left'){
     liveOwnerAnn.delete(ev.actor_id); liveOwners.delete(ev.actor_id); paintOwnerPill(); liveRelayout(); liveSystemLine('OverVibez Owner left');
-  } else if(ev.kind==='bonus'){ liveCelebrate(ev.cents,cu.username); }
+  } else if(ev.kind==='bonus'){ liveCelebrate(ev.cents,cu.username);
+  } else if(ev.kind==='meter_full'){ meterFull(cu.username); }
 }
 function liveCelebrate(cents,name){
   const g=document.getElementById('lvGold'); if(!g) return;
@@ -4155,6 +4176,90 @@ function paintBracket(){
     +`<p style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.5">Each battle is won by whoever's audience sends the most vibes. A draw goes to the creator higher in the bracket. A creator who ends their live loses the match.</p>`;
 }
 
+/* ═══ LIKES + VIBE METER ═══ viewers tap the heart. The meter fills from viewers, likes and vibes, once per live. The creator agrees to terms first and is the only one who sees their bonus. */
+let liveMeter=null, lmT={}, lmPending=0, lmSkipTerms=false;
+async function startBroadcast(){
+  const u=me();
+  if(!u.ageVerified) return toast('Verify your age first. Tap Profile → Identity & age verification');
+  if(!document.getElementById('liveTitle').value.trim()) return toast('Give your stream a title');
+  if(!lmSkipTerms){ let st=null; try{ st=(await sb.rpc('live_meter_terms_status')).data; }catch(e){} if(st&&!st.accepted) return meterTermsAsk(st.cfg); }
+  return startBroadcastGo();
+}
+function meterTermsAsk(c){
+  document.getElementById('meterTermsBody').innerHTML=`<div style="text-align:center;font-size:42px">🔥</div><h3 style="text-align:center;margin:4px 0 8px">The Vibe Meter</h3>
+    <p style="text-align:left">Every live has a Vibe Meter that your audience fills together. It only fills once <b>all three</b> of these are reached:</p>
+    <ul style="text-align:left;margin:0 0 10px 18px;line-height:1.7;font-size:14px"><li><b>${c.viewers} people watching</b>, each for at least ${c.watch_secs} seconds</li><li><b>${fmtV(c.likes)} likes</b> (each person's first ${c.like_cap} taps count)</li><li><b>${$$(c.gift_cents)} in vibes</b> sent to you</li></ul>
+    <p style="text-align:left">It can fill <b>once per live</b>. When it does you get <b>${fmtV(c.bonus)} bonus Vibez</b> that count towards your weekly and monthly leaderboards. You can earn this up to ${c.weekly_max} times in any 7 days. Everyone sees that the meter is full, but only you see your bonus.</p>
+    <p style="text-align:left">Only real engagement counts. If we find fake accounts, bought or swapped likes, viewers or vibes, or gifts sent from your own or linked accounts, we can remove the bonus and the Vibez and take action on the account. We can change or stop the meter at any time and our decision is final. See the Terms for more.</p>
+    <button class="primary" onclick="meterTermsAnswer(true)">I agree, go live</button><button class="ghost" onclick="meterTermsAnswer(false)">Go live without the bonus</button>`;
+  openModal('meterTermsModal');
+}
+async function meterTermsAnswer(ok){
+  closeModal('meterTermsModal');
+  if(ok){ const {error}=await sb.rpc('live_meter_terms_accept'); if(error) return toast(friendly(error.message)); } else lmSkipTerms=true;
+  startBroadcastGo();
+}
+function meterStart(streamId,role){
+  meterReset(); lmT.id=streamId; const m=document.getElementById('lvMeter'), b=document.getElementById('lvLikeBtn'); if(!m||!b) return;
+  m.classList.remove('hidden','full'); b.classList.remove('hidden'); b.classList.toggle('ro',role==='broadcaster');
+  document.getElementById('lvMeterFill').style.height='0'; document.getElementById('lvMeterPct').textContent='0%'; document.getElementById('lvLikes').textContent='0';
+  meterPoll(); lmT.poll=setInterval(meterPoll,10000);
+}
+function meterReset(){
+  clearInterval(lmT.poll); if(lmPending&&lmT.id){ sb.rpc('live_like',{p_stream:lmT.id,p_taps:Math.min(lmPending,10)}).then(()=>{},()=>{}); }
+  lmPending=0; lmT={}; liveMeter=null;
+  ['lvMeter','lvLikeBtn'].forEach(id=>{ const e=document.getElementById(id); if(e) e.classList.add('hidden'); });
+}
+async function meterPoll(){
+  if(!liveState||lmT.id!==liveState.id) return; const sid=liveState.id; const {data}=await sb.rpc('live_meter',{p_stream:sid}); if(!data||!liveState||liveState.id!==sid) return;
+  liveMeter=data; paintMeter();
+  if(data.creator&&data.filled&&data.bonus&&!lmT.bonusShown){ lmT.bonusShown=1;
+    toast(Number(data.bonus.vibez)>0?'🔥 Vibe Meter full! +'+fmtV(data.bonus.vibez)+' Vibez added to your weekly and monthly meter':'🔥 Vibe Meter full! '+(data.bonus.note||'')); }
+}
+function paintMeter(){
+  const m=liveMeter, box=document.getElementById('lvMeter'); if(!m||!box) return;
+  document.getElementById('lvMeterFill').style.height=m.pct+'%'; document.getElementById('lvMeterPct').textContent=m.filled?'FULL':m.pct+'%';
+  box.classList.toggle('full',!!m.filled); document.getElementById('lvLikes').textContent=fmtV(Number(m.likes||0)+lmPending);
+}
+function heartPop(){
+  const layer=document.getElementById('floatLayer'); if(!layer) return; const el=document.createElement('span'); el.className='vfly'; el.textContent=['❤️','💖','💗','🧡','💜'][Math.floor(Math.random()*5)];
+  el.style.fontSize=(22+Math.random()*16)+'px'; el.style.setProperty('--sw',(Math.random()*50-25)+'px'); el.style.marginLeft=(Math.random()*24-12)+'px'; layer.appendChild(el); setTimeout(()=>el.remove(),3600);
+}
+function liveLike(){
+  if(!liveState||liveState.role==='broadcaster'||!liveMeter) return; heartPop();
+  if(Number(liveMeter.my_taps||0)+lmPending>=Number(liveMeter.like_cap||100)){ if(!lmT.capToast){ lmT.capToast=1; toast('You have given all your likes for this live ❤️'); } return; }
+  lmPending++; paintMeter(); clearTimeout(lmT.flush); lmT.flush=setTimeout(meterFlush,1200);
+}
+async function meterFlush(){
+  if(!lmPending||!liveState) return; const n=Math.min(lmPending,10); lmPending-=n;
+  const {data}=await sb.rpc('live_like',{p_stream:liveState.id,p_taps:n}); if(data&&liveMeter){ liveMeter.my_taps=data.my_taps; liveMeter.likes=data.likes; }
+  paintMeter(); if(lmPending>0) lmT.flush=setTimeout(meterFlush,300);
+}
+function meterFull(name){
+  if(liveMeter){ liveMeter.filled=true; liveMeter.pct=100; paintMeter(); }
+  liveBanner('🔥','<b>The Vibe Meter is FULL!</b> @'+esc(name||'the creator')+' smashed it',true);
+  liveSystemLine('🔥 The Vibe Meter is full!',true);
+  confettiBurst('lvConfetti',['#FFD700','#FFC107','#FF8A3D','#FF3D8A','#FFF2B3'],260,120);
+  try{ if(navigator.vibrate) navigator.vibrate([60,40,60,40,120]); }catch(e){}
+  setTimeout(meterPoll,1500);
+}
+function meterInfo(){
+  const m=liveMeter; if(!m) return; const el=document.getElementById('meterBody'), bar=(p,c)=>`<div style="height:8px;border-radius:99px;background:var(--panel-2);overflow:hidden;margin:4px 0 10px"><i style="display:block;height:100%;width:${Math.min(100,p)}%;background:${c||'linear-gradient(90deg,#FFB443,#FF3D8A)'}"></i></div>`;
+  if(m.creator){ const t=m.targets||{};
+    el.innerHTML=`<p>${m.filled?'<b>The meter is full! 🎉</b> It fills once per live.':'It fills when all three reach their target. Each one counts for part of the bar.'}</p>
+      <div style="font-size:13.5px;display:flex;justify-content:space-between"><span>👁 People watching (${t.viewers||0} needed)</span><b>${m.viewers||0}</b></div>${bar(m.parts.viewers)}
+      <div style="font-size:13.5px;display:flex;justify-content:space-between"><span>❤️ Likes (${fmtV(t.likes||0)} needed)</span><b>${fmtV(m.likes_counted||0)}</b></div>${bar(m.parts.likes)}
+      <div style="font-size:13.5px;display:flex;justify-content:space-between"><span>✨ Vibes sent (${$$(t.gift_cents||0)} needed)</span><b>${$$(m.gift_cents||0)}</b></div>${bar(m.parts.gifts)}
+      ${m.filled&&m.bonus?`<p style="margin-top:6px"><b>${Number(m.bonus.vibez)>0?'+'+fmtV(m.bonus.vibez)+' Vibez added to your weekly and monthly meter.':esc(m.bonus.note||'No bonus this time.')}</b></p>`:''}
+      ${m.terms_ok?'':'<p style="color:var(--live);font-size:13px">You have not agreed to the Vibe Meter terms, so a full meter will not pay a bonus. Agree next time you go live.</p>'}
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.5">Only real engagement counts. Fake accounts or swapped likes, viewers and vibes mean no bonus. Everyone sees that the meter is full but only you see your bonus.</p>`;
+  } else {
+    el.innerHTML=`<p>The Vibe Meter fills up when the audience comes together: <b>lots of people watching</b>, <b>lots of likes</b> ❤️ and <b>vibes</b> ✨ sent to the creator. When it is full the creator gets a bonus.</p>
+      ${bar(m.pct)}<p style="text-align:center;font-weight:800">${m.filled?'FULL 🎉':m.pct+'%'}</p><p style="font-size:12.5px;color:var(--muted)">Tap the heart as many times as you like, up to ${m.like_cap} taps each live.</p>`;
+  }
+  openModal('meterModal');
+}
+
 /* leaving / ending */
 function liveCleanup(){
   clearInterval(liveTimer); clearInterval(liveBeat); clearInterval(livePollT); clearInterval(vibePollT); clearTimeout(vibeSyncT); liveTimer=liveBeat=livePollT=null;
@@ -4162,7 +4267,7 @@ function liveCleanup(){
   if(liveRoom){ try{ liveRoom.disconnect(); }catch(e){} liveRoom=null; }
   document.getElementById('liveVideoWrap').innerHTML='';
   document.getElementById('liveOverlay').classList.remove('open'); document.documentElement.classList.remove('live-open'); liveViewportOff();
-  clearTimeout(liveGoldT); battleReset(); liveOwners=new Set(); liveOwnerAnn=new Set(); liveAttach=null;
+  clearTimeout(liveGoldT); battleReset(); meterReset(); liveOwners=new Set(); liveOwnerAnn=new Set(); liveAttach=null;
   const wr=document.getElementById('liveVideoWrap'); if(wr) wr.classList.remove('split');
   liveState=null;
 }
@@ -4183,6 +4288,8 @@ async function liveLeave(){
       <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">${esc(liveState.title)}</p>
       <div class="pay-row"><span>Duration</span><span>${mins} min</span></div>
       <div class="pay-row"><span>Peak viewers</span><span>${peak}</span></div>
+      <div class="pay-row"><span>Likes received</span><span>${liveMeter?fmtV(liveMeter.likes||0):0}</span></div>
+      <div class="pay-row"><span>Vibe Meter</span><span>${liveMeter?(liveMeter.filled?'Full 🎉':liveMeter.pct+'%'):'0%'}</span></div>
       <div class="pay-row"><span>Tickets sold</span><span>${data?Number(data.tickets):0}</span></div>
       <div class="pay-row"><span>Ticket revenue (you keep 85%)</span><span style="color:var(--money);font-weight:700">${$$(Math.round(gross*(1-FEE)))}</span></div>
       <div class="pay-row"><span>Vibes received</span><span>${data?Number(data.vibes):0}</span></div>
