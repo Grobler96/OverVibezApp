@@ -287,3 +287,11 @@ Month-end prizes now go to the top 3 (`lb_prizes` has a `place` and `pct`): 1st 
 - Approving a prize no longer pays it. It waits `lb_prize_hold_days` (14) days. The hourly job `lb_release_prizes` then recalculates it (refunds remove gifts) and pays the lower of the approved and the recalculated amount. An admin can cancel an approved prize before it is released. The creator gets a `leaderboard_prize_held` notification on approval and `leaderboard_prize` on release.
 - This makes a ring of fake accounts more expensive (it needs at least four) but does not make it impossible, so the admin check stays.
 
+### 059 — knockout tournaments (4 or 8 creators)
+- A live creator opens a lobby (`tournament_create`), invites other live creators (`tournament_invite`), they accept (`tournament_respond`) and the host starts it when it is full (`tournament_start`). Players are seeded at random.
+- Every round is a set of normal battles (table `live_battles`, now with `tournament_id`, `round`, `slot`, `settled`) that all run at the same time. Winners go through, losers are knocked out (their live carries on). A draw goes to the creator higher in the bracket. A creator who ends their live forfeits the match; a creator who is not live when a round starts loses without a fight.
+- `battle_sweep` (every 10 seconds) now also calls `_tourney_sweep`, which settles finished rounds, waits 15 seconds, then builds the next round. The final crowns a champion.
+- The champion gets bonus Vibez on their monthly meter (`lb_ledger.kind = 'tournament_bonus'`, counted in `_lb_scores` next to the weekly bonuses). Settings: `tourney_bonus_8` (20000), `tourney_bonus_4` (10000), `tourney_min_cents` (1000: the battles must have raised at least this much in gifts, otherwise no bonus), `tourney_weekly_max` (2 bonuses per creator per week).
+- 1v1 battle challenges are blocked for creators who are in a tournament.
+- Viewers see the same battle screen as before plus a round label, a badge ("Semifinal starts in 12s", "Knocked out in the Quarterfinal"), a bracket view and a champion celebration. They get updates through realtime on `live_tournament_players` (filtered by stream) plus a 6 second refresh while a tournament is on.
+
