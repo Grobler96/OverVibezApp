@@ -2338,7 +2338,7 @@ const notifInfo=n=>{
     case 'leaderboard_prize_review': return ['🏆','The '+esc(d.month||'month')+' leaderboard prizes ('+$$(d.cents||0)+' in total) need checking before they are paid. Open Admin → Leaderboard'];
     case 'live_meter_full': return ['🔥','Your live '+(d.title?'“'+esc(d.title)+'” ':'')+'filled the Vibe Meter!'+(Number(d.vibez)>0?' <b>+'+fmtV(d.vibez)+' Vibez</b> added to your weekly and monthly meter':(d.note?' '+esc(d.note)+'.':''))];
     case 'tournament_invite': return ['🏆',who+' invited you to a '+(d.size||8)+' creator knockout tournament. Open your live to answer'];
-    case 'tournament_won': return ['🏆','You won the knockout tournament!'+(Number(d.vibez)>0?' <b>+'+fmtV(d.vibez)+' Vibez</b> added to your meter':'')];
+    case 'tournament_won': return ['🏆','You won the knockout tournament!'+(Number(d.vibez)>0?' <b>+'+fmtV(d.vibez)+' Vibez</b> added to your meter':(d.note?' No bonus Vibez this time: '+esc(d.note)+'.':''))];
     case 'battle_invite': return ['⚔️',who+' challenged you to a '+(d.minutes||5)+' minute battle. Open your live to answer'];
     case 'download_request': return ['⬇️',who+' asked to save one of your posts. Open Studio to say yes or no'];
     case 'download_ok': return ['✅',who+' said you can save that post. Tap ⬇ on it'];
@@ -4095,7 +4095,7 @@ function paintTourneyBadge(){
 function tourneyChampion(st){
   const go=()=>{ if(!liveState) return; const w=st.players.find(p=>p.status==='champion'); if(!w) return;
     const me=liveState.role==='broadcaster'&&liveState.creator===w.creator_id;
-    battleBig(`<div class="bb-t bb-end" style="font-size:26px">🏆 @${esc(w.username)} wins the tournament!</div>${Number(st.bonus_vibez)>0?`<div class="bb-s" style="margin-top:8px;font-weight:800;color:#FFE35C;font-size:16px">+${fmtV(st.bonus_vibez)} Vibez added to their meter ✨</div>`:''}${me?'<div class="bb-s" style="margin-top:8px">You are the champion! 🎉</div>':''}`);
+    battleBig(`<div class="bb-t bb-end" style="font-size:26px">🏆 @${esc(w.username)} wins the tournament!</div>${Number(st.bonus_vibez)>0?`<div class="bb-s" style="margin-top:8px;font-weight:800;color:#FFE35C;font-size:16px">+${fmtV(st.bonus_vibez)} Vibez added to their meter ✨</div>`:''}${me?'<div class="bb-s" style="margin-top:8px">You are the champion! 🎉</div>':''}${me&&!(Number(st.bonus_vibez)>0)&&st.bonus_note?`<div class="bb-s" style="margin-top:6px;font-size:12.5px;opacity:.9">No bonus Vibez this time. ${esc(st.bonus_note)}.</div>`:''}`);
     confettiBurst('lvConfetti',['#FFD700','#FFC107','#FFB443','#FFF2B3','#FFFFFF','#FF3D8A'],420,160);
     try{ if(navigator.vibrate) navigator.vibrate([100,50,100,50,200]); }catch(e){}
     clearTimeout(tourneyT.big); tourneyT.big=setTimeout(()=>{ if(!liveBattle) battleBig(''); },11000); };

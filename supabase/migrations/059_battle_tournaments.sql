@@ -4,7 +4,7 @@
 -- whose audience sends the most vibes wins). Winners go through, the rest are knocked out (their live carries on as normal).
 -- After a short break the winners are paired again, until one creator is left. The champion gets bonus Vibez on their meter.
 -- To stop friends farming the bonus, it is only paid if the battles raised enough in gifts and a creator can win it only a couple of times a week.
--- Settings (app_settings): tourney_bonus_8 (20000), tourney_bonus_4 (10000), tourney_min_cents (1000), tourney_weekly_max (2).
+-- Settings (app_settings): tourney_bonus_8 (20000), tourney_bonus_4 (10000), tourney_min_cents (10000 from 060), tourney_weekly_max (2).
 
 alter table public.live_battles add column if not exists tournament_id uuid;
 alter table public.live_battles add column if not exists round int;
