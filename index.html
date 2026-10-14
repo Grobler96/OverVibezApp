@@ -375,6 +375,7 @@ html.live-open,html.live-open body{overscroll-behavior:none;overflow:hidden}
 body.vibe-open #floatLayer{bottom:215px}
 #topupModal,#liveGiftModal,#battleModal{z-index:136}
 #battleInviteModal{z-index:137}
+#tourneyModal,#bracketModal{z-index:136}
 .fl{position:absolute;bottom:0;left:50%;font-size:24px;animation:flup 2.6s ease-out forwards}
 @keyframes flup{0%{transform:translate(-50%,0) scale(.7);opacity:0}12%{opacity:1}100%{transform:translate(calc(-50% + 18px),-320px) scale(1.25);opacity:0}}
 .live-summary{margin:auto;width:min(420px,92%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;color:var(--text)}
@@ -398,6 +399,17 @@ body.vibe-open #floatLayer{bottom:215px}
 .lv-battle .bt-sc{display:flex;justify-content:space-between;font-size:13px;font-weight:800}
 .lv-battle .bt-sc .lead{color:#FFE35C}
 .lv-battle .bt-me{font-size:11px;color:#D9B8FF;text-align:center;margin-top:2px}
+.lv-battle .bt-rd{text-align:center;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#FFE35C;margin-bottom:3px}
+.lv-tourney{position:absolute;top:58px;left:12px;right:12px;z-index:6;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,215,0,.4);border-radius:999px;padding:8px 14px;color:#fff;font-size:12.5px;font-weight:800;text-align:center;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-rd{font-family:'Unbounded';font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+.tb-m{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:6px;font-size:13px}
+.tb-m b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-m b:last-child{text-align:right}
+.tb-m .mid{font-size:11.5px;text-align:center;color:var(--muted);font-weight:700}
+.tb-m .win{color:#FFD33D}.tb-m .out{opacity:.45;text-decoration:line-through}
+.tb-m.live{border-color:rgba(255,61,138,.6)}
+.tb-slot{display:flex;align-items:center;gap:10px;padding:8px 2px;font-size:14px}
+.tb-slot i{font-style:normal;width:26px;height:26px;border-radius:50%;background:var(--panel-2);display:grid;place-items:center;font-size:12px;font-weight:800;flex:none}
 .lv-bbig{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px;pointer-events:none;background:radial-gradient(circle at 50% 45%,rgba(255,61,138,.28),transparent 66%)}
 .lv-bbig button{pointer-events:auto}
 .lv-bbig .bb-n{font-family:'Unbounded';font-weight:800;font-size:clamp(70px,26vw,130px);line-height:1;color:#fff;text-shadow:0 6px 30px rgba(255,61,138,.8);animation:goldpop .6s cubic-bezier(.2,1.5,.4,1) both}
@@ -827,6 +839,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <canvas id="lvConfetti" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9"></canvas>
     <div id="lvGold" class="lv-gold hidden"></div>
     <div id="lvBattle" class="lv-battle hidden"></div>
+    <div id="lvTourney" class="lv-tourney hidden" onclick="openBracket()"></div>
     <div id="lvBattleBig" class="lv-bbig hidden"></div>
     <div class="lchat" id="lvChat"></div>
     <div class="live-bottom">
@@ -834,6 +847,7 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
       <button id="lvSendBtn" class="lv-send" onpointerdown="event.preventDefault()" onclick="liveSend()" title="Send" aria-label="Send">➤</button>
       <button id="lvVibeBtn" onclick="openVibes()" title="Send a vibe" style="background:linear-gradient(135deg,#FF3D8A,#8B5CF6)">✨</button>
       <button id="lvTipBtn" onclick="liveTip()" title="Tip £2">💰</button>
+      <button id="lvTourneyBtn" class="hidden" onclick="openTourneySheet()" title="Start a knockout tournament with other live creators" style="background:linear-gradient(135deg,#FFB443,#FF3D8A)">🏆</button>
       <button id="lvBattleBtn" class="hidden" onclick="openBattleSheet()" title="Challenge another live creator to a battle" style="background:linear-gradient(135deg,#FF3D8A,#FF8A3D)">⚔️</button>
       <button id="lvReportBtn" onclick="liveReport()" title="Report">⚑</button>
     </div>
@@ -880,6 +894,18 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
 </div>
 <div class="overlay" id="battleInviteModal">
   <div class="sheet" style="text-align:center" id="battleInviteBody"></div>
+</div>
+<div class="overlay" id="tourneyModal" onclick="if(event.target===this)closeModal('tourneyModal')">
+  <div class="sheet" style="max-height:84vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h3>🏆 Knockout tournament</h3><button onclick="closeModal('tourneyModal')" style="color:var(--muted);font-size:20px;padding:0 4px">✕</button></div>
+    <div id="tourneyBody"></div>
+  </div>
+</div>
+<div class="overlay" id="bracketModal" onclick="if(event.target===this)closeModal('bracketModal')">
+  <div class="sheet" style="max-height:84vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h3>🏆 The bracket</h3><button onclick="closeModal('bracketModal')" style="color:var(--muted);font-size:20px;padding:0 4px">✕</button></div>
+    <div id="bracketBody"></div>
+  </div>
 </div>
 
 <div class="overlay" id="liveGiftModal" onclick="if(event.target===this)closeModal('liveGiftModal')">
@@ -2291,6 +2317,8 @@ const notifInfo=n=>{
     case 'leaderboard_prize': return ['🏆','You came <b>'+(['','1st','2nd','3rd'][d.place||1]||'top 3')+'</b> on the '+esc(d.month||'month')+' leaderboard! <b>'+$$(d.cents||0)+'</b> has been added to your bonus balance'];
     case 'leaderboard_prize_held': return ['🏆','You came <b>'+(['','1st','2nd','3rd'][d.place||1]||'top 3')+'</b> on the '+esc(d.month||'month')+' leaderboard! Your <b>'+$$(d.cents||0)+'</b> prize has been approved and will be added to your bonus balance on <b>'+(d.release_at?new Date(d.release_at).toLocaleDateString('en-GB',{day:'numeric',month:'long'}):'in 14 days')+'</b>'];
     case 'leaderboard_prize_review': return ['🏆','The '+esc(d.month||'month')+' leaderboard prizes ('+$$(d.cents||0)+' in total) need checking before they are paid. Open Admin → Leaderboard'];
+    case 'tournament_invite': return ['🏆',who+' invited you to a '+(d.size||8)+' creator knockout tournament. Open your live to answer'];
+    case 'tournament_won': return ['🏆','You won the knockout tournament!'+(Number(d.vibez)>0?' <b>+'+fmtV(d.vibez)+' Vibez</b> added to your meter':'')];
     case 'battle_invite': return ['⚔️',who+' challenged you to a '+(d.minutes||5)+' minute battle. Open your live to answer'];
     case 'download_request': return ['⬇️',who+' asked to save one of your posts. Open Studio to say yes or no'];
     case 'download_ok': return ['✅',who+' said you can save that post. Tap ⬇ on it'];
@@ -3708,8 +3736,10 @@ async function liveChatStart(streamId){
     await ensureUsers([p.new.sender_id]); vibeArrived(p.new); })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'live_events',filter:'stream_id=eq.'+streamId},p=>liveEventArrived(p.new))
     .on('postgres_changes',{event:'*',schema:'public',table:'live_battles',filter:'stream_a=eq.'+streamId},p=>p.new&&battleChanged(p.new))
-    .on('postgres_changes',{event:'*',schema:'public',table:'live_battles',filter:'stream_b=eq.'+streamId},p=>p.new&&battleChanged(p.new)).subscribe();
+    .on('postgres_changes',{event:'*',schema:'public',table:'live_battles',filter:'stream_b=eq.'+streamId},p=>p.new&&battleChanged(p.new))
+    .on('postgres_changes',{event:'*',schema:'public',table:'live_tournament_players',filter:'stream_id=eq.'+streamId},()=>tourneyRefresh()).subscribe();
   sb.rpc('battle_active',{p_stream:streamId}).then(({data})=>{ if(data&&liveState&&liveState.id===streamId) battleChanged(data); },()=>{});
+  tourneyRefresh();
   sb.rpc('live_owner_present',{p_stream:streamId}).then(({data})=>{ if(!liveState||liveState.id!==streamId) return; const here=new Set(liveRoom?[store.session].concat([...liveRoom.remoteParticipants.values()].map(x=>x.identity)):[]);
     (data||[]).forEach(o=>{ liveOwnerAnn.add(o.actor); if(here.has(o.actor)) liveOwners.add(o.actor); }); paintOwnerPill(); liveRelayout(); },()=>{});
 }
@@ -3884,11 +3914,12 @@ async function liveGift(cents){
 /* ═══ BATTLES ═══ two live creators face off. Score = value of the vibes each one's own audience sends while the round runs. */
 let liveBattle=null, battleRoom2=null, battleT={}, battleMin=5, battleWaitId=null;
 const fmtClock=ms=>{ ms=Math.max(0,ms); const t=Math.ceil(ms/1000); return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'); };
-function battleBtnPaint(){ const b=document.getElementById('lvBattleBtn'); if(b) b.classList.toggle('hidden',!(liveState&&liveState.role==='broadcaster'&&!liveBattle&&!battleWaitId)); }
+function battleBtnPaint(){ const can=!!(liveState&&liveState.role==='broadcaster'&&!liveBattle&&!battleWaitId&&!tourneyBusy());
+  ['lvBattleBtn','lvTourneyBtn'].forEach(id=>{ const b=document.getElementById(id); if(b) b.classList.toggle('hidden',!can); }); }
 function battleReset(){
   clearInterval(battleT.tick); clearInterval(battleT.poll); clearTimeout(battleT.over); clearTimeout(battleT.wait); battleT={};
   if(battleRoom2){ try{ battleRoom2.disconnect(); }catch(e){} battleRoom2=null; }
-  liveBattle=null; battleWaitId=null;
+  liveBattle=null; battleWaitId=null; tourneyReset();
   ['lvBattle','lvBattleBig'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.classList.add('hidden'); el.innerHTML=''; } });
   const st=document.getElementById('lvStage'); if(st) st.classList.remove('lv-stage-battle');
   const m=document.getElementById('battleInviteModal'); if(m) m.classList.remove('open');
@@ -3942,9 +3973,9 @@ function battleChanged(b){
 }
 function battleStart(b){
   battleClearWait(); document.getElementById('battleInviteModal').classList.remove('open');
-  liveBattle={id:b.id,a:b.creator_a,b:b.creator_b,sa:b.stream_a,sb:b.stream_b,start:new Date(b.started_at).getTime(),end:new Date(b.ends_at).getTime(),ca:Number(b.score_a||0),cb:Number(b.score_b||0),skew:b.now?new Date(b.now).getTime()-Date.now():0,finishing:false};
-  document.getElementById('lvStage').classList.add('lv-stage-battle'); battleBtnPaint(); paintBattleHud();
-  battleConnectOpp(liveState.id===b.stream_a?b.stream_b:b.stream_a,b.id);
+  liveBattle={id:b.id,a:b.creator_a,b:b.creator_b,sa:b.stream_a,sb:b.stream_b,round:b.round||0,rounds:b.rounds||0,start:new Date(b.started_at).getTime(),end:new Date(b.ends_at).getTime(),ca:Number(b.score_a||0),cb:Number(b.score_b||0),skew:b.now?new Date(b.now).getTime()-Date.now():0,finishing:false};
+  document.getElementById('lvStage').classList.add('lv-stage-battle'); battleBtnPaint(); paintBattleHud(); paintTourneyBadge();
+  battleConnectOpp(liveState.id===b.stream_a?b.stream_b:b.stream_a,b.id); if(b.tournament) tourneyRefresh();
   clearInterval(battleT.tick); clearInterval(battleT.poll); battleT.tick=setInterval(battleTick,250); battleT.poll=setInterval(battlePoll,2000); battlePoll();
 }
 async function battleConnectOpp(oppStream,battleId){
@@ -3963,7 +3994,7 @@ function paintBattleHud(){
   const now=Date.now()+bt.skew, clock=now<bt.start?'GET READY':fmtClock(bt.end-now);
   const mine=liveState.creator===bt.a||liveState.creator===bt.b, side=liveState.creator===bt.a?na:nb;
   el.classList.remove('hidden');
-  el.innerHTML=`<div class="bt-row"><span>@${esc(na)}</span><span class="bt-timer">${clock}</span><span style="text-align:right">@${esc(nb)}</span></div>
+  el.innerHTML=`${bt.round?`<div class="bt-rd">🏆 ${tourneyRoundName(bt.round,bt.rounds)}</div>`:''}<div class="bt-row"><span>@${esc(na)}</span><span class="bt-timer">${clock}</span><span style="text-align:right">@${esc(nb)}</span></div>
     <div class="bt-bar"><i style="width:${pa}%"></i><i></i></div>
     <div class="bt-sc"><span class="${bt.ca>bt.cb?'lead':''}">${$$(bt.ca)}</span><span class="${bt.cb>bt.ca?'lead':''}">${$$(bt.cb)}</span></div>
     ${mine?'':'<div class="bt-me">Send vibes to help your creator win ✨</div>'}`;
@@ -3994,7 +4025,134 @@ function battleEnd(b){
   clearTimeout(battleT.over); battleT.over=setTimeout(()=>{ if(battleRoom2){ try{ battleRoom2.disconnect(); }catch(e){} battleRoom2=null; }
     const opp=liveState&&(liveState.creator===bt.a?bt.b:bt.a); document.querySelectorAll('#liveVideoWrap .lv-tile').forEach(t=>{ if(t.dataset.pid===opp) t.remove(); });
     liveBattle=null; document.getElementById('lvStage')&&document.getElementById('lvStage').classList.remove('lv-stage-battle');
-    battleBig(''); const h=document.getElementById('lvBattle'); if(h){ h.classList.add('hidden'); h.innerHTML=''; } liveRelayout(); battleBtnPaint(); },9000);
+    battleBig(''); const h=document.getElementById('lvBattle'); if(h){ h.classList.add('hidden'); h.innerHTML=''; } liveRelayout(); battleBtnPaint(); paintTourneyBadge(); },9000);
+}
+
+/* ═══ TOURNAMENTS ═══ 4 or 8 live creators fight knockout rounds of battles. Winners go through, the champion gets bonus Vibez on their meter. */
+let liveTourney=null, tourneySize=8, tourneyMins=3, tourneyT={};
+const tourneyRoundName=(r,n)=>{ const k=n-r; return k===0?'Final':k===1?'Semifinal':k===2?'Quarterfinal':'Round '+r; };
+const tourneyName=(st,id)=>{ const p=st&&st.players.find(x=>x.creator_id===id); return p?p.username:'creator'; };
+function tourneyMe(){ return liveTourney&&liveState?liveTourney.players.find(p=>p.stream_id===liveState.id):null; }
+function tourneyBusy(){ const m=tourneyMe(); return !!(m&&m.status==='in'&&liveTourney&&['lobby','running','between'].includes(liveTourney.status)); }
+function tourneyReset(){
+  clearInterval(tourneyT.poll); clearInterval(tourneyT.tick); clearInterval(tourneyT.sheet); clearTimeout(tourneyT.big); clearTimeout(tourneyT.inv);
+  tourneyT={}; liveTourney=null;
+  const b=document.getElementById('lvTourney'); if(b){ b.classList.add('hidden'); b.textContent=''; }
+  ['tourneyModal','bracketModal'].forEach(id=>{ const m=document.getElementById(id); if(m) m.classList.remove('open'); });
+}
+async function tourneyRefresh(){
+  if(!liveState) return; const sid=liveState.id; const {data}=await sb.rpc('tournament_active',{p_stream:sid});
+  if(!liveState||liveState.id!==sid) return; tourneyApply(data||null);
+}
+function tourneyApply(st){
+  liveTourney=st;
+  if(!st){ clearInterval(tourneyT.poll); tourneyT.poll=null; clearInterval(tourneyT.tick); tourneyT.tick=null; paintTourneyBadge(); battleBtnPaint(); return; }
+  st.skew=st.now?new Date(st.now).getTime()-Date.now():0;
+  const me=tourneyMe(), broad=!!(liveState&&liveState.role==='broadcaster'), on=['lobby','running','between'].includes(st.status);
+  if(on&&!tourneyT.poll) tourneyT.poll=setInterval(tourneyRefresh,6000);
+  if(!on&&tourneyT.poll){ clearInterval(tourneyT.poll); tourneyT.poll=null; }
+  clearInterval(tourneyT.tick); tourneyT.tick=(st.status==='between'||st.status==='lobby')?setInterval(paintTourneyBadge,1000):null;
+  tourneyT.seen=tourneyT.seen||{};
+  if(st.status==='lobby'&&me&&me.status==='invited'&&broad&&!liveBattle&&tourneyT.shown!==st.id){ tourneyT.shown=st.id; tourneyInviteShow(st); }
+  if(me&&me.status==='out'&&broad&&!tourneyT.seen[st.id+':out']){ tourneyT.seen[st.id+':out']=1; toast('You are out in the '+tourneyRoundName(me.out_round||st.round,st.rounds)+'. Your live carries on 💛'); }
+  if(st.status==='finished'&&st.champion&&!tourneyT.seen[st.id+':win']){ tourneyT.seen[st.id+':win']=1; tourneyChampion(st); }
+  paintTourneyBadge(); battleBtnPaint();
+  if(document.getElementById('bracketModal').classList.contains('open')) paintBracket();
+  if(document.getElementById('tourneyModal').classList.contains('open')) paintTourneySheet();
+}
+function paintTourneyBadge(){
+  const el=document.getElementById('lvTourney'); if(!el) return; const st=liveTourney;
+  if(!st||liveBattle||st.status==='cancelled'){ el.classList.add('hidden'); return; }
+  const me=tourneyMe(), now=Date.now()+(st.skew||0); let t;
+  if(st.status==='lobby') t='🏆 Knockout tournament forming ('+st.players.filter(p=>p.status==='in').length+'/'+st.size+')';
+  else if(st.status==='finished'){ const w=st.players.find(p=>p.status==='champion'); t='🏆 '+(w?'@'+w.username:'A champion')+' won the tournament'; }
+  else if(me&&me.status==='out') t='Knocked out in the '+tourneyRoundName(me.out_round||st.round,st.rounds);
+  else if(st.status==='between') t='🏆 '+tourneyRoundName(st.round+1,st.rounds)+' starts in '+Math.max(0,Math.ceil((new Date(st.next_at).getTime()-now)/1000))+'s';
+  else t='🏆 '+tourneyRoundName(st.round,st.rounds)+' in progress';
+  el.textContent=t+' · tap for bracket'; el.classList.remove('hidden');
+}
+function tourneyChampion(st){
+  const go=()=>{ if(!liveState) return; const w=st.players.find(p=>p.status==='champion'); if(!w) return;
+    const me=liveState.role==='broadcaster'&&liveState.creator===w.creator_id;
+    battleBig(`<div class="bb-t bb-end" style="font-size:26px">🏆 @${esc(w.username)} wins the tournament!</div>${Number(st.bonus_vibez)>0?`<div class="bb-s" style="margin-top:8px;font-weight:800;color:#FFE35C;font-size:16px">+${fmtV(st.bonus_vibez)} Vibez added to their meter ✨</div>`:''}${me?'<div class="bb-s" style="margin-top:8px">You are the champion! 🎉</div>':''}`);
+    confettiBurst('lvConfetti',['#FFD700','#FFC107','#FFB443','#FFF2B3','#FFFFFF','#FF3D8A'],420,160);
+    try{ if(navigator.vibrate) navigator.vibrate([100,50,100,50,200]); }catch(e){}
+    clearTimeout(tourneyT.big); tourneyT.big=setTimeout(()=>{ if(!liveBattle) battleBig(''); },11000); };
+  if(liveBattle) tourneyT.big=setTimeout(go,9400); else go();
+}
+function tourneyInviteShow(st){
+  const host=tourneyName(st,st.host);
+  document.getElementById('battleInviteBody').innerHTML=`<div style="font-size:42px">🏆</div><h3 style="margin-top:4px">${esc(host)} invited you to a tournament!</h3>
+    <p>${st.size} live creators, ${st.minutes} minute rounds. Win your battles to go through to the final. The champion gets bonus Vibez on their meter. You keep everything you earn.</p>
+    <button class="primary" onclick="tourneyAnswer('${st.id}',true)">I'm in</button><button class="ghost" onclick="tourneyAnswer('${st.id}',false)">Not now</button>`;
+  document.getElementById('battleInviteModal').classList.add('open'); clearTimeout(tourneyT.inv); tourneyT.inv=setTimeout(()=>document.getElementById('battleInviteModal').classList.remove('open'),120000);
+}
+async function tourneyAnswer(id,accept){
+  document.getElementById('battleInviteModal').classList.remove('open'); clearTimeout(tourneyT.inv);
+  const {error}=await sb.rpc('tournament_respond',{p_tournament:id,p_accept:accept}); if(error) return toast(friendly(error.message));
+  if(accept) toast('You are in! Waiting for the host to start 🏆'); tourneyRefresh();
+}
+async function openTourneySheet(){
+  if(!liveState||liveState.role!=='broadcaster') return;
+  try{ await loadLive(); }catch(e){}
+  await tourneyRefresh(); paintTourneySheet(); openModal('tourneyModal');
+  clearInterval(tourneyT.sheet); let n=0; tourneyT.sheet=setInterval(()=>{ if(!document.getElementById('tourneyModal').classList.contains('open')){ clearInterval(tourneyT.sheet); return; }
+    tourneyRefresh(); if(++n%3===0) loadLive().then(paintTourneySheet).catch(()=>{}); },2000);
+}
+function paintTourneySheet(){
+  const el=document.getElementById('tourneyBody'); if(!el) return; const st=liveTourney, lobby=st&&st.status==='lobby'&&st.host===store.session;
+  if(!lobby){
+    const on=st&&['running','between'].includes(st.status)&&tourneyBusy();
+    el.innerHTML=on?`<p>Your tournament is on. Tap the badge on your live any time to see the bracket.</p><button class="primary" onclick="closeModal('tourneyModal');openBracket()">See the bracket</button>`
+      :`<p>Invite other creators who are live. Everyone is paired up at random and every pair battles at the same time. Winners go through, the rest are knocked out (their live carries on). The last creator standing wins bonus Vibez on their meter.</p>
+      <div class="chiprow" style="padding:0 0 8px">${[4,8].map(n=>`<button class="chip ${tourneySize===n?'on':''}" onclick="tourneySize=${n};paintTourneySheet()">${n} creators</button>`).join('')}</div>
+      <div class="chiprow" style="padding:0 0 12px">${[3,5].map(m=>`<button class="chip ${tourneyMins===m?'on':''}" onclick="tourneyMins=${m};paintTourneySheet()">${m} min rounds</button>`).join('')}</div>
+      <button class="primary" onclick="tourneyOpen()">Open the lobby</button>`;
+    return; }
+  const inn=st.players.filter(p=>p.status==='in'), slots=[...Array(st.size)].map((_,i)=>inn[i]);
+  const others=store.live.filter(l=>l.creator_id!==store.session&&user(l.creator_id));
+  el.innerHTML=`<p style="margin-bottom:6px">${inn.length} of ${st.size} creators are in. ${st.minutes} minute rounds.</p>
+    <div style="margin-bottom:10px">${slots.map((p,i)=>`<div class="tb-slot"><i>${i+1}</i>${p?`<b>@${esc(p.username)}</b>`:'<span style="color:var(--muted)">Waiting for a creator…</span>'}</div>`).join('')}</div>
+    <div class="section-title" style="padding:0 0 6px">Creators who are live</div>
+    ${others.length?`<div class="list-card" style="margin:0 0 12px">${others.map(l=>{ const c=user(l.creator_id), p=st.players.find(x=>x.creator_id===l.creator_id);
+      const act=p&&p.status==='in'?'<span style="color:#3DDC97;font-weight:700">✓ In</span>':p&&p.status==='invited'?'<span style="color:var(--muted)">Invited</span>':`<button class="fbtn" onclick="tourneyInvite('${l.id}')">Invite</button>`;
+      return `<div class="pcard"><div class="av ${c.av}">${avInner(c)}</div><div class="tx"><b>${esc(c.username)}</b><span>${esc(l.title)}</span></div>${act}</div>`; }).join('')}</div>`
+      :'<p style="color:var(--muted);padding:8px 0 12px">Nobody else is live right now. Ask creators to go live, then invite them here.</p>'}
+    <button class="primary" ${inn.length<st.size?'disabled style="opacity:.5"':''} onclick="tourneyStart()">${inn.length<st.size?'Waiting for '+(st.size-inn.length)+' more':'Start the tournament'}</button>
+    <button class="ghost" onclick="tourneyLeave()">Cancel the tournament</button>`;
+}
+async function tourneyOpen(){
+  const {error}=await sb.rpc('tournament_create',{p_stream:liveState.id,p_size:tourneySize,p_minutes:tourneyMins}); if(error) return toast(friendly(error.message));
+  await tourneyRefresh(); paintTourneySheet();
+}
+async function tourneyInvite(streamId){
+  if(!liveTourney) return; const {error}=await sb.rpc('tournament_invite',{p_tournament:liveTourney.id,p_stream:streamId}); if(error) return toast(friendly(error.message));
+  toast('Invite sent 🏆'); tourneyRefresh();
+}
+async function tourneyStart(){
+  if(!liveTourney) return; const {data,error}=await sb.rpc('tournament_start',{p_tournament:liveTourney.id}); if(error) return toast(friendly(error.message));
+  closeModal('tourneyModal'); if(data) tourneyApply(data);
+}
+async function tourneyLeave(){
+  if(!liveTourney) return; await sb.rpc('tournament_leave',{p_tournament:liveTourney.id}); closeModal('tourneyModal'); tourneyRefresh();
+}
+async function openBracket(){
+  if(!liveTourney) return; paintBracket(); openModal('bracketModal');
+  clearInterval(tourneyT.sheet2); tourneyT.sheet2=setInterval(async()=>{ if(!document.getElementById('bracketModal').classList.contains('open')){ clearInterval(tourneyT.sheet2); return; }
+    if(!liveTourney) return; const {data}=await sb.rpc('tournament_state',{p_tournament:liveTourney.id}); if(data) tourneyApply(data); },3000);
+}
+function paintBracket(){
+  const el=document.getElementById('bracketBody'), st=liveTourney; if(!el||!st) return;
+  const out=new Set(st.players.filter(p=>p.status==='out').map(p=>p.creator_id));
+  el.innerHTML=[...Array(st.rounds)].map((_,i)=>{ const r=i+1, n=st.size>>r, bs=st.battles.filter(b=>b.round===r);
+    return `<div class="tb-rd">${tourneyRoundName(r,st.rounds)}</div>`+[...Array(n)].map((_,k)=>{ const b=bs.find(x=>x.slot===k+1);
+      if(!b) return `<div class="tb-m"><b style="color:var(--muted)">To be decided</b><span class="mid">vs</span><b style="color:var(--muted)">To be decided</b></div>`;
+      const ended=b.status==='ended', wa=ended&&b.winner&&b.winner===b.creator_a, wb=ended&&b.winner&&b.winner===b.creator_b;
+      return `<div class="tb-m ${b.status==='active'?'live':''}"><b class="${wa?'win':wb?'out':''}">${wa?'🏆 ':''}@${esc(tourneyName(st,b.creator_a))}</b>
+        <span class="mid">${$$(Number(b.score_a))} · ${$$(Number(b.score_b))}<br>${b.status==='active'?'<span style="color:var(--live)">LIVE</span>':ended?(b.winner?'done':'draw'):''}</span>
+        <b class="${wb?'win':wa?'out':''}">@${esc(tourneyName(st,b.creator_b))}${wb?' 🏆':''}</b></div>`; }).join(''); }).join('')
+    +(st.status==='finished'&&st.champion?`<p style="margin-top:12px;text-align:center;font-weight:800;color:#FFD33D">🏆 @${esc(tourneyName(st,st.champion))} is the champion${Number(st.bonus_vibez)>0?' · +'+fmtV(st.bonus_vibez)+' Vibez':''}</p>`:'')
+    +`<p style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.5">Each battle is won by whoever's audience sends the most vibes. A draw goes to the creator higher in the bracket. A creator who ends their live loses the match.</p>`;
 }
 
 /* leaving / ending */
