@@ -295,3 +295,6 @@ Month-end prizes now go to the top 3 (`lb_prizes` has a `place` and `pct`): 1st 
 - 1v1 battle challenges are blocked for creators who are in a tournament.
 - Viewers see the same battle screen as before plus a round label, a badge ("Semifinal starts in 12s", "Knocked out in the Quarterfinal"), a bracket view and a champion celebration. They get updates through realtime on `live_tournament_players` (filtered by stream) plus a 6 second refresh while a tournament is on.
 
+
+### 061 — the "no bonus" reason is private to the champion
+If a tournament champion does not get bonus Vibez (not enough gifts, weekly limit), the reason is only in their own notification and their own copy of the tournament state. `_tourney_json` leaves `bonus_note` out for everyone else, and `bonus_note` is no longer readable from the `live_tournaments` table (column grants). Everyone sees who won, and the bonus only if it was paid.
