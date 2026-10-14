@@ -2289,6 +2289,7 @@ const notifInfo=n=>{
     case 'age_approved': return ['✅','Your 18+ check is done. You can now post, go live and add money'];
     case 'leaderboard_bonus': return ['🏆','You came <b>#'+(d.place||'')+'</b> on this week\'s leaderboard! <b>+'+fmtV(d.vibez||0)+' bonus Vibez</b> added to your meter'];
     case 'leaderboard_prize': return ['🏆','You came <b>'+(['','1st','2nd','3rd'][d.place||1]||'top 3')+'</b> on the '+esc(d.month||'month')+' leaderboard! <b>'+$$(d.cents||0)+'</b> has been added to your bonus balance'];
+    case 'leaderboard_prize_held': return ['🏆','You came <b>'+(['','1st','2nd','3rd'][d.place||1]||'top 3')+'</b> on the '+esc(d.month||'month')+' leaderboard! Your <b>'+$$(d.cents||0)+'</b> prize has been approved and will be added to your bonus balance on <b>'+(d.release_at?new Date(d.release_at).toLocaleDateString('en-GB',{day:'numeric',month:'long'}):'in 14 days')+'</b>'];
     case 'leaderboard_prize_review': return ['🏆','The '+esc(d.month||'month')+' leaderboard prizes ('+$$(d.cents||0)+' in total) need checking before they are paid. Open Admin → Leaderboard'];
     case 'battle_invite': return ['⚔️',who+' challenged you to a '+(d.minutes||5)+' minute battle. Open your live to answer'];
     case 'download_request': return ['⬇️',who+' asked to save one of your posts. Open Studio to say yes or no'];
@@ -2321,7 +2322,7 @@ function notifOpen(i){
   if(n.type==='live'&&n.ref_id) return openLive(n.ref_id);
   if(n.type==='comment'&&n.ref_id&&store.posts.some(p=>p.id===n.ref_id)) return openComments(n.ref_id);
   if(n.type==='payout_paid') return go('studio');
-  if(n.type==='leaderboard_bonus'||n.type==='leaderboard_prize') return openBoard('notifs');
+  if(n.type==='leaderboard_bonus'||n.type==='leaderboard_prize'||n.type==='leaderboard_prize_held') return openBoard('notifs');
   if(n.type==='leaderboard_prize_review'){ try{ sessionStorage.setItem('ov_admtab','lb'); }catch(e){} adminTab='lb'; return go('admin'); }
   if(n.type==='removed'&&n.ref_id&&n.data&&['post','comment'].includes(n.data.kind)) return openAppeal(n.data.kind,n.ref_id);
   if(n.type==='won'||n.type==='prize_shipped'||n.type==='new_giveaway'||n.type==='raffle_result') return go('raffles');
@@ -4599,24 +4600,26 @@ async function admOverview(){
 /* --- leaderboard prizes: the monthly winner is checked here before any money is paid --- */
 async function admLb(){
   const {data,error}=await admCall('admin_lb_prizes',{p_status:'all'}); if(error) return;
-  const pend=data.filter(z=>z.status==='pending'), done=data.filter(z=>z.status!=='pending');
+  const pend=data.filter(z=>z.status==='pending'), wait=data.filter(z=>z.status==='approved'), done=data.filter(z=>z.status==='paid'||z.status==='rejected');
   const card=z=>{ const st=z.stats||{}, sup=(st.top_supporters||[]), tot=sup.reduce((n,x)=>n+Number(x.vibez),0)||1;
     return `<div class="chart-card" style="margin:0 0 10px"><b>${esc(z.month)} ${['','🥇 winner','🥈 2nd place','🥉 3rd place'][z.place||1]} (${z.pct||100}%): @${esc(z.username)}</b>
-      <div style="font-size:13px;margin:6px 0">${fmtV(z.vibez)} Vibez at ${z.pct||100}% = ${lbGbp(z.calc_cents)}${z.capped?` <b style="color:var(--live)">limited to ${lbGbp(z.amount_cents)} by the cap</b>`:''}</div>
+      <div style="font-size:13px;margin:6px 0">${fmtV(z.vibez)} Vibez at ${z.pct||100}% = ${lbGbp(z.calc_cents)}${Number(z.raw_vibez)>Number(z.vibez)?` <span style="color:var(--muted)">(${fmtV(z.raw_vibez)} sent, ${fmtV(z.raw_vibez-z.vibez)} not counted because one supporter gave too much)</span>`:''}${z.capped?` <b style="color:var(--live)">limited to ${lbGbp(z.amount_cents)} by the cap</b>`:''}</div>
       <div style="font-size:12.5px;color:var(--muted);line-height:1.6">${st.supporters||0} different supporters · ${st.payments||0} payments · ${fmtV(st.bonus_vibez||0)} bonus Vibez<br>
         <b style="color:${(st.new_accounts||0)>0?'var(--live)':'inherit'}">${st.new_accounts||0}</b> supporters had accounts under 14 days old · <b style="color:${(st.only_this_creator||0)>(st.supporters||0)/2?'var(--live)':'inherit'}">${st.only_this_creator||0}</b> only ever gave to this creator</div>
       ${sup.length?`<div style="font-size:12.5px;margin-top:6px">Top supporters: ${sup.map(x=>'@'+esc(x.username)+' '+Math.round(x.vibez/tot*100)+'%').join(', ')}</div>`:''}
-      ${z.status==='pending'?`<div style="margin-top:10px"><button class="abtn ok" onclick="admLbDecide('${z.id}',true,${z.amount_cents},'${esc(z.username)}')">Pay ${lbGbp(z.amount_cents)}</button> <button class="abtn danger" onclick="admLbDecide('${z.id}',false)">Do not pay</button> <button class="abtn" onclick="admOpenUser('${z.creator_id}')">Look at the account</button></div>`
+      ${z.status==='pending'?`<div style="margin-top:10px"><button class="abtn ok" onclick="admLbDecide('${z.id}',true,${z.amount_cents},'${esc(z.username)}')">Approve ${lbGbp(z.amount_cents)}</button> <button class="abtn danger" onclick="admLbDecide('${z.id}',false)">Do not pay</button> <button class="abtn" onclick="admOpenUser('${z.creator_id}')">Look at the account</button></div>`
+        :z.status==='approved'?`<div style="font-size:12.5px;margin-top:8px"><b>Approved</b>. Pays ${new Date(z.release_at).toLocaleDateString('en-GB',{day:'numeric',month:'long'})} after a final refund check (it can only go down). <button class="abtn danger" onclick="admLbDecide('${z.id}',false)">Cancel it</button></div>`
         :`<div style="font-size:12.5px;margin-top:8px"><b>${z.status==='paid'?'Paid':'Not paid'}</b>${z.note?' · '+esc(z.note):''}</div>`}</div>`; };
   admBody().innerHTML=`<div class="admin-pad"><div class="section-title" style="padding:0 0 6px">Needs checking</div>${pend.length?pend.map(card).join(''):admEmpty('No prizes waiting. The top 3 appear here after each month closes.')}
+    ${wait.length?`<div class="section-title" style="padding:14px 0 6px">Approved, waiting to be paid</div>${wait.map(card).join('')}`:''}
     ${done.length?`<div class="section-title" style="padding:14px 0 6px">Earlier months</div>${done.map(card).join('')}`:''}
-    <p style="font-size:12px;color:var(--muted);line-height:1.5">Before paying, look for gifts from brand new accounts, supporters who only ever gave to this creator, or one supporter making up most of the total. Those are the signs of someone sending gifts to themselves. Paid prizes go into the creator's bonus balance.</p></div>`;
+    <p style="font-size:12px;color:var(--muted);line-height:1.5">Before paying, look for gifts from brand new accounts, supporters who only ever gave to this creator, or one supporter making up most of the total. Those are the signs of someone sending gifts to themselves. Counts already limit any one supporter to 25% of a creator's total. An approved prize is paid 14 days later, after a last check for refunds, and goes into the creator's bonus balance.</p></div>`;
 }
 async function admLbDecide(id,ok,cents,name){
   let note=null;
-  if(ok){ if(!confirm('Pay '+lbGbp(cents)+' to @'+name+'?\n\nIt goes into their bonus balance and cannot be undone. Have you checked who sent the gifts?')) return; note='checked'; }
+  if(ok){ if(!confirm('Approve '+lbGbp(cents)+' for @'+name+'?\n\nIt is paid into their bonus balance in 14 days, after a last check for refunds. You can cancel it until then. Have you checked who sent the gifts?')) return; note='checked'; }
   else { note=prompt('Why are you not paying this prize? (the creator is not told this)',''); if(note===null) return; }
-  const {error}=await admCall('admin_lb_decide',{p_prize:id,p_approve:ok,p_note:note}); if(error) return; toast(ok?'Prize paid 🏆':'Marked as not paid'); admLoad();
+  const {error}=await admCall('admin_lb_decide',{p_prize:id,p_approve:ok,p_note:note}); if(error) return; toast(ok?'Approved. It pays in 14 days 🏆':'Marked as not paid'); admLoad();
 }
 /* --- referral rewards: approve each reward after looking at the accounts (admin only) --- */
 async function admReferrals(){

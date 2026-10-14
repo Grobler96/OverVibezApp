@@ -281,3 +281,9 @@ When a creator starts Stripe setup, Stripe's "business website" box is pre-fille
 
 ### 057 — no prize cap, runner-up prizes
 Month-end prizes now go to the top 3 (`lb_prizes` has a `place` and `pct`): 1st 100% of the Vibez value (£1 per 1,000 Vibez), 2nd 25%, 3rd 10%, each reviewed and paid separately in Admin, Money, Leaderboard, each into the creator's bonus balance with its own notification. There is no cap: `lb_prize_cap_cents` now only applies if it is set above 0. The percentages are `app_settings` keys `lb_prize_pct_1/2/3` (100/25/10). The board shows what 1st to 3rd would be paid if the month ended now, and last month's prizes as paid or "being checked" (a rejected prize is shown as being checked, not as rejected).
+
+### 058 — leaderboard anti-cheat
+- One supporter counts for at most 25% of a creator's total for the week or month (`lb_supporter_cap_pct`), but every supporter counts in full up to 10,000 Vibez (`lb_supporter_floor_vibez`), so small creators are not affected. The limit shapes the board, the weekly bonuses and the monthly prizes. Admins see how many Vibez were sent against how many counted.
+- Approving a prize no longer pays it. It waits `lb_prize_hold_days` (14) days. The hourly job `lb_release_prizes` then recalculates it (refunds remove gifts) and pays the lower of the approved and the recalculated amount. An admin can cancel an approved prize before it is released. The creator gets a `leaderboard_prize_held` notification on approval and `leaderboard_prize` on release.
+- This makes a ring of fake accounts more expensive (it needs at least four) but does not make it impossible, so the admin check stays.
+
