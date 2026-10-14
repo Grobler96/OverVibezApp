@@ -351,7 +351,7 @@ body:has(.overlay.open) .install-bar,body:has(.live-overlay.open) .install-bar{d
 #vibeModal .sheet h3{font-size:14px;margin-bottom:2px}
 #vibeModal .sheet p{margin-bottom:8px;font-size:12.5px}
 body.vibe-open #floatLayer{bottom:215px}
-#topupModal{z-index:136}
+#topupModal,#liveGiftModal{z-index:136}
 .fl{position:absolute;bottom:0;left:50%;font-size:24px;animation:flup 2.6s ease-out forwards}
 @keyframes flup{0%{transform:translate(-50%,0) scale(.7);opacity:0}12%{opacity:1}100%{transform:translate(calc(-50% + 18px),-320px) scale(1.25);opacity:0}}
 .live-summary{margin:auto;width:min(420px,92%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;color:var(--text)}
@@ -359,6 +359,25 @@ body.vibe-open #floatLayer{bottom:215px}
 #payModal,#reportModal,#commentsModal{z-index:130}
 #liveVideoWrap{position:absolute;inset:0;background:#000;display:grid;place-items:center}
 #liveVideoWrap video{width:100%;height:100%;object-fit:cover}
+.lv-tile{position:relative;width:100%;height:100%;overflow:hidden;background:#000}
+#liveVideoWrap.split{grid-template-rows:1fr 1fr;gap:2px}
+.lv-tag{position:absolute;right:10px;bottom:8px;z-index:3;font-size:11.5px;font-weight:700;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);color:#fff;border-radius:999px;padding:4px 10px}
+.lv-tag:empty{display:none}
+.lv-tile~.lv-tile .lv-tag{top:10px;bottom:auto}
+.lv-owner{position:absolute;right:14px;bottom:78px;display:flex;flex-direction:column;gap:10px;z-index:7}
+.lv-owner button{width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);border:1px solid rgba(255,215,0,.55);font-size:20px;color:#fff}
+.lv-ownerpill{position:absolute;top:188px;left:14px;z-index:5;background:linear-gradient(135deg,#FFE35C,#FFB443);color:#3a2600;font-weight:800;font-size:12px;border-radius:999px;padding:6px 12px;box-shadow:0 4px 14px rgba(255,180,0,.4)}
+.vbanner.gold{background:linear-gradient(135deg,#FFD700,#E0A800);color:#3a2600}
+.lv-gold{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px;pointer-events:none;background:radial-gradient(circle at 50% 45%,rgba(255,215,0,.30),transparent 68%)}
+.lv-gold .lvg-amt{font-family:'Unbounded';font-weight:800;font-size:clamp(64px,22vw,118px);line-height:1;background:linear-gradient(180deg,#FFF6B0,#FFD700 45%,#C98F00);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 18px rgba(255,200,0,.7))}
+.lv-gold .lvg-t{margin-top:14px;font-size:19px;font-weight:700;color:#FFE9A0;text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.lv-gold .lvg-s{margin-top:6px;font-size:14px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.lv-gold.go .lvg-amt{animation:goldpop .9s cubic-bezier(.2,1.5,.4,1) both,goldshine 1.6s ease-in-out .9s infinite}
+.lv-gold.go .lvg-t,.lv-gold.go .lvg-s{animation:goldfade .6s .35s both}
+@keyframes goldpop{0%{transform:scale(.2);opacity:0}60%{transform:scale(1.18);opacity:1}100%{transform:scale(1)}}
+@keyframes goldshine{0%,100%{filter:drop-shadow(0 4px 18px rgba(255,200,0,.7)) brightness(1)}50%{filter:drop-shadow(0 4px 30px rgba(255,220,80,.95)) brightness(1.25)}}
+@keyframes goldfade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.lv-gold.go .lvg-amt,.lv-gold.go .lvg-t,.lv-gold.go .lvg-s{animation:none}}
 .av,.r-ic{overflow:hidden}
 .av img,.r-ic img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
 .cover{height:130px;background:var(--panel-2) center/cover no-repeat;margin:0 14px;border-radius:18px}
@@ -756,6 +775,14 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     </div>
     <div class="live-title-bar"><b id="lvTitle"></b><span id="lvSub"></span></div>
     <div id="lvTop" class="live-title-bar" style="top:96px;font-size:12px;opacity:.95"></div>
+    <div id="lvOwnerPill" class="lv-ownerpill hidden">👑 OverVibez Owner is here</div>
+    <div id="lvOwner" class="lv-owner hidden">
+      <button onclick="liveAnnounce()" title="Announce that you are here" aria-label="Announce you are here">📣</button>
+      <button id="lvCamBtn" onclick="liveToggleCam()" title="Go on camera with them" aria-label="Go on camera">🎥</button>
+      <button onclick="openLiveGift()" title="Gift a bonus" aria-label="Gift a bonus">🎁</button>
+    </div>
+    <canvas id="lvConfetti" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9"></canvas>
+    <div id="lvGold" class="lv-gold hidden"></div>
     <div class="lchat" id="lvChat"></div>
     <div class="live-bottom">
       <input id="lvInput" placeholder="Say something…" maxlength="300" onkeydown="if(event.key==='Enter')liveSend()">
@@ -793,6 +820,16 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div class="err" id="bulkErr"></div>
     <button class="primary" id="bulkGo" onclick="bulkStart()" disabled>Upload</button>
     <button class="ghost" id="bulkClose" onclick="closeModal('bulkModal')">Close</button>
+  </div>
+</div>
+
+<div class="overlay" id="liveGiftModal" onclick="if(event.target===this)closeModal('liveGiftModal')">
+  <div class="sheet">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h3>🎁 Gift a bonus</h3><button onclick="closeModal('liveGiftModal')" style="color:var(--muted);font-size:20px;padding:0 4px">✕</button></div>
+    <p id="lgSub"></p>
+    <div class="vibe-grid" id="lgGrid"></div>
+    <div class="field" style="margin-top:10px"><input id="lgCustom" type="number" inputmode="decimal" min="1" max="100" step="0.01" placeholder="Another amount, £1 to £100"></div>
+    <button class="primary" style="margin-top:0" onclick="liveGiftCustom()">Gift this amount</button>
   </div>
 </div>
 
@@ -2048,15 +2085,15 @@ function closeWin(){
   winCurrent=null; setTimeout(nextWin,350);
 }
 function stopConfetti(id){ if(confettiRaf) cancelAnimationFrame(confettiRaf); confettiRaf=null; const c=document.getElementById(id||'confetti'); if(c){ const x=c.getContext('2d'); x.clearRect(0,0,c.width,c.height); } }
-function confettiBurst(id){
+function confettiBurst(id,palette,count,stagger){
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const cid=id||'confetti', c=document.getElementById(cid), x=c.getContext('2d'); c.width=innerWidth; c.height=innerHeight;
-  const cols=['#FF3D8A','#8B5CF6','#FFB443','#3DDC97','#FFFFFF'], ps=[];
-  for(let i=0;i<170;i++) ps.push({x:c.width/2+(Math.random()-.5)*80,y:c.height*.4,vx:(Math.random()-.5)*14,vy:-Math.random()*15-4,g:.32+Math.random()*.2,s:5+Math.random()*7,r:Math.random()*6.3,vr:(Math.random()-.5)*.4,c:cols[i%cols.length],life:140+Math.random()*80});
+  const cid=id||'confetti', c=document.getElementById(cid), x=c.getContext('2d'); c.width=c.clientWidth||innerWidth; c.height=c.clientHeight||innerHeight;
+  const cols=palette||['#FF3D8A','#8B5CF6','#FFB443','#3DDC97','#FFFFFF'], ps=[], st=stagger||0;
+  for(let i=0;i<(count||170);i++) ps.push({x:c.width/2+(Math.random()-.5)*80,y:c.height*.4,vx:(Math.random()-.5)*14,vy:-Math.random()*15-4,g:.32+Math.random()*.2,s:5+Math.random()*7,r:Math.random()*6.3,vr:(Math.random()-.5)*.4,c:cols[i%cols.length],life:140+Math.random()*80,d:Math.random()*st});
   let f=0; (function tick(){
     x.clearRect(0,0,c.width,c.height); f++;
-    ps.forEach(p=>{ p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.vx*=.99; p.r+=p.vr; if(p.life-->0&&p.y<c.height+20){ x.save(); x.translate(p.x,p.y); x.rotate(p.r); x.fillStyle=p.c; x.globalAlpha=Math.min(1,p.life/40); x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6); x.restore(); } });
-    if(f<300) confettiRaf=requestAnimationFrame(tick); else stopConfetti(cid);
+    ps.forEach(p=>{ if(f<p.d) return; p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.vx*=.99; p.r+=p.vr; if(p.life-->0&&p.y<c.height+20){ x.save(); x.translate(p.x,p.y); x.rotate(p.r); x.fillStyle=p.c; x.globalAlpha=Math.min(1,p.life/40); x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6); x.restore(); } });
+    if(f<300+st) confettiRaf=requestAnimationFrame(tick); else stopConfetti(cid);
   })();
 }
 async function checkWins(){
@@ -3395,6 +3432,7 @@ function setLiveEntry(t){ liveEntry=t;
   document.getElementById('livePriceField').classList.toggle('hidden',t==='free'); }
 function openCreate(){ setCreateMode('post'); document.getElementById('cmLive').classList.toggle('hidden',!features.live); openModal('createModal'); }
 
+let liveOwners=new Set(), liveAttach=null, liveGoldT=null;
 let liveRoom=null, liveState=null, liveTimer=null, liveBeat=null, livePollT=null, liveChannel=null, liveSeen=new Set();
 async function loadLive(){
   const since=new Date(Date.now()-90e3).toISOString();
@@ -3432,7 +3470,7 @@ async function openLive(streamId){
   const u=me(); if(s.creator_id===u.id) return toast('You are the broadcaster of this stream');
   if(liveState) return;
   const c=user(s.creator_id);
-  if(s.entry_price_cents>0){
+  if(s.entry_price_cents>0&&!isAdmin()){
     const {data}=await sb.from('live_tickets').select('stream_id').eq('stream_id',s.id).eq('user_id',u.id);
     if(!data||!data.length){
       payBtn(); document.getElementById('payTitle').textContent='Join '+c.username+' live';
@@ -3461,11 +3499,16 @@ async function connectLive(streamId,role,meta){
   const t=await liveToken(streamId);
   const {Room,RoomEvent,Track}=window.LivekitClient;
   const room=new Room({adaptiveStream:true,dynacast:true});
-  liveRoom=room; liveState={id:streamId,role,start:Date.now(),title:meta.title,price:meta.price,creator:meta.creator,peak:0,ending:false};
-  const wrap=document.getElementById('liveVideoWrap'); wrap.innerHTML='';
-  const attach=tr=>{ if(tr.kind==='video'){ const el=tr.attach(); el.setAttribute('playsinline',''); wrap.appendChild(el); } else if(role==='viewer'){ const el=tr.attach(); el.style.display='none'; wrap.appendChild(el); } };
-  room.on(RoomEvent.TrackSubscribed,tr=>attach(tr));
-  room.on(RoomEvent.TrackUnsubscribed,tr=>tr.detach().forEach(el=>el.remove()));
+  liveRoom=room; liveState={id:streamId,role,start:Date.now(),title:meta.title,price:meta.price,creator:meta.creator,peak:0,ending:false,owner:t.role==='owner',onCam:false,announced:false};
+  liveOwners=new Set();
+  const wrap=document.getElementById('liveVideoWrap'); wrap.innerHTML=''; wrap.classList.remove('split');
+  const attach=(tr,pid)=>{ if(tr.kind==='video'){ const el=tr.attach(); el.setAttribute('playsinline','');
+      const tile=document.createElement('div'); tile.className='lv-tile'; tile.dataset.pid=pid||''; tile.appendChild(el);
+      const tag=document.createElement('span'); tag.className='lv-tag'; tile.appendChild(tag); wrap.appendChild(tile); liveRelayout(); }
+    else { const el=tr.attach(); el.style.display='none'; wrap.appendChild(el); } };
+  liveAttach=attach;
+  room.on(RoomEvent.TrackSubscribed,(tr,pub,part)=>attach(tr,part&&part.identity));
+  room.on(RoomEvent.TrackUnsubscribed,tr=>{ tr.detach().forEach(el=>{ const tl=el.closest&&el.closest('.lv-tile'); (tl||el).remove(); }); liveRelayout(); });
   const count=()=>{ if(!liveState) return; const n=room.remoteParticipants.size; liveState.peak=Math.max(liveState.peak,n); document.getElementById('lvViewers').textContent=n; };
   room.on(RoomEvent.ParticipantConnected,count); room.on(RoomEvent.ParticipantDisconnected,count);
   room.on(RoomEvent.Disconnected,()=>{ if(liveState&&!liveState.ending) liveEnded('You were disconnected from the stream.'); });
@@ -3476,17 +3519,19 @@ async function connectLive(streamId,role,meta){
   document.getElementById('lvTipBtn').classList.toggle('hidden',role==='broadcaster'); document.getElementById('lvVibeBtn').classList.toggle('hidden',role==='broadcaster');
   document.getElementById('lvVibesN').textContent=role==='broadcaster'?'£0.00':'0'; document.getElementById('lvTop').innerHTML=''; document.getElementById('floatLayer').innerHTML='';
   document.getElementById('lvReportBtn').classList.toggle('hidden',role==='broadcaster');
+  document.getElementById('lvOwner').classList.toggle('hidden',!liveState.owner); document.getElementById('lvCamBtn').textContent='🎥';
+  document.getElementById('lvOwnerPill').classList.add('hidden'); document.getElementById('lvGold').classList.add('hidden');
   document.getElementById('lvChat').innerHTML=''; document.getElementById('lvSummary').classList.add('hidden'); document.getElementById('lvStage').classList.remove('hidden');
   document.getElementById('lvViewers').textContent='0'; document.getElementById('lvTime').textContent='00:00';
   document.getElementById('liveOverlay').classList.add('open');
   await room.connect(t.url,t.token);
   if(role==='broadcaster'){
     await room.localParticipant.setCameraEnabled(true); await room.localParticipant.setMicrophoneEnabled(true);
-    const cam=room.localParticipant.getTrackPublication(Track.Source.Camera); if(cam&&cam.track) attach(cam.track);
+    const cam=room.localParticipant.getTrackPublication(Track.Source.Camera); if(cam&&cam.track) attach(cam.track,store.session);
     liveBeat=setInterval(async()=>{ const {error}=await sb.rpc('live_heartbeat',{p_stream:streamId}); if(error&&liveState&&!liveState.ending) liveEnded('Your stream was ended by a moderator.'); },30000);
   } else {
     try{ await room.startAudio(); }catch(e){}
-    room.remoteParticipants.forEach(p=>p.trackPublications.forEach(pub=>{ if(pub.isSubscribed&&pub.track) attach(pub.track); }));
+    room.remoteParticipants.forEach(p=>p.trackPublications.forEach(pub=>{ if(pub.isSubscribed&&pub.track) attach(pub.track,p.identity); }));
     livePollT=setInterval(async()=>{ const {data}=await sb.from('live_streams').select('status,last_seen_at').eq('id',streamId).single();
       if(liveState&&!liveState.ending&&(!data||data.status!=='live'||new Date(data.last_seen_at)<new Date(Date.now()-120e3))) liveEnded('This stream has ended.'); },15000);
   }
@@ -3511,7 +3556,9 @@ async function liveChatStart(streamId){
   liveChannel=sb.channel('live-'+streamId).on('postgres_changes',{event:'INSERT',schema:'public',table:'live_comments',filter:'stream_id=eq.'+streamId},async p=>{
     await ensureUsers([p.new.user_id]); liveChatAdd(p.new,p.new.body.startsWith('💰')); })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'live_vibes',filter:'stream_id=eq.'+streamId},async p=>{
-    await ensureUsers([p.new.sender_id]); vibeArrived(p.new); }).subscribe();
+    await ensureUsers([p.new.sender_id]); vibeArrived(p.new); })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'live_events',filter:'stream_id=eq.'+streamId},p=>liveEventArrived(p.new)).subscribe();
+  sb.rpc('live_owner_present',{p_stream:streamId}).then(({data})=>{ if(!liveState||liveState.id!==streamId) return; (data||[]).forEach(o=>liveOwners.add(o.actor)); paintOwnerPill(); liveRelayout(); },()=>{});
 }
 async function liveSend(){
   const inp=document.getElementById('lvInput'), body=inp.value.trim(); if(!body||!liveState) return;
@@ -3576,6 +3623,84 @@ async function liveTip(){
 }
 function liveReport(){ if(liveState) openReport('stream',liveState.id); }
 
+/* ═══ OWNERS IN A LIVE ═══ admins can drop into any live, announce themselves, go on camera alongside the creator and gift a bonus everyone sees. */
+function liveRelayout(){
+  const wrap=document.getElementById('liveVideoWrap'); if(!wrap) return;
+  wrap.querySelectorAll('.lv-tile').forEach(t=>{ if(!t.querySelector('video')) t.remove(); });
+  const tiles=[...wrap.querySelectorAll('.lv-tile')]; wrap.classList.toggle('split',tiles.length>=2);
+  tiles.forEach(t=>{ const pid=t.dataset.pid, tag=t.querySelector('.lv-tag'); if(!tag) return;
+    tag.textContent=tiles.length<2?'':(liveOwners.has(pid)||(liveState&&liveState.owner&&pid===store.session))?'👑 OverVibez Owner':(liveState&&pid===liveState.creator?'@'+((user(pid)||{}).username||'creator'):''); });
+}
+function paintOwnerPill(){ const el=document.getElementById('lvOwnerPill'); if(el) el.classList.toggle('hidden',!liveOwners.size); }
+function liveSystemLine(text,gold){
+  const box=document.getElementById('lvChat'); if(!box) return;
+  const d=document.createElement('div'); d.className='lchat-msg'+(gold?' gold':''); d.textContent=text; box.appendChild(d);
+  while(box.children.length>7) box.removeChild(box.firstChild);
+}
+function liveBanner(emoji,html,gold){
+  const st=document.getElementById('lvStage'); if(!st) return; const b=document.createElement('div'); b.className='vbanner'+(gold?' gold':'');
+  b.innerHTML=`<span class="e">${emoji}</span><span>${html}</span>`; st.appendChild(b); setTimeout(()=>b.remove(),4200);
+}
+function liveEventArrived(ev){
+  if(!liveState||liveSeen.has('e'+ev.id)) return; liveSeen.add('e'+ev.id);
+  const mineCreator=liveState.role==='broadcaster', cu=user(liveState.creator)||{username:'the creator'};
+  if(ev.kind==='owner_joined'){
+    liveOwners.add(ev.actor_id); paintOwnerPill(); liveRelayout();
+    liveBanner('👑',mineCreator?'<b>OverVibez Owner</b> joined your live!':ev.cohost?'<b>OverVibez Owner</b> is on camera with @'+esc(cu.username)+'!':'<b>OverVibez Owner</b> joined the live',true);
+    liveSystemLine(ev.cohost?'👑 OverVibez Owner is on camera':'👑 OverVibez Owner joined',true);
+  } else if(ev.kind==='owner_left'){
+    liveOwners.delete(ev.actor_id); paintOwnerPill(); liveRelayout(); liveSystemLine('OverVibez Owner left');
+  } else if(ev.kind==='bonus'){ liveCelebrate(ev.cents,cu.username); }
+}
+function liveCelebrate(cents,name){
+  const g=document.getElementById('lvGold'); if(!g) return;
+  g.innerHTML=`<div class="lvg-amt">${$$(cents)}</div><div class="lvg-t">OverVibez Owner gifted <b>@${esc(name)}</b></div><div class="lvg-s">paid straight into their bonus balance 🎉</div>`;
+  g.classList.remove('hidden','go'); void g.offsetWidth; g.classList.add('go');
+  clearTimeout(liveGoldT); liveGoldT=setTimeout(()=>g.classList.add('hidden'),cents>=5000?9000:cents>=2000?7500:6000);
+  confettiBurst('lvConfetti',['#FFD700','#FFC107','#FFB443','#FFF2B3','#FFFFFF','#E0A800'],cents>=5000?420:260,cents>=5000?160:90);
+  vibeFly({emoji:'💰',price_cents:1000},6); setTimeout(()=>vibeFly({emoji:'🪙',price_cents:1000},6),700);
+  liveSystemLine('💰 OverVibez Owner gifted @'+name+' '+$$(cents)+'!',true);
+  try{ if(navigator.vibrate) navigator.vibrate([90,40,90]); }catch(e){}
+}
+async function liveAnnounce(){
+  if(!liveState||!liveState.owner) return;
+  if(await rpc('live_owner_join',{p_stream:liveState.id,p_cohost:!!liveState.onCam})){ liveState.announced=true; toast('Announced to everyone in the live 👑'); }
+}
+async function liveToggleCam(){
+  if(!liveState||!liveState.owner||!liveRoom) return;
+  const lp=liveRoom.localParticipant, {Track}=window.LivekitClient, btn=document.getElementById('lvCamBtn');
+  if(!liveState.onCam){
+    try{ await lp.setCameraEnabled(true); await lp.setMicrophoneEnabled(true); }catch(e){ return toast('Could not start your camera. Check the camera and microphone are allowed'); }
+    liveState.onCam=true; btn.textContent='⏹'; btn.title='Stop your video'; liveOwners.add(store.session);
+    const cam=lp.getTrackPublication(Track.Source.Camera);
+    if(cam&&cam.track&&liveAttach&&!document.querySelector('#liveVideoWrap .lv-tile[data-pid="'+store.session+'"]')) liveAttach(cam.track,store.session);
+    liveRelayout();
+    if(await rpc('live_owner_join',{p_stream:liveState.id,p_cohost:true})) liveState.announced=true;
+  } else {
+    try{ await lp.setCameraEnabled(false); await lp.setMicrophoneEnabled(false); }catch(e){}
+    liveState.onCam=false; btn.textContent='🎥'; btn.title='Go on camera with them';
+    const mine=document.querySelector('#liveVideoWrap .lv-tile[data-pid="'+store.session+'"]'); if(mine) mine.remove(); liveRelayout();
+  }
+}
+const LIVE_GIFTS=[500,1000,2500,5000,10000];
+function openLiveGift(){
+  if(!liveState||!liveState.owner) return; const c=user(liveState.creator)||{username:'the creator'};
+  document.getElementById('lgSub').textContent='Paid from OverVibez into the bonus balance of @'+c.username+', no fee. Everyone in the live sees it with gold and confetti.';
+  document.getElementById('lgGrid').innerHTML=LIVE_GIFTS.map(x=>`<button class="vibe-btn" onclick="liveGift(${x})"><span class="em">🎁</span><b>${$$(x)}</b></button>`).join('');
+  document.getElementById('lgCustom').value=''; openModal('liveGiftModal');
+}
+function liveGiftCustom(){
+  const v=Math.round(parseFloat(document.getElementById('lgCustom').value)*100);
+  if(isNaN(v)||v<100||v>10000) return toast('Pick an amount between £1 and £100'); liveGift(v);
+}
+async function liveGift(cents){
+  if(!liveState||!liveState.owner) return; const c=user(liveState.creator)||{username:'the creator'};
+  if(!confirm('Gift @'+c.username+' '+$$(cents)+' right now?\n\nIt is paid from OverVibez into their bonus balance and everyone in the live sees it. This cannot be undone.')) return;
+  closeModal('liveGiftModal');
+  const {data,error}=await sb.rpc('admin_live_bonus',{p_stream:liveState.id,p_cents:cents}); if(error) return toast(friendly(error.message));
+  if(data&&data.id) liveEventArrived({id:data.id,kind:'bonus',cents:data.cents,actor_id:store.session});
+}
+
 /* leaving / ending */
 function liveCleanup(){
   clearInterval(liveTimer); clearInterval(liveBeat); clearInterval(livePollT); clearInterval(vibePollT); clearTimeout(vibeSyncT); liveTimer=liveBeat=livePollT=null;
@@ -3583,10 +3708,13 @@ function liveCleanup(){
   if(liveRoom){ try{ liveRoom.disconnect(); }catch(e){} liveRoom=null; }
   document.getElementById('liveVideoWrap').innerHTML='';
   document.getElementById('liveOverlay').classList.remove('open');
+  clearTimeout(liveGoldT); liveOwners=new Set(); liveAttach=null;
+  const wr=document.getElementById('liveVideoWrap'); if(wr) wr.classList.remove('split');
   liveState=null;
 }
 async function liveLeave(){
   if(!liveState) return;
+  if(liveState.owner&&liveState.announced) sb.rpc('live_owner_leave',{p_stream:liveState.id}).then(()=>{},()=>{});
   if(liveState.role==='broadcaster'){
     if(!confirm('End your live stream?')) return;
     liveState.ending=true;

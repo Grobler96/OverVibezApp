@@ -245,3 +245,10 @@ The native Download, Picture in picture and right click menus are switched off o
 * **Find a person from anywhere** (search box in the bar, or press `/`): username, display name, ID and, for admins, email.
 * **People directory** (`admin_find_users`): search plus filters (creators, followers, staff, not 18+ checked, open reports, banned, joined this week), sorting (newest, oldest, followers, and for admins earnings and wallet), paging, and CSV export for admins. Email, wallet and earnings are admin only and enforced in the database.
 * **Audit log**: live filter box and CSV export.
+
+### 053 — owners in lives
+* **Drop in anywhere.** Admins can watch any live without a ticket (`live_access` returns the `owner` role, `live_can_watch` allows admins). The `live-token` edge function (v14) gives owners a token that can publish camera and microphone, but nothing is published until they press the button. Everyone else's tokens are unchanged.
+* **Announce** (📣, `live_owner_join`): everyone in the live gets a gold "OverVibez Owner joined your live" banner, a chat line and a "👑 OverVibez Owner is here" pill (people who join later see the pill too, `live_owner_present`).
+* **Split screen** (🎥): the owner goes on camera and the live turns into two stacked videos, each labelled. This also announces them. Pressing ⏹ stops their video; leaving tells the room they left (`live_owner_leave`).
+* **Gift a bonus** (🎁, `admin_live_bonus`): £1 to £100 per gift, paid through the normal `admin_pay_bonus` into the creator's bonus balance (no fee, logged, shows as a bonus notification and in their transactions). Everyone in the live sees the amount in gold with confetti and falling coins. Limit per admin of £1,000 per 24 hours, set by `app_settings` key `live_bonus_daily_cap_cents`.
+* Events live in `live_events` (realtime, readable only by people who can watch that live). Only admins can create them, through the functions above. The Terms mention staff in live streams.
