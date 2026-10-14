@@ -148,6 +148,23 @@ input,textarea,select{font-family:inherit;color:var(--text)}
 /* ═══════════ SECTIONS / EXPLORE / RAFFLES ═══════════ */
 .section-title{font-family:'Unbounded';font-weight:700;font-size:15px;padding:20px 18px 10px;letter-spacing:-.3px}
 .section-sub{padding:0 18px 14px;font-size:13px;color:var(--muted);margin-top:-6px}
+.lb-card{margin:0 14px 12px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,rgba(255,61,138,.22),rgba(139,92,246,.22));border:1px solid rgba(255,215,0,.35);display:flex;align-items:center;gap:10px;cursor:pointer}
+.lb-card .lb-card-t{font-family:'Unbounded';font-weight:700;font-size:14px} .lb-card .lb-card-s{font-size:12.5px;color:var(--muted);margin-top:3px} .lb-card>div{flex:1;min-width:0} .lb-card>span{font-size:22px;color:var(--muted)}
+.lb-hero{margin:0 14px 12px;padding:16px;border-radius:16px;background:linear-gradient(135deg,rgba(255,215,0,.16),rgba(255,61,138,.16));border:1px solid rgba(255,215,0,.35)}
+.lb-hero b{font-family:'Unbounded';font-size:15px} .lb-hero .lb-count{float:right;font-weight:800;color:#FFD700;font-size:13px} .lb-hero p{font-size:12.5px;line-height:1.5;color:var(--muted);margin-top:8px}
+.lb-hero .lb-big{font-family:'Unbounded';font-size:26px;font-weight:800;background:linear-gradient(180deg,#FFF6B0,#FFD700 50%,#C98F00);-webkit-background-clip:text;background-clip:text;color:transparent;margin-top:6px}
+.lb-list{margin:0 14px 12px;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.lb-row{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.lb-row:last-child{border:none} .lb-row.top{background:linear-gradient(90deg,rgba(255,215,0,.08),transparent)}
+.lb-rk{width:30px;text-align:center;font-weight:800;font-size:15px;flex:none}
+.lb-av{width:42px;height:42px;border-radius:50%;overflow:hidden;flex:none;display:grid;place-items:center;background:var(--panel-2);font-weight:700}
+.lb-av img{width:100%;height:100%;object-fit:cover}
+.lb-mid{flex:1;min-width:0} .lb-mid b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lb-bar{height:6px;border-radius:6px;background:var(--panel-2);margin-top:6px;overflow:hidden} .lb-bar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#FF3D8A,#8B5CF6)}
+.lb-row.top .lb-bar i{background:linear-gradient(90deg,#FFD700,#FF8A3D)}
+.lb-v{text-align:right;flex:none} .lb-v b{display:block;font-size:14px;font-variant-numeric:tabular-nums} .lb-v span{font-size:10.5px;color:var(--muted)}
+.lb-chip{display:inline-block;font-size:10.5px;font-weight:700;color:#FFD700;margin-top:3px}
+.lb-me{margin:0 14px 12px;padding:12px 14px;border-radius:14px;border:1px solid var(--accent);font-size:13.5px}
 .explore-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:0 14px}
 .tile{aspect-ratio:1;border-radius:10px;display:grid;place-items:center;font-size:34px;position:relative;overflow:hidden;background:var(--panel-2);cursor:pointer;transition:transform .15s}
 .tile:hover{transform:scale(.97)}
@@ -633,9 +650,12 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div class="section-title">Explore</div>
     <div style="padding:0 14px 6px"><div class="field" style="margin-bottom:8px"><input id="exploreQ" type="search" placeholder="Search creators…" autocomplete="off" oninput="exploreTyped()"></div></div>
     <div class="chiprow" id="exploreChips"></div>
+    <div id="boardCard"></div>
     <div id="featuredBox"></div>
     <div id="exploreBody"></div>
   </div>
+
+  <div id="page-board" class="hidden"></div>
 
   <div id="page-money" class="hidden">
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
@@ -1471,6 +1491,72 @@ async function saveWatermarkedVideo(url,label,name){
   requestAnimationFrame(tick); await done;
   saveBlob(new Blob(chunks,{type:mime.split(';')[0]}),name+(mime.startsWith('video/mp4')?'.mp4':'.webm')); toast('Saved ✅');
 }
+/* ═══════════ VIBEZ LEADERBOARD ═══════════ */
+let lbScope='week', lbData=null, lbTimer=null, lbTick=null, lbSkew=0, lbRate=1000, lbBack='explore', lbTeaser=null, lbMeter=null;
+const fmtV=n=>Number(n||0).toLocaleString('en-GB'), LB_MEDAL=['🥇','🥈','🥉'], lbGbp=c=>'£'+(Number(c||0)/100).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+function lbLeft(ms){ if(ms<=0) return 'ending now'; const d=Math.floor(ms/864e5),h=Math.floor(ms%864e5/36e5),m=Math.floor(ms%36e5/6e4); return d?d+'d '+h+'h':h?h+'h '+m+'m':Math.max(1,m)+'m'; }
+function lbAv(r){ return r.avatar_url?`<img src="${esc(pubUrl(r.avatar_url))}" alt="">`:esc((r.username||'?')[0].toUpperCase()); }
+function openBoard(from){ lbBack=from||'explore'; lbScope='week'; go('board'); }
+async function lbOpen(id){ if(!id) return; await ensureUsers([id]); if(user(id)) openProfile(id); }
+function lbStop(){ clearInterval(lbTimer); clearInterval(lbTick); lbTimer=lbTick=null; }
+function renderBoard(){
+  const pg=document.getElementById('page-board');
+  pg.innerHTML=`<button class="back-btn" onclick="go(lbBack)">← Back</button><div class="section-title" style="padding-bottom:6px">🏆 Vibez Leaderboard</div>
+    <div class="chiprow" id="lbTabs"></div><div id="lbBody"><p style="color:var(--muted);text-align:center;padding:30px">Loading…</p></div>`;
+  paintBoardTabs(); loadBoard(); lbStop();
+  lbTimer=setInterval(()=>{ if(!document.hidden&&!document.getElementById('page-board').classList.contains('hidden')) loadBoard(); },20000);
+  lbTick=setInterval(paintBoardCount,1000);
+}
+function paintBoardTabs(){ const el=document.getElementById('lbTabs'); if(el) el.innerHTML=[['week','This week'],['month','This month'],['last','Last month']].map(([k,l])=>`<button class="chip ${lbScope===k?'on':''}" onclick="setBoardScope('${k}')">${l}</button>`).join(''); }
+function setBoardScope(k){ lbScope=k; lbData=null; paintBoardTabs(); document.getElementById('lbBody').innerHTML='<p style="color:var(--muted);text-align:center;padding:30px">Loading…</p>'; loadBoard(); }
+async function loadBoard(){
+  const sc=lbScope, {data,error}=await sb.rpc('lb_board',{p_scope:sc,p_limit:50}); if(error||!data||sc!==lbScope) return;
+  lbData=data; lbRate=data.rate||1000; if(data.now) lbSkew=new Date(data.now).getTime()-Date.now(); paintBoard();
+}
+function paintBoardCount(){ const el=document.getElementById('lbCount'); if(el&&lbData&&lbData.ends_at) el.textContent='Ends in '+lbLeft(new Date(lbData.ends_at).getTime()-(Date.now()+lbSkew)); }
+function paintBoard(){
+  const d=lbData, box=document.getElementById('lbBody'); if(!d||!box) return;
+  const rate=d.rate||1000, how=`<details class="chart-card" style="margin:0 14px 14px"><summary style="font-weight:700;cursor:pointer">How it works</summary>
+    <div style="font-size:12.5px;line-height:1.6;color:var(--muted);margin-top:8px">
+    • Every vibe and tip sent to a creator <b>during a live</b> adds Vibez to their meter. £1 = ${fmtV(rate)} Vibez, so a £50 gift is ${fmtV(50*rate)} Vibez.<br>
+    • Subscriptions, paid posts, tickets and tips on posts do not count.<br>
+    • Every week the top 3 get bonus Vibez from us: ${(d.bonuses||[10000,5000,2500]).map((b,i)=>LB_MEDAL[i]+' '+fmtV(b)).join(' · ')}. Weeks run Monday to Sunday.<br>
+    • At the end of the month the creator with the most Vibez wins a prize of £1 for every ${fmtV(rate)} Vibez, paid into their bonus balance once our team has checked the gifts were genuine. Then every meter starts again from zero.<br>
+    • We can hold back a prize if gifts look fake or bought through the creator's own accounts.</div></details>`;
+  let hero='', rows=d.rows||[];
+  if(d.scope==='last'){
+    const win=rows[0], st=d.prize_status;
+    hero=`<div class="lb-hero"><b>${esc(d.month)} result</b>${win?`<div class="lb-big">🏆 @${esc(win.username)}</div><p>${fmtV(win.vibez)} Vibez. ${st==='paid'?'Prize paid: <b>'+lbGbp(d.prize_cents)+'</b>.':'Prize being checked by our team.'}</p>`:'<p>No result for last month.</p>'}</div>`;
+  } else if(d.scope==='week'){
+    hero=`<div class="lb-hero"><b>This week</b><span class="lb-count" id="lbCount"></span><p>Top 3 at the end of the week win bonus Vibez from us: ${(d.bonuses||[]).map((b,i)=>LB_MEDAL[i]+' +'+fmtV(b)).join(' · ')}</p></div>`;
+  } else {
+    hero=`<div class="lb-hero"><b>This month</b><span class="lb-count" id="lbCount"></span>${d.leader_vibez>0?`<div class="lb-big">${lbGbp(d.prize_if_ended_cents||0)}</div><p>The leader's prize if the month ended now. Most Vibez at month end wins £1 for every ${fmtV(rate)} Vibez, then everyone starts again.</p>`:'<p>Nobody has any Vibez yet this month. Go live and get sent vibes to take the lead.</p>'}</div>`;
+  }
+  const lead=Math.max(1,...rows.map(r=>Number(r.vibez)));
+  const list=rows.length?`<div class="lb-list">${rows.map((r,i)=>{ const top=r.rank<=3, wk=d.scope==='week'&&top?(d.bonuses||[])[r.rank-1]:0;
+    return `<div class="lb-row ${top?'top':''}" onclick="lbOpen('${r.creator_id}')"><span class="lb-rk">${top?LB_MEDAL[r.rank-1]:r.rank}</span><div class="lb-av">${lbAv(r)}</div>
+      <div class="lb-mid"><b>${esc(r.display_name||r.username)} ${r.is_verified?'<span class="verified">✔</span>':''}</b>${d.scope==='last'?'':`<div class="lb-bar"><i style="width:${Math.max(3,Math.round(r.vibez/lead*100))}%"></i></div>`}${wk?`<span class="lb-chip">🎁 +${fmtV(wk)} bonus at week end</span>`:''}${r.bonus>0&&d.scope==='month'?`<span class="lb-chip">includes ${fmtV(r.bonus)} bonus Vibez</span>`:''}</div>
+      <div class="lb-v"><b>${fmtV(r.vibez)}</b><span>Vibez</span></div></div>`; }).join('')}</div>`
+    :(d.scope==='last'?'':'<p style="color:var(--muted);text-align:center;padding:24px 20px;font-size:13.5px">No Vibez yet. Go live and get sent vibes to get on the board.</p>');
+  const mine=d.me&&!rows.some(r=>r.creator_id===store.session)?`<div class="lb-me">You are <b>#${d.me.rank}</b> with <b>${fmtV(d.me.vibez)}</b> Vibez</div>`:'';
+  box.innerHTML=hero+list+mine+how; paintBoardCount();
+}
+async function loadBoardTeaser(){ try{ const {data}=await sb.rpc('lb_board',{p_scope:'week',p_limit:3}); if(data){ lbTeaser=data; paintBoardCard(); } }catch(e){} }
+function paintBoardCard(){
+  const el=document.getElementById('boardCard'); if(!el) return; const rows=(lbTeaser&&lbTeaser.rows)||[];
+  el.innerHTML=`<div class="lb-card" onclick="openBoard('explore')"><div><div class="lb-card-t">🏆 Vibez Leaderboard</div><div class="lb-card-s">${rows.length?rows.map(r=>LB_MEDAL[r.rank-1]+' @'+esc(r.username)).join('  '):'Go live, earn Vibez and win the month'}</div></div><span>›</span></div>`;
+}
+async function loadMeter(){
+  if(!me()||me().role!=='creator') return;
+  try{ const [w,m]=await Promise.all([sb.rpc('lb_board',{p_scope:'week',p_limit:1}),sb.rpc('lb_board',{p_scope:'month',p_limit:1})]); lbMeter={w:w.data,m:m.data}; paintMeter(); }catch(e){}
+}
+function paintMeter(){
+  const el=document.getElementById('meterBox'); if(!el) return; const u=me(); if(!u||u.role!=='creator'){ el.innerHTML=''; return; }
+  const m=lbMeter&&lbMeter.m, w=lbMeter&&lbMeter.w, mm=m&&m.me, wm=w&&w.me;
+  el.innerHTML=`<div class="chart-card" style="cursor:pointer" onclick="openBoard('studio')"><h4 style="margin:0 0 6px">✨ Your Vibe meter</h4>
+    <div style="font-family:'Unbounded';font-weight:800;font-size:24px">${fmtV(mm?mm.vibez:0)} <span style="font-size:12px;font-weight:600;color:var(--muted)">Vibez this month</span></div>
+    <div style="font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5">${mm?'Month rank <b style="color:var(--text)">#'+mm.rank+'</b>':'Not on the board yet'} · ${wm?'This week <b style="color:var(--text)">#'+wm.rank+'</b>':'not ranked this week'}. Vibes and tips in your lives add Vibez. Tap to see the leaderboard.</div></div>`;
+}
 /* ═══════════ OFFERS (free trials and discounts) AND PINNED POSTS ═══════════ */
 let offerState=null, offerSet={data:null,at:0}, ofKind='trial';
 (function captureOffer(){ try{ const q=new URLSearchParams(location.search), c=q.get('offer'); if(c&&/^[A-Za-z0-9]{4,16}$/.test(c)){ localStorage.setItem('ov_offer',c.toUpperCase()); history.replaceState(null,'',location.pathname+location.hash); } }catch(e){} })();
@@ -2200,6 +2286,9 @@ const notifInfo=n=>{
     case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+'. It is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done. You can now post, go live and add money'];
+    case 'leaderboard_bonus': return ['🏆','You came <b>#'+(d.place||'')+'</b> on this week\'s leaderboard! <b>+'+fmtV(d.vibez||0)+' bonus Vibez</b> added to your meter'];
+    case 'leaderboard_prize': return ['🏆','You won the '+esc(d.month||'month')+' leaderboard! <b>'+$$(d.cents||0)+'</b> has been added to your bonus balance'];
+    case 'leaderboard_prize_review': return ['🏆','The '+esc(d.month||'month')+' leaderboard winner needs checking before the '+$$(d.cents||0)+' prize is paid. Open Admin → Leaderboard'];
     case 'battle_invite': return ['⚔️',who+' challenged you to a '+(d.minutes||5)+' minute battle. Open your live to answer'];
     case 'download_request': return ['⬇️',who+' asked to save one of your posts. Open Studio to say yes or no'];
     case 'download_ok': return ['✅',who+' said you can save that post. Tap ⬇ on it'];
@@ -2231,6 +2320,8 @@ function notifOpen(i){
   if(n.type==='live'&&n.ref_id) return openLive(n.ref_id);
   if(n.type==='comment'&&n.ref_id&&store.posts.some(p=>p.id===n.ref_id)) return openComments(n.ref_id);
   if(n.type==='payout_paid') return go('studio');
+  if(n.type==='leaderboard_bonus'||n.type==='leaderboard_prize') return openBoard('notifs');
+  if(n.type==='leaderboard_prize_review'){ try{ sessionStorage.setItem('ov_admtab','lb'); }catch(e){} adminTab='lb'; return go('admin'); }
   if(n.type==='removed'&&n.ref_id&&n.data&&['post','comment'].includes(n.data.kind)) return openAppeal(n.data.kind,n.ref_id);
   if(n.type==='won'||n.type==='prize_shipped'||n.type==='new_giveaway'||n.type==='raffle_result') return go('raffles');
   if(n.actor_id&&user(n.actor_id)) return openProfile(n.actor_id);
@@ -2295,7 +2386,8 @@ function renderShell(){
     <button class="nav-btn" data-page="me" onclick="go('me',this)">◍<span>Profile</span></button>`;
 }
 function go(page,btn){
-  ['home','explore','raffles','messages','studio','me','profile','admin','notifs','money'].forEach(p=>{
+  if(page!=='board') lbStop();
+  ['home','explore','raffles','messages','studio','me','profile','admin','notifs','money','board'].forEach(p=>{
     const el=document.getElementById('page-'+p); if(el) el.classList.toggle('hidden',p!==page);
   });
   document.querySelectorAll('.nav-btn[data-page]').forEach(b=>b.classList.toggle('on',b.dataset.page===page));
@@ -2310,11 +2402,12 @@ function go(page,btn){
   if(page==='admin')renderAdmin();
   if(page==='notifs')renderNotifs();
   if(page==='money')renderMoney(true);
+  if(page==='board')renderBoard();
   window.scrollTo({top:0});
   navSave(page);
 }
 /* remember the page you were on, so a refresh (or reopening the app soon after) puts you back there instead of on Home */
-const NAV_PAGES=['home','explore','raffles','messages','studio','me','profile','admin','notifs','money'];
+const NAV_PAGES=['home','explore','raffles','messages','studio','me','profile','admin','notifs','money','board'];
 function navSave(page){ try{ if(store.session) localStorage.setItem('ov_nav',JSON.stringify({u:store.session,p:page,c:page==='profile'?currentProfile:null,t:Date.now()})); }catch(e){} }
 function navRead(uid){ try{ const n=JSON.parse(localStorage.getItem('ov_nav')||'null'); return n&&n.u===uid&&NAV_PAGES.includes(n.p)&&Date.now()-n.t<6*36e5?n:null; }catch(e){ return null; } }
 function updateWallet(){ const u=me(); if(u) document.getElementById('walletAmt').textContent=$$(u.wallet); }
@@ -2895,7 +2988,7 @@ function tileHtml(p,i,arr){
 }
 async function renderExplore(reset){
   if(reset){ document.getElementById('exploreQ').value=''; }
-  loadFeatured();
+  loadFeatured(); paintBoardCard(); if(!lbTeaser||reset) loadBoardTeaser();
   const chips=[['trending','🔥 Trending'],['new','🆕 New'],['live','🔴 Live']].concat(CATS.map(c=>[c[0],(c[1]?c[1]+' ':'')+c[2]]));
   document.getElementById('exploreChips').innerHTML=chips.map(([k,l])=>`<button class="chip ${exploreTab===k?'on':''}" onclick="setExploreTab('${k}')">${l}</button>`).join('');
   const body=document.getElementById('exploreBody'), q=document.getElementById('exploreQ').value.trim();
@@ -3133,6 +3226,7 @@ function renderStudio(){
       <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Paid to you by our team, no fee taken. Kept separate from your sales earnings.</div>
       <button class="primary" onclick="requestBonusPayout()">Withdraw bonus ${$$(u.bonus)}</button></div>`:''}
     <div id="refBox"></div>
+    <div id="meterBox"></div>
     <div id="levelBox"></div>
     <div id="schedBox"></div>
     <div id="collabBox"></div>
@@ -3148,7 +3242,7 @@ function renderStudio(){
   paintRef(); if(!refSet.data||Date.now()-refSet.at>30000) loadRef();
   paintAnalytics(); if(!studioAn.data||Date.now()-studioAn.at>60000) loadAnalytics();
   paintLevel(); loadLevel(); paintSched(); if(!schedSet.data||Date.now()-schedSet.at>30000) loadSched(); paintTimes(); if(!timesSet.data) loadTimes();
-  paintCollabInbox(); paintCommentSettings(); if(!cmtSet.data) loadCommentSettings(); paintDownloads(); loadDownloads();
+  paintCollabInbox(); paintCommentSettings(); if(!cmtSet.data) loadCommentSettings(); paintDownloads(); loadDownloads(); paintMeter(); loadMeter();
   paintPostStats(); if(!postStats.data||Date.now()-postStats.at>30000) loadPostStats();
   paintSubscribers(); loadSubscribers();
 }
@@ -3659,9 +3753,10 @@ function vibeArrived(ev){
   if(!liveState||liveSeen.has('v'+ev.id)) return; liveSeen.add('v'+ev.id);
   const v=(vibeTypes||[]).find(x=>x.key===ev.vibe_key); if(!v) return; const a=user(ev.sender_id)||{username:'someone'};
   vibeFly(v,ev.qty);
-  liveChatAdd({user_id:ev.sender_id,body:'sent '+v.emoji+' '+v.label+(ev.qty>1?' ×'+ev.qty:'')},true);
+  const vz=Math.round((ev.cents||0)*(lbRate/100));
+  liveChatAdd({user_id:ev.sender_id,body:'sent '+v.emoji+' '+v.label+(ev.qty>1?' ×'+ev.qty:'')+(vz?' (+'+fmtV(vz)+' Vibez)':'')},true);
   if(ev.cents>=1000){ const st=document.getElementById('lvStage'), b=document.createElement('div'); b.className='vbanner';
-    b.innerHTML=`<span class="e">${v.emoji}</span><span><b>@${esc(a.username)}</b> sent a ${esc(v.label)}${ev.qty>1?' ×'+ev.qty:''}!</span>`; st.appendChild(b); setTimeout(()=>b.remove(),3700); }
+    b.innerHTML=`<span class="e">${v.emoji}</span><span><b>@${esc(a.username)}</b> sent a ${esc(v.label)}${ev.qty>1?' ×'+ev.qty:''}!${vz?' <b>+'+fmtV(vz)+' Vibez</b>':''}</span>`; st.appendChild(b); setTimeout(()=>b.remove(),3700); }
   clearTimeout(vibeSyncT); vibeSyncT=setTimeout(liveVibeSync,1200);     // refresh the count, top vibers and (for the creator) earnings from the server
 }
 async function liveVibeSync(){
@@ -4145,7 +4240,7 @@ let currentProfile=null;
 function openProfile(cid){ currentProfile=cid; go('profile'); }
 function rerender(){
   updateWallet();
-  const vis=['home','explore','raffles','messages','studio','me','profile','admin','notifs','money'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
+  const vis=['home','explore','raffles','messages','studio','me','profile','admin','notifs','money','board'].find(p=>!document.getElementById('page-'+p).classList.contains('hidden'));
   if(vis==='home'){renderStories();renderFeed()} else if(vis==='explore')renderExplore();
   else if(vis==='raffles')renderRaffles(); else if(vis==='messages'){ if(!document.getElementById('threads-view').classList.contains('hidden'))renderThreads(); }
   else if(vis==='studio')renderStudio(); else if(vis==='notifs'){} else if(vis==='me')renderMe(); else if(vis==='profile')renderProfile();
@@ -4266,7 +4361,7 @@ const ADM_GROUPS=[
   ['Queues',[['reports','🚩','Reports',0],['appeals','⚖️','Appeals',0],['age','🪪','Age checks',1],['feedback','💬','Feedback',1]]],
   ['People',[['users','👥','People',0],['referrals','🎁','Referrals',1],['invites','✉️','Invites',1]]],
   ['Content',[['content','🖼️','Content',0],['live','🔴','Live now',0],['giveaways','🎟️','Giveaways',1],['raffles','🎰','Raffles',1]]],
-  ['Money',[['payouts','🏦','Payouts',1],['stats','💷','Stats',1]]],
+  ['Money',[['payouts','🏦','Payouts',1],['lb','🏆','Leaderboard',1],['stats','💷','Stats',1]]],
   ['System',[['errors','🐞','App errors',1],['audit','📜','Audit log',1]]]];
 const admItems=()=>ADM_GROUPS.map(([g,it])=>[g,it.filter(x=>!x[3]||isAdmin())]).filter(([g,it])=>it.length);
 let admCounts={}, admCountsAt=0, admLoadedTab=null, admRestoreY=null, admFindT=null;
@@ -4312,7 +4407,7 @@ async function admLoad(){
   const soft=admLoadedTab===adminTab&&admBody()&&admBody().children.length;
   if(!soft) admLoading(); else admBody().style.opacity='.55';
   const tab=adminTab;
-  try{ await ({overview:admOverview,reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,feedback:admFeedback,referrals:admReferrals,audit:admAudit})[tab](); }catch(e){}
+  try{ await ({overview:admOverview,reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,feedback:admFeedback,referrals:admReferrals,lb:admLb,audit:admAudit})[tab](); }catch(e){}
   const bd=admBody(); if(bd) bd.style.opacity='';
   if(tab===adminTab){ admLoadedTab=tab; if(soft) window.scrollTo(0,y); else if(want!==null) window.scrollTo(0,want); }
   refreshAdmCounts(true);
@@ -4499,6 +4594,28 @@ async function admOverview(){
    <div class="section-title" style="padding:14px 0 6px">Money, last 7 days</div>
    <div class="admin-grid">${[['Sales',admMoney(o.sales_7d_cents)],['Our 15%',admMoney(o.fees_7d_cents)],['Wallet top-ups',admMoney(o.topups_7d_cents)]].map(([l,v])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>
    <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-top:10px">Full figures, including what you hold on behalf of members, are under Stats.</p></div>`;
+}
+/* --- leaderboard prizes: the monthly winner is checked here before any money is paid --- */
+async function admLb(){
+  const {data,error}=await admCall('admin_lb_prizes',{p_status:'all'}); if(error) return;
+  const pend=data.filter(z=>z.status==='pending'), done=data.filter(z=>z.status!=='pending');
+  const card=z=>{ const st=z.stats||{}, sup=(st.top_supporters||[]), tot=sup.reduce((n,x)=>n+Number(x.vibez),0)||1;
+    return `<div class="chart-card" style="margin:0 0 10px"><b>${esc(z.month)} winner: @${esc(z.username)}</b>
+      <div style="font-size:13px;margin:6px 0">${fmtV(z.vibez)} Vibez = ${lbGbp(z.calc_cents)}${z.capped?` <b style="color:var(--live)">limited to ${lbGbp(z.amount_cents)} by the cap</b>`:''}</div>
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.6">${st.supporters||0} different supporters · ${st.payments||0} payments · ${fmtV(st.bonus_vibez||0)} bonus Vibez<br>
+        <b style="color:${(st.new_accounts||0)>0?'var(--live)':'inherit'}">${st.new_accounts||0}</b> supporters had accounts under 14 days old · <b style="color:${(st.only_this_creator||0)>(st.supporters||0)/2?'var(--live)':'inherit'}">${st.only_this_creator||0}</b> only ever gave to this creator</div>
+      ${sup.length?`<div style="font-size:12.5px;margin-top:6px">Top supporters: ${sup.map(x=>'@'+esc(x.username)+' '+Math.round(x.vibez/tot*100)+'%').join(', ')}</div>`:''}
+      ${z.status==='pending'?`<div style="margin-top:10px"><button class="abtn ok" onclick="admLbDecide('${z.id}',true,${z.amount_cents},'${esc(z.username)}')">Pay ${lbGbp(z.amount_cents)}</button> <button class="abtn danger" onclick="admLbDecide('${z.id}',false)">Do not pay</button> <button class="abtn" onclick="admOpenUser('${z.creator_id}')">Look at the account</button></div>`
+        :`<div style="font-size:12.5px;margin-top:8px"><b>${z.status==='paid'?'Paid':'Not paid'}</b>${z.note?' · '+esc(z.note):''}</div>`}</div>`; };
+  admBody().innerHTML=`<div class="admin-pad"><div class="section-title" style="padding:0 0 6px">Needs checking</div>${pend.length?pend.map(card).join(''):admEmpty('No prizes waiting. A winner appears here after each month closes.')}
+    ${done.length?`<div class="section-title" style="padding:14px 0 6px">Earlier months</div>${done.map(card).join('')}`:''}
+    <p style="font-size:12px;color:var(--muted);line-height:1.5">Before paying, look for gifts from brand new accounts, supporters who only ever gave to this creator, or one supporter making up most of the total. Those are the signs of someone sending gifts to themselves. Paid prizes go into the creator's bonus balance.</p></div>`;
+}
+async function admLbDecide(id,ok,cents,name){
+  let note=null;
+  if(ok){ if(!confirm('Pay '+lbGbp(cents)+' to @'+name+'?\n\nIt goes into their bonus balance and cannot be undone. Have you checked who sent the gifts?')) return; note='checked'; }
+  else { note=prompt('Why are you not paying this prize? (the creator is not told this)',''); if(note===null) return; }
+  const {error}=await admCall('admin_lb_decide',{p_prize:id,p_approve:ok,p_note:note}); if(error) return; toast(ok?'Prize paid 🏆':'Marked as not paid'); admLoad();
 }
 /* --- referral rewards: approve each reward after looking at the accounts (admin only) --- */
 async function admReferrals(){
