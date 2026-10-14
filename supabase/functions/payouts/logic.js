@@ -27,18 +27,29 @@ async function requireCreator({ userClient }) {
   return p;
 }
 
+/** What Stripe's "business website" and "what do you sell" boxes are pre-filled with: the creator's own OverVibez page. */
+export function businessProfile(site, username) {
+  let origin = 'https://www.overvibez.com';
+  try { origin = new URL(site).origin; } catch { /* keep the default */ }
+  return { url: origin + '/' + username, product_description: 'Online content creator selling subscriptions, exclusive posts and live streams on OverVibez.' };
+}
+
 /** Starts (or resumes) Stripe's hosted onboarding. Returns { url }. */
 export async function startOnboarding(deps) {
-  await requireCreator(deps);
+  const p = await requireCreator(deps);
   const { admin, stripe, user, site } = deps;
+  const business_profile = p.username ? businessProfile(site, p.username) : undefined;
   let acct = await loadAccount(deps);
   let accountId = acct?.stripe_account_id;
   if (!accountId) {
-    const a = await stripe('/v1/accounts', { params: { type: 'express', country: 'GB', email: user.email, business_type: 'individual',
+    const a = await stripe('/v1/accounts', { params: { type: 'express', country: 'GB', email: user.email, business_type: 'individual', business_profile,
       capabilities: { transfers: { requested: true } }, metadata: { user_id: user.id } }, idempotencyKey: 'acct_' + user.id });
     accountId = a.id;
     const { error } = await admin.from('payout_accounts').upsert({ user_id: user.id, stripe_account_id: accountId }, { onConflict: 'user_id' });
     if (error) throw new Error('could not save the payout account');
+  } else if (business_profile && !acct.details_submitted) {
+    // started earlier but not finished: fill the boxes in now. Never touches an account that has already been submitted.
+    try { await stripe('/v1/accounts/' + accountId, { params: { business_profile } }); } catch (e) { console.error('business_profile update failed', e.message); }
   }
   const link = await stripe('/v1/account_links', { params: { account: accountId, type: 'account_onboarding',
     refresh_url: site + '?connect=refresh', return_url: site + '?connect=return' } });

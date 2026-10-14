@@ -1,0 +1,21 @@
+import { startOnboarding, businessProfile } from '../supabase/functions/payouts/logic.js';
+import { formEncode } from '../supabase/functions/payouts/stripe.js';
+const ok=(c,m)=>console.log((c?'PASS ':'FAIL ')+m);
+function deps({acct,username='chloe'}){ const calls=[]; const store={acct};
+  const admin={from:()=>({select:()=>({eq:()=>({maybeSingle:async()=>({data:store.acct})}),}),upsert:async(r)=>{ store.acct=r; return {}; }})};
+  const userClient={rpc:async()=>({data:{account_type:'creator',is_banned:false,age_verified:true,username}})};
+  const stripe=async(path,opts)=>{ calls.push([path,opts]); return path==='/v1/accounts'?{id:'acct_1'}:path==='/v1/account_links'?{url:'https://connect.stripe.com/x'}:{}; };
+  return {calls,d:{admin,userClient,stripe,user:{id:'u1',email:'c@x.com'},site:'https://www.overvibez.com/'}}; }
+let t=deps({acct:null}); let r=await startOnboarding(t.d);
+const create=t.calls.find(c=>c[0]==='/v1/accounts');
+ok(create&&create[1].params.business_profile.url==='https://www.overvibez.com/chloe','new account is created with the creator page as the business website');
+ok(/Online content creator/.test(create[1].params.business_profile.product_description),'and a plain description');
+ok(formEncode(create[1].params).get('business_profile[url]')==='https://www.overvibez.com/chloe','form-encoded the way Stripe expects');
+ok(r.url.includes('stripe.com')&&t.calls.some(c=>c[0]==='/v1/account_links'),'still returns the onboarding link');
+t=deps({acct:{stripe_account_id:'acct_9',details_submitted:false}}); await startOnboarding(t.d);
+ok(t.calls.some(c=>c[0]==='/v1/accounts/acct_9'&&c[1].params.business_profile.url.endsWith('/chloe')),'unfinished account gets the boxes filled in');
+t=deps({acct:{stripe_account_id:'acct_9',details_submitted:true}}); await startOnboarding(t.d);
+ok(!t.calls.some(c=>c[0]==='/v1/accounts/acct_9'),'a submitted account is never touched');
+t=deps({acct:{stripe_account_id:'acct_9',details_submitted:false}}); t.d.stripe=async(p,o)=>{ if(p==='/v1/accounts/acct_9') throw new Error('boom'); return {url:'https://x'}; };
+ok((await startOnboarding(t.d)).url==='https://x','a failed pre-fill never blocks onboarding');
+ok(businessProfile('not a url','bob').url==='https://www.overvibez.com/bob','bad site setting falls back safely');
