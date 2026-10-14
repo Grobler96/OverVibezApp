@@ -435,7 +435,7 @@ body.vibe-open #floatLayer{bottom:215px}
 .fbtn{padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:700;background:var(--grad);color:#fff;flex:none}
 .fbtn.on{background:var(--panel-2);color:var(--text);border:1px solid var(--line)}
 .notif{display:flex;gap:12px;align-items:flex-start;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px;line-height:1.45}
-.notif.unread{background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.notif.is-unread{background:color-mix(in srgb,var(--accent) 9%,transparent)}
 .notif .ni{font-size:20px;flex:none;width:30px;text-align:center}
 .notif small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
 .tile .t-media{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-touch-callout:none;user-select:none}
@@ -2313,7 +2313,7 @@ async function renderNotifs(){
   await ensureUsers(data.map(n=>n.actor_id));
   store.notifs=data;
   el.innerHTML=data.length?`<div class="list-card" style="margin:0 14px">${data.map((n,i)=>{ const [ic,txt]=notifInfo(n);
-    return `<div class="notif ${n.read_at?'':'unread'}" onclick="notifOpen(${i})"><div class="ni">${ic}</div><div style="flex:1;min-width:0;word-break:break-word">${txt}<small>${ago(n.created_at)} ago</small></div></div>`; }).join('')}</div>`
+    return `<div class="notif ${n.read_at?'':'is-unread'}" onclick="notifOpen(${i})"><div class="ni">${ic}</div><div style="flex:1;min-width:0;word-break:break-word">${txt}<small>${ago(n.created_at)} ago</small></div></div>`; }).join('')}</div>`
     :'<p style="color:var(--muted);text-align:center;padding:40px 24px;font-size:14px;line-height:1.6">No notifications yet.<br>New followers, tips, comments and more will show up here.</p>';
   if(data.some(n=>!n.read_at)){ await sb.rpc('mark_notifications_read'); store.unread=0; paintBadges(); }
 }
