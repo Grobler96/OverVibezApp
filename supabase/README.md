@@ -295,3 +295,9 @@ Month-end prizes now go to the top 3 (`lb_prizes` has a `place` and `pct`): 1st 
 - 1v1 battle challenges are blocked for creators who are in a tournament.
 - Viewers see the same battle screen as before plus a round label, a badge ("Semifinal starts in 12s", "Knocked out in the Quarterfinal"), a bracket view and a champion celebration. They get updates through realtime on `live_tournament_players` (filtered by stream) plus a 6 second refresh while a tournament is on.
 
+### 062 — likes and the Vibe Meter
+- **Likes:** `live_like(stream, taps)` adds taps (max 10 a call, max `lm_like_cap` = 100 per person per live). The creator cannot like their own live.
+- **Viewers** are counted by `live_meter(stream)`, which every client in a live calls every 10 seconds (it records that they are watching). A viewer counts once they have been seen for at least `lm_min_watch_secs` (30). Staff accounts are not counted.
+- **The meter** (`_lm_stats`) has three parts: unique viewers (target 50, worth 40 points of the 100), likes (target 500, worth 30; each person's first 25 taps count) and vibes sent into the live (target £25, worth 30). It only reaches 100 when all three have hit their target. Tune with `lm_viewers_target`, `lm_likes_target`, `lm_gift_target_cents`, `lm_w_viewers/likes/gifts`, `lm_like_meter_cap`.
+- **When it fills** (`_lm_check`, called by the creator's heartbeat and by `live_meter`) it fills once per live (`live_meters`). The creator gets `lm_bonus_vibez` (5000) as a `live_meter_bonus` row in `lb_ledger`, which counts on BOTH the weekly and the monthly board (`_lb_scores`). No bonus if the creator has not accepted the terms (`live_meter_terms`, accepted in the go-live flow), is banned, or has already earned `lm_weekly_max` (3) meter bonuses in 7 days. A `meter_full` event goes to everyone in the live; the creator alone gets the bonus (or the reason) in their notification `live_meter_full` and their own copy of the meter state.
+
