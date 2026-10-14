@@ -365,6 +365,10 @@ body.vibe-open #floatLayer{bottom:215px}
 #pwModal,#editProfileModal{z-index:130}
 .badge,.nbadge{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--live);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;line-height:1;font-style:normal}
 .nav-btn{position:relative}
+.nav-btn.glow{color:var(--text);isolation:isolate} .nav-btn.glow::before{content:'';position:absolute;top:2px;left:50%;width:44px;height:44px;margin-left:-22px;border-radius:50%;background:radial-gradient(circle,rgba(255,61,138,.85),rgba(139,92,246,.4) 55%,transparent 72%);animation:navglow 2s ease-in-out infinite;pointer-events:none;z-index:-1}
+.nav-btn.glow::after{content:'';position:absolute;top:3px;right:9px;width:8px;height:8px;border-radius:50%;background:#FF3D8A;box-shadow:0 0 0 2px var(--bg)}
+@keyframes navglow{0%,100%{transform:scale(.85);opacity:.55}50%{transform:scale(1.25);opacity:1}}
+@media (prefers-reduced-motion:reduce){.nav-btn.glow::before{animation:none;opacity:.8}}
 .nav-btn .nbadge{top:0;right:4px}
 .pcard{display:flex;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
 .pcard:last-child{border:none}
@@ -1158,6 +1162,7 @@ async function hydrate(){
   const dres=await Promise.all((drawn.data||[]).map(d=>sb.rpc('raffle_result',{p_raffle:d.id})));
   store.raffleResults=(drawn.data||[]).map((d,i)=>Object.assign({id:d.id,title:d.title,prize:d.prize},(dres[i].data||[{}])[0]||{})).filter(x=>x.winner_username);
   try{ const [fs,pz]=await Promise.all([sb.rpc('my_free_entry_status'),sb.rpc('my_prizes')]); store.freeStatus=fs.data||{eligible:false}; store.prizes=pz.data||[]; }catch(e){ store.freeStatus={eligible:false}; store.prizes=[]; }
+  paintRaffleGlow();
   try{ if(me()&&me().role==='creator'){ const {data:pa}=await sb.rpc('my_payout_account'); if(pa) store.payout=pa; } }catch(e){}
   await loadLive();
   await loadThreads();
@@ -2060,7 +2065,20 @@ async function checkWins(){
 }
 
 /* ═══════════ NOTIFICATIONS + UNREAD BADGES ═══════════ */
+/* Raffles tab glow: something open you have not yet looked at, or a free giveaway you have not entered */
+function raffleSeen(){ try{ return new Set(JSON.parse(localStorage.getItem('ov_raffles_seen')||'[]')); }catch(e){ return new Set(); } }
+function raffleGlowOn(){
+  const now=Date.now(), f=store.freeStatus||{}, seen=raffleSeen();
+  return (store.raffles||[]).some(r=>r.ends>now&&(!seen.has(r.id)||(r.free&&f.eligible&&!(f.entered||[]).includes(r.id))));
+}
+function markRafflesSeen(){
+  try{ const seen=raffleSeen(); (store.raffles||[]).forEach(r=>seen.add(r.id)); localStorage.setItem('ov_raffles_seen',JSON.stringify([...seen].slice(-60))); }catch(e){}
+  paintRaffleGlow();
+}
+function paintRaffleGlow(){ const b=document.querySelector('.nav-btn[data-page="raffles"]'); if(b) b.classList.toggle('glow',raffleGlowOn()); }
+setInterval(()=>{ if(store.session) paintRaffleGlow(); },30000);
 function paintBadges(){
+  paintRaffleGlow();
   const b=document.getElementById('bellBadge'), c=document.getElementById('chatBadge');
   if(b){ b.textContent=store.unread>99?'99+':store.unread; b.classList.toggle('hidden',!store.unread); }
   if(c){ c.textContent=store.unreadMsgs>99?'99+':store.unreadMsgs; c.classList.toggle('hidden',!store.unreadMsgs); }
@@ -2207,7 +2225,7 @@ function go(page,btn){
   if(btn) btn.classList.add('on');
   if(page==='home'){renderStories();renderFeed();loadStart();}
   if(page==='explore')renderExplore(true);
-  if(page==='raffles')renderRaffles();
+  if(page==='raffles'){ renderRaffles(); markRafflesSeen(); }
   if(page==='messages')renderThreads();
   if(page==='studio')renderStudio();
   if(page==='me')renderMe();
