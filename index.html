@@ -351,7 +351,8 @@ body:has(.overlay.open) .install-bar,body:has(.live-overlay.open) .install-bar{d
 #vibeModal .sheet h3{font-size:14px;margin-bottom:2px}
 #vibeModal .sheet p{margin-bottom:8px;font-size:12.5px}
 body.vibe-open #floatLayer{bottom:215px}
-#topupModal,#liveGiftModal{z-index:136}
+#topupModal,#liveGiftModal,#battleModal{z-index:136}
+#battleInviteModal{z-index:137}
 .fl{position:absolute;bottom:0;left:50%;font-size:24px;animation:flup 2.6s ease-out forwards}
 @keyframes flup{0%{transform:translate(-50%,0) scale(.7);opacity:0}12%{opacity:1}100%{transform:translate(calc(-50% + 18px),-320px) scale(1.25);opacity:0}}
 .live-summary{margin:auto;width:min(420px,92%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;color:var(--text)}
@@ -364,6 +365,22 @@ body.vibe-open #floatLayer{bottom:215px}
 .lv-tag{position:absolute;right:10px;bottom:8px;z-index:3;font-size:11.5px;font-weight:700;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);color:#fff;border-radius:999px;padding:4px 10px}
 .lv-tag:empty{display:none}
 .lv-tile~.lv-tile .lv-tag{top:10px;bottom:auto}
+.lv-stage-battle .live-title-bar{display:none}
+.lv-battle{position:absolute;top:58px;left:12px;right:12px;z-index:6;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:8px 12px 10px;color:#fff}
+.lv-battle .bt-row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;font-weight:700}
+.lv-battle .bt-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:36%}
+.lv-battle .bt-timer{font-family:'Unbounded';font-size:15px;color:#FFE35C;max-width:none!important;flex:none}
+.lv-battle .bt-bar{display:flex;height:12px;border-radius:999px;overflow:hidden;background:#3a2a55;margin:6px 0 4px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+.lv-battle .bt-bar i{display:block;background:linear-gradient(90deg,#FF3D8A,#FF8A3D);transition:width .6s ease}
+.lv-battle .bt-bar i+i{background:linear-gradient(90deg,#8B5CF6,#3D8BFF);flex:1}
+.lv-battle .bt-sc{display:flex;justify-content:space-between;font-size:13px;font-weight:800}
+.lv-battle .bt-sc .lead{color:#FFE35C}
+.lv-battle .bt-me{font-size:11px;color:#D9B8FF;text-align:center;margin-top:2px}
+.lv-bbig{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px;pointer-events:none;background:radial-gradient(circle at 50% 45%,rgba(255,61,138,.28),transparent 66%)}
+.lv-bbig button{pointer-events:auto}
+.lv-bbig .bb-n{font-family:'Unbounded';font-weight:800;font-size:clamp(70px,26vw,130px);line-height:1;color:#fff;text-shadow:0 6px 30px rgba(255,61,138,.8);animation:goldpop .6s cubic-bezier(.2,1.5,.4,1) both}
+.lv-bbig .bb-t{margin-top:12px;font-size:20px;font-weight:800;color:#FFE9A0;text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.lv-bbig .bb-s{margin-top:6px;font-size:14px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6)}
 .lv-owner{position:absolute;right:14px;bottom:78px;display:flex;flex-direction:column;gap:10px;z-index:7}
 .lv-owner button{width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);border:1px solid rgba(255,215,0,.55);font-size:20px;color:#fff}
 .lv-ownerpill{position:absolute;top:188px;left:14px;z-index:5;background:linear-gradient(135deg,#FFE35C,#FFB443);color:#3a2600;font-weight:800;font-size:12px;border-radius:999px;padding:6px 12px;box-shadow:0 4px 14px rgba(255,180,0,.4)}
@@ -783,11 +800,14 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     </div>
     <canvas id="lvConfetti" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9"></canvas>
     <div id="lvGold" class="lv-gold hidden"></div>
+    <div id="lvBattle" class="lv-battle hidden"></div>
+    <div id="lvBattleBig" class="lv-bbig hidden"></div>
     <div class="lchat" id="lvChat"></div>
     <div class="live-bottom">
       <input id="lvInput" placeholder="Say something…" maxlength="300" onkeydown="if(event.key==='Enter')liveSend()">
       <button id="lvVibeBtn" onclick="openVibes()" title="Send a vibe" style="background:linear-gradient(135deg,#FF3D8A,#8B5CF6)">✨</button>
       <button id="lvTipBtn" onclick="liveTip()" title="Tip £2">💰</button>
+      <button id="lvBattleBtn" class="hidden" onclick="openBattleSheet()" title="Challenge another live creator to a battle" style="background:linear-gradient(135deg,#FF3D8A,#FF8A3D)">⚔️</button>
       <button id="lvReportBtn" onclick="liveReport()" title="Report">⚑</button>
     </div>
   </div>
@@ -821,6 +841,18 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <button class="primary" id="bulkGo" onclick="bulkStart()" disabled>Upload</button>
     <button class="ghost" id="bulkClose" onclick="closeModal('bulkModal')">Close</button>
   </div>
+</div>
+
+<div class="overlay" id="battleModal" onclick="if(event.target===this)closeModal('battleModal')">
+  <div class="sheet" style="max-height:80vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h3>⚔️ Start a battle</h3><button onclick="closeModal('battleModal')" style="color:var(--muted);font-size:20px;padding:0 4px">✕</button></div>
+    <p>Challenge another creator who is live. For a few minutes, whoever's audience sends the most vibes wins the round. Everyone keeps what they earn.</p>
+    <div class="chiprow" style="padding:0 0 10px" id="battleMins"></div>
+    <div id="battleList"></div>
+  </div>
+</div>
+<div class="overlay" id="battleInviteModal">
+  <div class="sheet" style="text-align:center" id="battleInviteBody"></div>
 </div>
 
 <div class="overlay" id="liveGiftModal" onclick="if(event.target===this)closeModal('liveGiftModal')">
@@ -2161,6 +2193,7 @@ const notifInfo=n=>{
     case 'featured': return ['⭐','You are <b>Creator of the Week</b>! You are featured at the top of Explore for 7 days'];
     case 'bonus': return ['🎁','OverVibez paid you a bonus of '+$$(d.cents)+'. It is in your bonus balance (Studio), no fee taken'];
     case 'age_approved': return ['✅','Your 18+ check is done. You can now post, go live and add money'];
+    case 'battle_invite': return ['⚔️',who+' challenged you to a '+(d.minutes||5)+' minute battle. Open your live to answer'];
     case 'download_request': return ['⬇️',who+' asked to save one of your posts. Open Studio to say yes or no'];
     case 'download_ok': return ['✅',who+' said you can save that post. Tap ⬇ on it'];
     case 'download_no': return ['🚫',who+' did not allow saving that post'];
@@ -3442,8 +3475,8 @@ async function loadLive(){
 setInterval(async()=>{ if(!store.session||document.hidden) return; try{ await loadLive(); }catch(e){}
   if(!document.getElementById('page-home').classList.contains('hidden')){ renderStories(); renderFeed(); } },20000);
 
-async function liveToken(streamId){
-  const {data,error}=await sb.functions.invoke('live-token',{body:{stream_id:streamId}});
+async function liveToken(streamId,battleId){
+  const {data,error}=await sb.functions.invoke('live-token',{body:battleId?{stream_id:streamId,via_battle:battleId}:{stream_id:streamId}});
   if(error){ let msg=error.message; try{ const b=await error.context.json(); msg=b.error==='not_configured'?'NOT_CONFIGURED':(b.error||msg); }catch(e){} throw new Error(msg); }
   return data;
 }
@@ -3521,7 +3554,7 @@ async function connectLive(streamId,role,meta){
   document.getElementById('lvEndBtn').textContent=role==='broadcaster'?'End':'Leave';
   document.getElementById('lvTipBtn').classList.toggle('hidden',role==='broadcaster'); document.getElementById('lvVibeBtn').classList.toggle('hidden',role==='broadcaster');
   document.getElementById('lvVibesN').textContent=role==='broadcaster'?'£0.00':'0'; document.getElementById('lvTop').innerHTML=''; document.getElementById('floatLayer').innerHTML='';
-  document.getElementById('lvReportBtn').classList.toggle('hidden',role==='broadcaster');
+  document.getElementById('lvReportBtn').classList.toggle('hidden',role==='broadcaster'); battleReset(); battleBtnPaint();
   document.getElementById('lvOwner').classList.toggle('hidden',!liveState.owner); document.getElementById('lvCamBtn').textContent='🎥';
   document.getElementById('lvOwnerPill').classList.add('hidden'); document.getElementById('lvGold').classList.add('hidden');
   document.getElementById('lvChat').innerHTML=''; document.getElementById('lvSummary').classList.add('hidden'); document.getElementById('lvStage').classList.remove('hidden');
@@ -3560,7 +3593,10 @@ async function liveChatStart(streamId){
     await ensureUsers([p.new.user_id]); liveChatAdd(p.new,p.new.body.startsWith('💰')); })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'live_vibes',filter:'stream_id=eq.'+streamId},async p=>{
     await ensureUsers([p.new.sender_id]); vibeArrived(p.new); })
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'live_events',filter:'stream_id=eq.'+streamId},p=>liveEventArrived(p.new)).subscribe();
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'live_events',filter:'stream_id=eq.'+streamId},p=>liveEventArrived(p.new))
+    .on('postgres_changes',{event:'*',schema:'public',table:'live_battles',filter:'stream_a=eq.'+streamId},p=>p.new&&battleChanged(p.new))
+    .on('postgres_changes',{event:'*',schema:'public',table:'live_battles',filter:'stream_b=eq.'+streamId},p=>p.new&&battleChanged(p.new)).subscribe();
+  sb.rpc('battle_active',{p_stream:streamId}).then(({data})=>{ if(data&&liveState&&liveState.id===streamId) battleChanged(data); },()=>{});
   sb.rpc('live_owner_present',{p_stream:streamId}).then(({data})=>{ if(!liveState||liveState.id!==streamId) return; const here=new Set(liveRoom?[store.session].concat([...liveRoom.remoteParticipants.values()].map(x=>x.identity)):[]);
     (data||[]).forEach(o=>{ liveOwnerAnn.add(o.actor); if(here.has(o.actor)) liveOwners.add(o.actor); }); paintOwnerPill(); liveRelayout(); },()=>{});
 }
@@ -3633,6 +3669,8 @@ function liveRelayout(){
   wrap.querySelectorAll('.lv-tile').forEach(t=>{ if(!t.querySelector('video')) t.remove(); });
   const tiles=[...wrap.querySelectorAll('.lv-tile')]; wrap.classList.toggle('split',tiles.length>=2);
   tiles.forEach(t=>{ const pid=t.dataset.pid, tag=t.querySelector('.lv-tag'); if(!tag) return;
+    t.style.order=liveBattle?(pid===liveBattle.a?0:pid===liveBattle.b?1:2):'';
+    if(liveBattle&&(pid===liveBattle.a||pid===liveBattle.b)){ tag.textContent='⚔️ @'+((user(pid)||{}).username||'creator'); return; }
     tag.textContent=tiles.length<2?'':(liveOwners.has(pid)||(liveState&&liveState.owner&&pid===store.session))?'👑 OverVibez Owner':(liveState&&pid===liveState.creator?'@'+((user(pid)||{}).username||'creator'):''); });
 }
 function paintOwnerPill(){ const el=document.getElementById('lvOwnerPill'); if(el) el.classList.toggle('hidden',!liveOwners.size); }
@@ -3705,6 +3743,122 @@ async function liveGift(cents){
   if(data&&data.id) liveEventArrived({id:data.id,kind:'bonus',cents:data.cents,actor_id:store.session});
 }
 
+/* ═══ BATTLES ═══ two live creators face off. Score = value of the vibes each one's own audience sends while the round runs. */
+let liveBattle=null, battleRoom2=null, battleT={}, battleMin=5, battleWaitId=null;
+const fmtClock=ms=>{ ms=Math.max(0,ms); const t=Math.ceil(ms/1000); return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0'); };
+function battleBtnPaint(){ const b=document.getElementById('lvBattleBtn'); if(b) b.classList.toggle('hidden',!(liveState&&liveState.role==='broadcaster'&&!liveBattle&&!battleWaitId)); }
+function battleReset(){
+  clearInterval(battleT.tick); clearInterval(battleT.poll); clearTimeout(battleT.over); clearTimeout(battleT.wait); battleT={};
+  if(battleRoom2){ try{ battleRoom2.disconnect(); }catch(e){} battleRoom2=null; }
+  liveBattle=null; battleWaitId=null;
+  ['lvBattle','lvBattleBig'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.classList.add('hidden'); el.innerHTML=''; } });
+  const st=document.getElementById('lvStage'); if(st) st.classList.remove('lv-stage-battle');
+  const m=document.getElementById('battleInviteModal'); if(m) m.classList.remove('open');
+  battleBtnPaint();
+}
+async function openBattleSheet(){
+  if(!liveState||liveState.role!=='broadcaster') return;
+  try{ await loadLive(); }catch(e){}
+  paintBattleSheet(); openModal('battleModal');
+}
+function paintBattleSheet(){
+  document.getElementById('battleMins').innerHTML=[3,5,10].map(m=>`<button class="chip ${battleMin===m?'on':''}" onclick="battleMin=${m};paintBattleSheet()">${m} min</button>`).join('');
+  const list=store.live.filter(l=>l.creator_id!==store.session&&user(l.creator_id));
+  document.getElementById('battleList').innerHTML=list.length?`<div class="list-card" style="margin:0">${list.map(l=>{ const c=user(l.creator_id);
+    return `<div class="pcard"><div class="av ${c.av}">${avInner(c)}</div><div class="tx"><b>${esc(c.username)}</b><span>${esc(l.title)}</span></div><button class="fbtn" onclick="battleChallenge('${l.id}')">⚔️ Challenge</button></div>`; }).join('')}</div>`
+    :'<p style="text-align:center;padding:18px 0;color:var(--muted)">Nobody else is live right now. Come back when another creator goes live.</p>';
+}
+async function battleChallenge(targetStream){
+  if(!liveState) return;
+  const {data,error}=await sb.rpc('battle_invite',{p_stream:liveState.id,p_target:targetStream,p_minutes:battleMin}); if(error) return toast(friendly(error.message));
+  closeModal('battleModal'); battleWaitId=data; battleBtnPaint();
+  const tgt=store.live.find(l=>l.id===targetStream), c=tgt&&user(tgt.creator_id);
+  battleBig(`<div class="bb-t">⚔️ Challenge sent</div><div class="bb-s">Waiting for ${c?'@'+esc(c.username):'them'} to accept…</div><button class="abtn" style="margin-top:14px" onclick="battleCancelWait()">Cancel</button>`);
+  clearTimeout(battleT.wait); battleT.wait=setTimeout(()=>{ if(battleWaitId) battleClearWait(); },90000);
+}
+async function battleCancelWait(){ const id=battleWaitId; battleClearWait(); if(id) sb.rpc('battle_cancel',{p_battle:id}).then(()=>{},()=>{}); }
+function battleClearWait(){ battleWaitId=null; clearTimeout(battleT.wait); if(!liveBattle) battleBig(''); battleBtnPaint(); }
+function battleBig(html){ const el=document.getElementById('lvBattleBig'); if(!el) return; el.innerHTML=html; el.classList.toggle('hidden',!html); }
+function battleInviteShow(b){
+  if(liveBattle) return; const c=user(b.creator_a)||{username:'a creator',av:'a1'};
+  document.getElementById('battleInviteBody').innerHTML=`<div style="font-size:42px">⚔️</div><h3 style="margin-top:4px">${esc(c.username)} challenged you!</h3>
+    <p>A ${b.minutes||5} minute battle. Whose audience sends the most vibes wins. You both keep everything you earn.</p>
+    <button class="primary" onclick="battleAnswer('${b.id}',true)">Accept the battle</button><button class="ghost" onclick="battleAnswer('${b.id}',false)">Not now</button>`;
+  document.getElementById('battleInviteModal').classList.add('open'); clearTimeout(battleT.invite); battleT.invite=setTimeout(()=>document.getElementById('battleInviteModal').classList.remove('open'),85000);
+}
+async function battleAnswer(id,accept){
+  document.getElementById('battleInviteModal').classList.remove('open'); clearTimeout(battleT.invite);
+  const {data,error}=await sb.rpc('battle_respond',{p_battle:id,p_accept:accept}); if(error) return toast(friendly(error.message));
+  if(accept&&data) battleChanged(data);
+}
+function battleChanged(b){
+  if(!liveState||![b.stream_a,b.stream_b].includes(liveState.id)) return;
+  const iAmA=liveState.role==='broadcaster'&&liveState.creator===b.creator_a, iAmB=liveState.role==='broadcaster'&&liveState.creator===b.creator_b;
+  if(b.status==='invited'){ if(iAmB) battleInviteShow(b); return; }
+  if(['declined','cancelled','expired'].includes(b.status)){
+    document.getElementById('battleInviteModal').classList.remove('open');
+    if(iAmA&&battleWaitId===b.id){ toast(b.status==='declined'?'They said not this time':'No answer, the challenge ran out'); battleClearWait(); }
+    return; }
+  if(b.status==='active'){ if(!liveBattle||liveBattle.id!==b.id) battleStart(b); return; }
+  if(b.status==='ended'&&liveBattle&&liveBattle.id===b.id) battleEnd(b);
+}
+function battleStart(b){
+  battleClearWait(); document.getElementById('battleInviteModal').classList.remove('open');
+  liveBattle={id:b.id,a:b.creator_a,b:b.creator_b,sa:b.stream_a,sb:b.stream_b,start:new Date(b.started_at).getTime(),end:new Date(b.ends_at).getTime(),ca:Number(b.score_a||0),cb:Number(b.score_b||0),skew:b.now?new Date(b.now).getTime()-Date.now():0,finishing:false};
+  document.getElementById('lvStage').classList.add('lv-stage-battle'); battleBtnPaint(); paintBattleHud();
+  battleConnectOpp(liveState.id===b.stream_a?b.stream_b:b.stream_a,b.id);
+  clearInterval(battleT.tick); clearInterval(battleT.poll); battleT.tick=setInterval(battleTick,250); battleT.poll=setInterval(battlePoll,2000); battlePoll();
+}
+async function battleConnectOpp(oppStream,battleId){
+  try{
+    if(!window.LivekitClient) return; const t=await liveToken(oppStream,battleId); if(!liveBattle||liveBattle.id!==battleId) return;
+    const {Room,RoomEvent}=window.LivekitClient, room=new Room({adaptiveStream:true,dynacast:true}); battleRoom2=room;
+    room.on(RoomEvent.TrackSubscribed,(tr,pub,part)=>{ if(liveAttach) liveAttach(tr,part&&part.identity); });
+    room.on(RoomEvent.TrackUnsubscribed,tr=>{ tr.detach().forEach(el=>{ const tl=el.closest&&el.closest('.lv-tile'); (tl||el).remove(); }); liveRelayout(); });
+    await room.connect(t.url,t.token); try{ await room.startAudio(); }catch(e){}
+    room.remoteParticipants.forEach(p=>p.trackPublications.forEach(pub=>{ if(pub.isSubscribed&&pub.track&&liveAttach) liveAttach(pub.track,p.identity); }));
+  }catch(e){ toast('Could not show the other creator, the score still counts'); }
+}
+function paintBattleHud(){
+  const bt=liveBattle, el=document.getElementById('lvBattle'); if(!bt||!el) return;
+  const na=(user(bt.a)||{}).username||'creator', nb=(user(bt.b)||{}).username||'creator', tot=bt.ca+bt.cb, pa=tot?Math.round(bt.ca/tot*100):50;
+  const now=Date.now()+bt.skew, clock=now<bt.start?'GET READY':fmtClock(bt.end-now);
+  const mine=liveState.creator===bt.a||liveState.creator===bt.b, side=liveState.creator===bt.a?na:nb;
+  el.classList.remove('hidden');
+  el.innerHTML=`<div class="bt-row"><span>@${esc(na)}</span><span class="bt-timer">${clock}</span><span style="text-align:right">@${esc(nb)}</span></div>
+    <div class="bt-bar"><i style="width:${pa}%"></i><i></i></div>
+    <div class="bt-sc"><span class="${bt.ca>bt.cb?'lead':''}">${$$(bt.ca)}</span><span class="${bt.cb>bt.ca?'lead':''}">${$$(bt.cb)}</span></div>
+    ${mine?'':'<div class="bt-me">Send vibes to help your creator win ✨</div>'}`;
+}
+function battleTick(){
+  const bt=liveBattle; if(!bt) return; const now=Date.now()+bt.skew;
+  const key=now<bt.start?'n'+Math.ceil((bt.start-now)/1000):now<bt.start+1200?'go':'';
+  if(bt.big!==key){ bt.big=key;
+    if(key==='go') battleBig(`<div class="bb-n" style="font-size:clamp(50px,18vw,90px)">FIGHT!</div>`);
+    else if(key) battleBig(`<div class="bb-n">${key.slice(1)}</div><div class="bb-t">Battle starting…</div>`);
+    else battleBig(''); }
+  paintBattleHud();
+  if(now>=bt.end&&!bt.finishing){ bt.finishing=true; sb.rpc('battle_finish',{p_battle:bt.id}).then(({data})=>{ if(data&&data.status==='ended'&&liveBattle&&liveBattle.id===bt.id) battleChanged(data); else bt.finishing=false; },()=>{ bt.finishing=false; }); }
+}
+async function battlePoll(){
+  const bt=liveBattle; if(!bt) return; const {data}=await sb.rpc('battle_scores',{p_battle:bt.id}); if(!data||!liveBattle||liveBattle.id!==bt.id) return;
+  bt.ca=Number(data.score_a||0); bt.cb=Number(data.score_b||0); if(data.now) bt.skew=new Date(data.now).getTime()-Date.now();
+  if(data.status==='ended') return battleEnd(data); paintBattleHud();
+}
+function battleEnd(b){
+  const bt=liveBattle; if(!bt||bt.over) return; bt.over=true; bt.ca=Number(b.score_a||0); bt.cb=Number(b.score_b||0);
+  clearInterval(battleT.tick); clearInterval(battleT.poll); paintBattleHud();
+  const w=b.winner, wu=w&&user(w), iWon=!!(w&&liveState&&liveState.role==='broadcaster'&&liveState.creator===w);
+  battleBig(w?`<div class="bb-t bb-end" style="font-size:26px">🏆 @${esc(wu?wu.username:'winner')} wins!</div><div class="bb-s">${$$(bt.ca)} to ${$$(bt.cb)}</div>${iWon?'<div class="bb-s" style="margin-top:8px;font-weight:800;color:#FFE35C">You won the battle! 🎉</div>':''}`
+    :`<div class="bb-t bb-end" style="font-size:26px">🤝 It's a draw!</div><div class="bb-s">${$$(bt.ca)} each</div>`);
+  confettiBurst('lvConfetti',w?['#FFD700','#FFC107','#FFB443','#FFF2B3','#FFFFFF','#FF3D8A']:['#8B5CF6','#FF3D8A','#FFFFFF'],w?300:120,60);
+  try{ if(navigator.vibrate) navigator.vibrate([80,40,80]); }catch(e){}
+  clearTimeout(battleT.over); battleT.over=setTimeout(()=>{ if(battleRoom2){ try{ battleRoom2.disconnect(); }catch(e){} battleRoom2=null; }
+    const opp=liveState&&(liveState.creator===bt.a?bt.b:bt.a); document.querySelectorAll('#liveVideoWrap .lv-tile').forEach(t=>{ if(t.dataset.pid===opp) t.remove(); });
+    liveBattle=null; document.getElementById('lvStage')&&document.getElementById('lvStage').classList.remove('lv-stage-battle');
+    battleBig(''); const h=document.getElementById('lvBattle'); if(h){ h.classList.add('hidden'); h.innerHTML=''; } liveRelayout(); battleBtnPaint(); },9000);
+}
+
 /* leaving / ending */
 function liveCleanup(){
   clearInterval(liveTimer); clearInterval(liveBeat); clearInterval(livePollT); clearInterval(vibePollT); clearTimeout(vibeSyncT); liveTimer=liveBeat=livePollT=null;
@@ -3712,7 +3866,7 @@ function liveCleanup(){
   if(liveRoom){ try{ liveRoom.disconnect(); }catch(e){} liveRoom=null; }
   document.getElementById('liveVideoWrap').innerHTML='';
   document.getElementById('liveOverlay').classList.remove('open');
-  clearTimeout(liveGoldT); liveOwners=new Set(); liveOwnerAnn=new Set(); liveAttach=null;
+  clearTimeout(liveGoldT); battleReset(); liveOwners=new Set(); liveOwnerAnn=new Set(); liveAttach=null;
   const wr=document.getElementById('liveVideoWrap'); if(wr) wr.classList.remove('split');
   liveState=null;
 }

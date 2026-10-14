@@ -1,4 +1,5 @@
-// Edge function: POST { stream_id } -> { token, url, role, room, title }
+// Edge function: POST { stream_id, via_battle? } -> { token, url, role, room, title }
+// via_battle: during a creator battle, someone in one live may also watch the other creator's room (subscribe only).
 // Runs with the CALLER's Supabase JWT, asks the database (live_access) whether they may broadcast/watch, and only then
 // mints a short-lived LiveKit token. The LiveKit API secret exists only here (Supabase secret), never in the browser.
 // Required secrets: LIVEKIT_URL (wss://...livekit.cloud), LIVEKIT_API_KEY, LIVEKIT_API_SECRET.
@@ -23,15 +24,18 @@ Deno.serve(async (req) => {
 
   const auth = req.headers.get('Authorization');
   if (!auth) return json({ error: 'Not signed in' }, 401);
-  let streamId: string | undefined;
-  try { streamId = (await req.json()).stream_id; } catch { /* fallthrough */ }
+  let streamId: string | undefined, battleId: string | undefined;
+  try { const body = await req.json(); streamId = body.stream_id; battleId = body.via_battle; } catch { /* fallthrough */ }
   if (!streamId || !/^[0-9a-f-]{36}$/i.test(streamId)) return json({ error: 'stream_id required' }, 400);
+  if (battleId && !/^[0-9a-f-]{36}$/i.test(battleId)) return json({ error: 'bad battle' }, 400);
 
   const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: auth } } });
   const { data: u, error: uerr } = await sb.auth.getUser();
   if (uerr || !u?.user) return json({ error: 'Not signed in' }, 401);
 
-  const { data: access, error } = await sb.rpc('live_access', { p_stream: streamId });
+  const { data: access, error } = battleId
+    ? await sb.rpc('live_battle_access', { p_battle: battleId, p_stream: streamId })
+    : await sb.rpc('live_access', { p_stream: streamId });
   if (error) return json({ error: error.message }, 403);
 
   const token = await mintLiveKitToken({
