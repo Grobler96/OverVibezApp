@@ -325,13 +325,18 @@ body:has(.overlay.open) .install-bar,body:has(.live-overlay.open) .install-bar{d
 .live-end{margin-left:auto;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:7px 16px;font-size:12.5px;font-weight:700;color:#fff}
 .live-title-bar{position:absolute;top:62px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:rgba(255,255,255,.92);z-index:5}
 .live-title-bar span{background:rgba(0,0,0,.4);padding:4px 10px;border-radius:8px;font-size:11.5px}
-.lchat{position:absolute;left:14px;right:92px;bottom:78px;display:flex;flex-direction:column;gap:6px;max-height:38%;overflow:hidden;mask-image:linear-gradient(transparent,#000 25%);z-index:4}
+.lchat{position:absolute;left:14px;right:92px;bottom:78px;display:flex;flex-direction:column;gap:6px;max-height:38%;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch;scrollbar-width:none;mask-image:linear-gradient(transparent,#000 25%);z-index:4}
+.lchat::before{content:'';margin-top:auto}
+.lchat::-webkit-scrollbar{display:none}
+html.live-open,html.live-open body{overscroll-behavior:none;overflow:hidden}
+#liveOverlay{overscroll-behavior:none}
+.live-bottom .lv-send{background:var(--grad);color:#fff;font-weight:800}
 .lchat-msg{background:rgba(0,0,0,.42);backdrop-filter:blur(4px);border-radius:12px;padding:7px 12px;font-size:12.5px;line-height:1.35;align-self:flex-start;max-width:100%}
 .lchat-msg b{color:#D9B8FF;margin-right:6px}
 .lchat-msg.gold{border:1px solid var(--money);color:var(--money)}
-.live-bottom{position:absolute;left:0;right:0;bottom:0;display:flex;gap:8px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.6));z-index:6}
-.live-bottom input{flex:1;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:11px 16px;color:#fff;font-size:13.5px;outline:none}
-.live-bottom button{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.12);font-size:18px;flex:none}
+.live-bottom{position:absolute;left:0;right:0;bottom:0;display:flex;gap:6px;padding:12px 14px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(0,0,0,.6));z-index:6}
+.live-bottom input{flex:1;min-width:0;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:11px 16px;color:#fff;font-size:13.5px;outline:none}
+.live-bottom button{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.12);font-size:17px;flex:none}
 #floatLayer{position:absolute;right:14px;bottom:80px;width:70px;height:60%;pointer-events:none;z-index:5;overflow:visible}
 .vfly{position:absolute;bottom:0;left:50%;line-height:1;will-change:transform,opacity;animation:vflyUp 3.4s cubic-bezier(.2,.7,.3,1) forwards;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
 @keyframes vflyUp{0%{transform:translate(-50%,0) scale(.4);opacity:0}10%{opacity:1;transform:translate(-50%,-30px) scale(1.15)}40%{transform:translate(calc(-50% + var(--sw)),-30vh) scale(1)}100%{transform:translate(calc(-50% - var(--sw)),-56vh) scale(.9);opacity:0}}
@@ -358,10 +363,10 @@ body.vibe-open #floatLayer{bottom:215px}
 .live-summary{margin:auto;width:min(420px,92%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:24px;color:var(--text)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 #payModal,#reportModal,#commentsModal{z-index:130}
-#liveVideoWrap{position:absolute;inset:0;background:#000;display:grid;place-items:center}
-#liveVideoWrap video{width:100%;height:100%;object-fit:cover}
-.lv-tile{position:relative;width:100%;height:100%;overflow:hidden;background:#000}
-#liveVideoWrap.split{grid-template-rows:1fr 1fr;gap:2px}
+#liveVideoWrap{position:absolute;inset:0;background:#000;display:grid;grid-auto-rows:minmax(0,1fr);grid-template-columns:minmax(0,1fr);place-items:stretch}
+#liveVideoWrap video{width:100%;height:100%;object-fit:cover;object-position:50% 30%;display:block}
+.lv-tile{position:relative;width:100%;height:100%;min-height:0;min-width:0;overflow:hidden;background:#000}
+#liveVideoWrap.split{gap:2px}
 .lv-tag{position:absolute;right:10px;bottom:8px;z-index:3;font-size:11.5px;font-weight:700;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);color:#fff;border-radius:999px;padding:4px 10px}
 .lv-tag:empty{display:none}
 .lv-tile~.lv-tile .lv-tag{top:10px;bottom:auto}
@@ -794,9 +799,10 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div id="lvTop" class="live-title-bar" style="top:96px;font-size:12px;opacity:.95"></div>
     <div id="lvOwnerPill" class="lv-ownerpill hidden">👑 OverVibez Owner is here</div>
     <div id="lvOwner" class="lv-owner hidden">
-      <button onclick="liveAnnounce()" title="Announce that you are here" aria-label="Announce you are here">📣</button>
+      <button id="lvAnnBtn" onclick="liveAnnounce()" title="Announce that you are here" aria-label="Announce you are here">📣</button>
       <button id="lvCamBtn" onclick="liveToggleCam()" title="Go on camera with them" aria-label="Go on camera">🎥</button>
-      <button onclick="openLiveGift()" title="Gift a bonus" aria-label="Gift a bonus">🎁</button>
+      <button id="lvFlipBtn" onclick="liveFlipCam()" title="Switch between the front and back camera" aria-label="Switch camera">🔄</button>
+      <button id="lvGiftBtn" onclick="openLiveGift()" title="Gift a bonus" aria-label="Gift a bonus">🎁</button>
     </div>
     <canvas id="lvConfetti" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:9"></canvas>
     <div id="lvGold" class="lv-gold hidden"></div>
@@ -804,7 +810,8 @@ button,.row,.chip,.nav-btn,[onclick]{touch-action:manipulation}
     <div id="lvBattleBig" class="lv-bbig hidden"></div>
     <div class="lchat" id="lvChat"></div>
     <div class="live-bottom">
-      <input id="lvInput" placeholder="Say something…" maxlength="300" onkeydown="if(event.key==='Enter')liveSend()">
+      <input id="lvInput" placeholder="Say something…" maxlength="300" enterkeyhint="send" onkeydown="if(event.key==='Enter')liveSend()">
+      <button id="lvSendBtn" class="lv-send" onpointerdown="event.preventDefault()" onclick="liveSend()" title="Send" aria-label="Send">➤</button>
       <button id="lvVibeBtn" onclick="openVibes()" title="Send a vibe" style="background:linear-gradient(135deg,#FF3D8A,#8B5CF6)">✨</button>
       <button id="lvTipBtn" onclick="liveTip()" title="Tip £2">💰</button>
       <button id="lvBattleBtn" class="hidden" onclick="openBattleSheet()" title="Challenge another live creator to a battle" style="background:linear-gradient(135deg,#FF3D8A,#FF8A3D)">⚔️</button>
@@ -3535,8 +3542,10 @@ async function connectLive(streamId,role,meta){
   liveRoom=room; liveState={id:streamId,role,start:Date.now(),title:meta.title,price:meta.price,creator:meta.creator,peak:0,ending:false,owner:t.role==='owner',onCam:false,announced:false};
   liveOwners=new Set(); liveOwnerAnn=new Set();
   const wrap=document.getElementById('liveVideoWrap'); wrap.innerHTML=''; wrap.classList.remove('split');
-  const attach=(tr,pid)=>{ if(tr.kind==='video'){ const el=tr.attach(); el.setAttribute('playsinline','');
-      const tile=document.createElement('div'); tile.className='lv-tile'; tile.dataset.pid=pid||''; tile.appendChild(el);
+  const attach=(tr,pid)=>{ if(tr.kind==='video'){
+      const tid=tr.sid||(tr.mediaStreamTrack&&tr.mediaStreamTrack.id)||''; if(tid&&wrap.querySelector('.lv-tile[data-tid="'+tid+'"]')) return;      // the same video can be announced twice, show it once
+      const el=tr.attach(); el.setAttribute('playsinline','');
+      const tile=document.createElement('div'); tile.className='lv-tile'; tile.dataset.pid=pid||''; tile.dataset.tid=tid; tile.appendChild(el);
       const tag=document.createElement('span'); tag.className='lv-tag'; tile.appendChild(tag); wrap.appendChild(tile); liveRelayout(); }
     else { const el=tr.attach(); el.style.display='none'; wrap.appendChild(el); } };
   liveAttach=attach;
@@ -3555,11 +3564,14 @@ async function connectLive(streamId,role,meta){
   document.getElementById('lvTipBtn').classList.toggle('hidden',role==='broadcaster'); document.getElementById('lvVibeBtn').classList.toggle('hidden',role==='broadcaster');
   document.getElementById('lvVibesN').textContent=role==='broadcaster'?'£0.00':'0'; document.getElementById('lvTop').innerHTML=''; document.getElementById('floatLayer').innerHTML='';
   document.getElementById('lvReportBtn').classList.toggle('hidden',role==='broadcaster'); battleReset(); battleBtnPaint();
-  document.getElementById('lvOwner').classList.toggle('hidden',!liveState.owner); document.getElementById('lvCamBtn').textContent='🎥';
+  const bcast=role==='broadcaster', own=liveState.owner;
+  document.getElementById('lvOwner').classList.toggle('hidden',!(own||bcast)); document.getElementById('lvCamBtn').textContent='🎥';
+  ['lvAnnBtn','lvCamBtn','lvGiftBtn'].forEach(id=>document.getElementById(id).classList.toggle('hidden',!own));
+  document.getElementById('lvFlipBtn').classList.toggle('hidden',!bcast);
   document.getElementById('lvOwnerPill').classList.add('hidden'); document.getElementById('lvGold').classList.add('hidden');
   document.getElementById('lvChat').innerHTML=''; document.getElementById('lvSummary').classList.add('hidden'); document.getElementById('lvStage').classList.remove('hidden');
   document.getElementById('lvViewers').textContent='0'; document.getElementById('lvTime').textContent='00:00';
-  document.getElementById('liveOverlay').classList.add('open');
+  document.getElementById('liveOverlay').classList.add('open'); document.documentElement.classList.add('live-open'); liveViewportOn();
   await room.connect(t.url,t.token);
   if(role==='broadcaster'){
     await room.localParticipant.setCameraEnabled(true); await room.localParticipant.setMicrophoneEnabled(true);
@@ -3582,11 +3594,16 @@ function liveChatAdd(c,gold){
   const box=document.getElementById('lvChat'); const a=user(c.user_id);
   const d=document.createElement('div'); d.className='lchat-msg'+(gold?' gold':'');
   const b=document.createElement('b'); b.textContent=a?a.username:'user'; d.appendChild(b); d.appendChild(document.createTextNode(c.body));
-  box.appendChild(d); while(box.children.length>7) box.removeChild(box.firstChild);
+  liveChatPush(box,d);
+}
+function liveChatPush(box,d){
+  const near=box.scrollHeight-box.scrollTop-box.clientHeight<70;
+  box.appendChild(d); while(box.children.length>150) box.removeChild(box.firstChild);
+  if(near) box.scrollTop=box.scrollHeight;
 }
 async function liveChatStart(streamId){
   liveSeen=new Set();
-  const {data}=await sb.from('live_comments').select('id,user_id,body,created_at').eq('stream_id',streamId).order('created_at',{ascending:false}).limit(7);
+  const {data}=await sb.from('live_comments').select('id,user_id,body,created_at').eq('stream_id',streamId).order('created_at',{ascending:false}).limit(40);
   if(data&&data.length){ await ensureUsers(data.map(x=>x.user_id)); data.reverse().forEach(c=>liveChatAdd(c)); }
   await loadVibeTypes(); liveVibeSync(); clearInterval(vibePollT); vibePollT=setInterval(liveVibeSync,10000);   // safety net if the live connection hiccups
   liveChannel=sb.channel('live-'+streamId).on('postgres_changes',{event:'INSERT',schema:'public',table:'live_comments',filter:'stream_id=eq.'+streamId},async p=>{
@@ -3605,7 +3622,7 @@ async function liveSend(){
   inp.value='';
   const {data,error}=await sb.from('live_comments').insert({stream_id:liveState.id,user_id:store.session,body}).select('id,user_id,body').single();
   if(error){ inp.value=body; return toast(error.message); }
-  liveChatAdd(data);
+  liveChatAdd(data); inp.focus();
 }
 /* ═══ SENDING VIBEZ ═══ viewers send gifts during a stream; each one is charged to their wallet (85% to the creator) and everyone in the room sees it. */
 let vibeTypes=null, vibeSyncT=null, vibePollT=null;
@@ -3663,10 +3680,35 @@ async function liveTip(){
 }
 function liveReport(){ if(liveState) openReport('stream',liveState.id); }
 
+/* keep the live exactly the size of what is visible, so the keyboard never pushes the top of it off screen */
+function liveViewportSync(){
+  const o=document.getElementById('liveOverlay'), v=window.visualViewport; if(!o||!v||!o.classList.contains('open')) return;
+  o.style.top=v.offsetTop+'px'; o.style.bottom='auto'; o.style.height=v.height+'px';
+}
+function liveViewportOn(){ if(window.visualViewport){ visualViewport.addEventListener('resize',liveViewportSync); visualViewport.addEventListener('scroll',liveViewportSync); } liveViewportSync(); }
+function liveViewportOff(){
+  if(window.visualViewport){ visualViewport.removeEventListener('resize',liveViewportSync); visualViewport.removeEventListener('scroll',liveViewportSync); }
+  const o=document.getElementById('liveOverlay'); if(o){ o.style.top=''; o.style.bottom=''; o.style.height=''; }
+}
+/* switch between the selfie camera and the one on the back of the phone */
+async function liveFlipCam(){
+  if(!liveRoom||!liveState) return; const {Track}=window.LivekitClient;
+  const pub=liveRoom.localParticipant.getTrackPublication(Track.Source.Camera), tr=pub&&pub.videoTrack;
+  if(!tr) return toast('Turn your camera on first');
+  const next=liveState.facing==='environment'?'user':'environment';
+  try{ await tr.restartTrack({facingMode:{ideal:next}}); liveState.facing=next; return; }catch(e){}
+  try{       // some phones need the camera picked by name
+    const cams=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput'); if(cams.length<2) return toast('This phone has only one camera');
+    const cur=tr.mediaStreamTrack.getSettings().deviceId, other=cams.find(c=>c.deviceId!==cur)||cams[0];
+    await liveRoom.switchActiveDevice('videoinput',other.deviceId); liveState.facing=next;
+  }catch(e){ toast('Could not switch camera'); }
+}
+
 /* ═══ OWNERS IN A LIVE ═══ admins can drop into any live, announce themselves, go on camera alongside the creator and gift a bonus everyone sees. */
 function liveRelayout(){
   const wrap=document.getElementById('liveVideoWrap'); if(!wrap) return;
   wrap.querySelectorAll('.lv-tile').forEach(t=>{ if(!t.querySelector('video')) t.remove(); });
+  const seenPid=new Set(); wrap.querySelectorAll('.lv-tile').forEach(t=>{ const k=t.dataset.pid; if(k&&seenPid.has(k)) t.remove(); else if(k) seenPid.add(k); });   // never the same person twice
   const tiles=[...wrap.querySelectorAll('.lv-tile')]; wrap.classList.toggle('split',tiles.length>=2);
   tiles.forEach(t=>{ const pid=t.dataset.pid, tag=t.querySelector('.lv-tag'); if(!tag) return;
     t.style.order=liveBattle?(pid===liveBattle.a?0:pid===liveBattle.b?1:2):'';
@@ -3676,8 +3718,7 @@ function liveRelayout(){
 function paintOwnerPill(){ const el=document.getElementById('lvOwnerPill'); if(el) el.classList.toggle('hidden',!liveOwners.size); }
 function liveSystemLine(text,gold){
   const box=document.getElementById('lvChat'); if(!box) return;
-  const d=document.createElement('div'); d.className='lchat-msg'+(gold?' gold':''); d.textContent=text; box.appendChild(d);
-  while(box.children.length>7) box.removeChild(box.firstChild);
+  const d=document.createElement('div'); d.className='lchat-msg'+(gold?' gold':''); d.textContent=text; liveChatPush(box,d);
 }
 function liveBanner(emoji,html,gold){
   const st=document.getElementById('lvStage'); if(!st) return; const b=document.createElement('div'); b.className='vbanner'+(gold?' gold':'');
@@ -3713,14 +3754,14 @@ async function liveToggleCam(){
   const lp=liveRoom.localParticipant, {Track}=window.LivekitClient, btn=document.getElementById('lvCamBtn');
   if(!liveState.onCam){
     try{ await lp.setCameraEnabled(true); await lp.setMicrophoneEnabled(true); }catch(e){ return toast('Could not start your camera. Check the camera and microphone are allowed'); }
-    liveState.onCam=true; btn.textContent='⏹'; btn.title='Stop your video'; liveOwners.add(store.session); liveOwnerAnn.add(store.session);
+    liveState.onCam=true; btn.textContent='⏹'; btn.title='Stop your video'; liveOwners.add(store.session); liveOwnerAnn.add(store.session); document.getElementById('lvFlipBtn').classList.remove('hidden');
     const cam=lp.getTrackPublication(Track.Source.Camera);
     if(cam&&cam.track&&liveAttach&&!document.querySelector('#liveVideoWrap .lv-tile[data-pid="'+store.session+'"]')) liveAttach(cam.track,store.session);
     liveRelayout();
     if(await rpc('live_owner_join',{p_stream:liveState.id,p_cohost:true})) liveState.announced=true;
   } else {
     try{ await lp.setCameraEnabled(false); await lp.setMicrophoneEnabled(false); }catch(e){}
-    liveState.onCam=false; btn.textContent='🎥'; btn.title='Go on camera with them';
+    liveState.onCam=false; btn.textContent='🎥'; btn.title='Go on camera with them'; document.getElementById('lvFlipBtn').classList.add('hidden');
     const mine=document.querySelector('#liveVideoWrap .lv-tile[data-pid="'+store.session+'"]'); if(mine) mine.remove(); liveRelayout();
   }
 }
@@ -3865,7 +3906,7 @@ function liveCleanup(){
   if(liveChannel){ sb.removeChannel(liveChannel); liveChannel=null; }
   if(liveRoom){ try{ liveRoom.disconnect(); }catch(e){} liveRoom=null; }
   document.getElementById('liveVideoWrap').innerHTML='';
-  document.getElementById('liveOverlay').classList.remove('open');
+  document.getElementById('liveOverlay').classList.remove('open'); document.documentElement.classList.remove('live-open'); liveViewportOff();
   clearTimeout(liveGoldT); battleReset(); liveOwners=new Set(); liveOwnerAnn=new Set(); liveAttach=null;
   const wr=document.getElementById('liveVideoWrap'); if(wr) wr.classList.remove('split');
   liveState=null;

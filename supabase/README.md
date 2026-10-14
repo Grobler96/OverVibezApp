@@ -263,3 +263,11 @@ A ban used to block only what the person could do (post, comment, spend); their 
 
 ### Payouts onboarding pre-fill (payouts v16)
 When a creator starts Stripe setup, Stripe's "business website" box is pre-filled with their OverVibez page (`https://www.overvibez.com/username`) and the "what do you sell" box with a plain description. New accounts get it at creation; accounts started earlier but not yet submitted get it before the onboarding link is made; accounts that have already been submitted are never touched, and a failed pre-fill never blocks setup. Creators can still edit both boxes. `tests/payouts-onboard.test.mjs` covers it.
+
+### Live screen fixes (client only)
+* **No duplicate video.** The same video can be announced twice when you join a live. It is now shown once per person, so an owner joining sees the creator full screen until they press 🎥.
+* **Even split.** Rows are now exactly equal (`minmax(0,1fr)`), whatever shape each camera is, and faces are favoured when a video is cropped.
+* **Switch camera.** 🔄 for creators while live and for owners while on camera: selfie and back camera.
+* **Chat.** A send button next to the box (it keeps the keyboard open), 150 messages kept instead of 7, scrollable, follows new messages unless you have scrolled up to read.
+* **No pull to refresh.** While in a live the page behind is locked (`html.live-open`), so pulling down can no longer reload the app.
+* **Keyboard.** The live now follows the visible screen size, so the keyboard no longer pushes the top bar off screen.
