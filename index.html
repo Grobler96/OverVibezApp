@@ -385,6 +385,22 @@ body.vibe-open #floatLayer{bottom:215px}
 .pcard .tx b{display:flex;align-items:center;gap:5px;min-width:0} .pcard .tx b .verified{flex:none}
 .abtn{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:600;margin:4px 6px 0 0}
 .abtn.danger{color:var(--live);border-color:var(--live)} .abtn.ok{color:var(--ok);border-color:var(--ok)}
+.adm-bar{position:sticky;z-index:30;background:var(--bg);padding:8px 14px 10px;border-bottom:1px solid var(--line);margin-bottom:6px}
+.adm-navrow{display:flex;gap:8px;align-items:center;position:relative}
+.adm-cur{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;font-weight:700;flex:none;min-width:0}
+.adm-cur .adm-caret{color:var(--muted);font-size:11px;margin-left:2px}
+.adm-ic{font-size:16px;width:22px;text-align:center;flex:none} .adm-lbl{flex:1;text-align:left;white-space:nowrap}
+.adm-badge{background:var(--live,#ff4757);color:#fff;font-size:11px;font-weight:800;border-radius:999px;padding:2px 7px;line-height:1.3;flex:none}
+.adm-menu{position:absolute;left:14px;right:14px;top:100%;margin-top:4px;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:14px;max-height:70vh;overflow-y:auto;box-shadow:0 14px 40px rgba(0,0,0,.45);padding:6px}
+.adm-grp{font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 10px 4px}
+.adm-item{display:flex;align-items:center;gap:8px;width:100%;padding:11px 10px;border-radius:10px;font-size:14px;text-align:left}
+.adm-item:hover,.adm-item.on{background:var(--panel-2)} .adm-item.on .adm-lbl{font-weight:700}
+.adm-shade{position:fixed;inset:0;z-index:25;background:rgba(0,0,0,.35)}
+.adm-find{position:relative;flex:1;min-width:0} .adm-find input{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 14px;font-size:14px;outline:none}
+.adm-findres{position:absolute;left:0;right:0;top:100%;margin-top:4px;z-index:60;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.45);overflow:hidden}
+.adm-fr{display:block;width:100%;text-align:left;padding:10px 14px;font-size:13.5px;border-bottom:1px solid var(--line)} .adm-fr span{color:var(--muted);font-size:12px}
+.adm-sel{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:13.5px;color:var(--text)}
+#adminBody{transition:opacity .15s}
 .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 14px 14px}
 .admin-grid .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;text-align:left}
 .admin-grid .stat b{display:block;font-size:20px} .admin-grid .stat span{font-size:11.5px;color:var(--muted)}
@@ -1766,7 +1782,7 @@ async function startSession(uid){
 }
 function clearSession(){
   store.session=null; store.sec=null; store.users=[]; store.posts=[]; store.threads=[]; store.raffles=[]; store.raffleResults=[];
-  startState=null; suggestIds=null; store.streak=null; payBal={data:null,at:0}; refSet={data:null,at:0}; offerState=null; offerSet={data:null,at:0}; dlSet.data=null; dlSet.reqs=[]; store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
+  startState=null; suggestIds=null; store.streak=null; payBal={data:null,at:0}; refSet={data:null,at:0}; offerState=null; offerSet={data:null,at:0}; dlSet.data=null; dlSet.reqs=[]; admCounts={}; admLoadedTab=null; store.likes={}; store.unlocks={}; store.subs={}; store.subEnds={}; store.subCanceled={}; store.subPrice={}; store.following=new Set(); store.unread=0; store.unreadMsgs=0; store.freeStatus={eligible:false}; store.prizes=[]; store.blocks=new Map(); store.myTickets={}; store.payout={connected:false,details_submitted:false,payouts_enabled:false}; freeShown=false;
   if(rt){ sb.removeChannel(rt); rt=null; }
   document.getElementById('liPass').value='';
   document.getElementById('app').classList.add('hidden');
@@ -3900,20 +3916,85 @@ const admLoading=()=>{ const b=admBody(); if(b) b.innerHTML='<p style="color:var
 const admEmpty=t=>`<p style="color:var(--muted);text-align:center;padding:30px 20px;font-size:13.5px">${t}</p>`;
 async function admCall(name,args){ const {data,error}=await sb.rpc(name,args||{}); if(error){ toast(error.message); return {error}; } return {data}; }
 const admMoney=c=>$$(c);
+const ADM_GROUPS=[
+  ['Overview',[['overview','📊','Overview',1]]],
+  ['Queues',[['reports','🚩','Reports',0],['appeals','⚖️','Appeals',0],['age','🪪','Age checks',1],['feedback','💬','Feedback',1]]],
+  ['People',[['users','👥','People',0],['referrals','🎁','Referrals',1],['invites','✉️','Invites',1]]],
+  ['Content',[['content','🖼️','Content',0],['live','🔴','Live now',0],['giveaways','🎟️','Giveaways',1],['raffles','🎰','Raffles',1]]],
+  ['Money',[['payouts','🏦','Payouts',1],['stats','💷','Stats',1]]],
+  ['System',[['errors','🐞','App errors',1],['audit','📜','Audit log',1]]]];
+const admItems=()=>ADM_GROUPS.map(([g,it])=>[g,it.filter(x=>!x[3]||isAdmin())]).filter(([g,it])=>it.length);
+let admCounts={}, admCountsAt=0, admLoadedTab=null, admRestoreY=null, admFindT=null;
+try{ const t=sessionStorage.getItem('ov_admtab'); if(t) adminTab=t; }catch(e){}
+function admCountOf(k){ return admCounts[k]||0; }
+function admBadge(n){ return n>0?`<span class="adm-badge">${n>99?'99+':n}</span>`:''; }
+function paintAdmBar(){
+  const cur=admItems().flatMap(([g,it])=>it).find(x=>x[0]===adminTab)||admItems()[0][1][0];
+  const btn=document.getElementById('admCur'); if(btn) btn.innerHTML=`<span class="adm-ic">${cur[1]}</span><span class="adm-lbl">${cur[2]}</span>${admBadge(admCountOf(cur[0]))}<span class="adm-caret">▾</span>`;
+  const menu=document.getElementById('admMenu');
+  if(menu) menu.innerHTML=admItems().map(([g,it])=>`<div class="adm-grp">${g}</div>`+it.map(x=>`<button class="adm-item ${x[0]===adminTab?'on':''}" onclick="admTab('${x[0]}')"><span class="adm-ic">${x[1]}</span><span class="adm-lbl">${x[2]}</span>${admBadge(admCountOf(x[0]))}</button>`).join('')).join('');
+  const total=Object.entries(admCounts).filter(([k])=>k!=='live').reduce((n,[k,v])=>n+(+v||0),0), tb=document.getElementById('admTotal'); if(tb) tb.innerHTML=total>0?admBadge(total):'';
+}
+async function refreshAdmCounts(force){
+  if(!force&&Date.now()-admCountsAt<20000) return; admCountsAt=Date.now();
+  const {data}=await sb.rpc('admin_nav_counts'); if(data){ admCounts=data; paintAdmBar(); }
+}
+function admToggleMenu(open){ const m=document.getElementById('admMenu'); if(!m) return; const show=open===undefined?m.classList.contains('hidden'):open; m.classList.toggle('hidden',!show); const o=document.getElementById('admShade'); if(o) o.classList.toggle('hidden',!show); }
 function renderAdmin(){
   if(!isStaff()){ go('home'); return; }
-  if(!adminSeen){ adminSeen=true; if(isAdmin()) adminTab='overview'; }
-  const tabs=[['reports','Reports'],['appeals','Appeals'],['live','Live'],['content','Content'],['users','Users']].concat(isAdmin()?[['overview','Overview'],['referrals','Referrals'],['age','Age checks'],['feedback','Feedback'],['invites','Invites'],['giveaways','Giveaways'],['errors','Errors'],['stats','Stats'],['payouts','Payouts'],['raffles','Raffles'],['audit','Audit log']]:[]);
+  if(!adminSeen){ adminSeen=true; if(isAdmin()&&!sessionStorage.getItem('ov_admtab')) adminTab='overview'; }
+  if(!admItems().flatMap(([g,it])=>it).some(x=>x[0]===adminTab)) adminTab=admItems()[0][1][0][0];
+  const th=(document.querySelector('.topbar')||{}).offsetHeight||64;
   document.getElementById('page-admin').innerHTML=`
     <button class="back-btn" onclick="go('me')" style="padding:14px 18px 0">← Back</button>
-    <div class="section-title">${isAdmin()?'Admin console':'Moderator tools'}</div>
+    <div class="section-title" style="padding-bottom:8px">${isAdmin()?'Admin console':'Moderator tools'}</div>
     ${store.sec&&!store.sec.mfa_enabled?`<div class="chart-card" style="border-color:var(--accent)"><b>🛡️ Turn on two-step login</b><p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:4px 0 8px">Staff accounts can move money and ban people. Protect yours with an authenticator app.${store.sec.require_staff_mfa?' <b>Required. Until you do, staff tools are locked.</b>':''}</p><button class="abtn ok" onclick="openTwoStep()">Set up</button></div>`:''}
-    <div class="chiprow">${tabs.map(([k,l])=>`<button class="chip ${adminTab===k?'on':''}" onclick="admTab('${k}')">${l}</button>`).join('')}</div>
+    <div class="adm-bar" style="top:${th}px">
+      <div class="adm-navrow"><button id="admCur" class="adm-cur" onclick="admToggleMenu()"></button><span id="admTotal"></span>
+        <div class="adm-find"><input id="admGlobal" placeholder="Find a person…  ( / )" autocomplete="off" oninput="admFind(this.value)" onfocus="admFind(this.value)"><div id="admFindRes" class="adm-findres hidden"></div></div></div>
+      <div id="admMenu" class="adm-menu hidden"></div>
+    </div>
+    <div id="admShade" class="adm-shade hidden" onclick="admToggleMenu(false);admFindClose()"></div>
     <div id="adminBody"></div>`;
-  admLoad();
+  paintAdmBar(); admLoadedTab=null; admLoad(); refreshAdmCounts(true);
 }
-function admTab(t){ adminTab=t; renderAdmin(); }
-function admLoad(){ admLoading(); ({overview:admOverview,reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,feedback:admFeedback,referrals:admReferrals,audit:admAudit})[adminTab](); }
+function admTab(t){
+  adminTab=t; try{ sessionStorage.setItem('ov_admtab',t); }catch(e){}
+  admToggleMenu(false); admLoadedTab=null; paintAdmBar(); admLoad(); window.scrollTo(0,0);
+}
+async function admLoad(){
+  const want=admRestoreY, y=window.scrollY; admRestoreY=null;
+  const soft=admLoadedTab===adminTab&&admBody()&&admBody().children.length;
+  if(!soft) admLoading(); else admBody().style.opacity='.55';
+  const tab=adminTab;
+  try{ await ({overview:admOverview,reports:admReports,appeals:admAppeals,live:admLive,age:admAge,invites:admInvites,content:admContent,users:admUsers,stats:admStats,payouts:admPayouts,raffles:admRaffles,giveaways:admGiveaways,errors:admErrors,feedback:admFeedback,referrals:admReferrals,audit:admAudit})[tab](); }catch(e){}
+  const bd=admBody(); if(bd) bd.style.opacity='';
+  if(tab===adminTab){ admLoadedTab=tab; if(soft) window.scrollTo(0,y); else if(want!==null) window.scrollTo(0,want); }
+  refreshAdmCounts(true);
+}
+/* global person finder */
+function admFindClose(){ const r=document.getElementById('admFindRes'); if(r) r.classList.add('hidden'); }
+function admFind(q){
+  clearTimeout(admFindT); const box=document.getElementById('admFindRes'); if(!box) return; q=q.trim();
+  if(q.length<2){ box.classList.add('hidden'); return; }
+  admFindT=setTimeout(async()=>{
+    const {data,error}=await sb.rpc('admin_find_users',{p_q:q,p_limit:6}); if(error||document.getElementById('admGlobal').value.trim()!==q) return;
+    const rows=(data&&data.rows)||[];
+    box.innerHTML=rows.length?rows.map(u=>`<button class="adm-fr" onclick="admFindClose();document.getElementById('admGlobal').value='';admOpenUser('${u.id}')"><b>@${esc(u.username)}</b> <span>${esc(u.account_type)}${u.is_banned?' · BANNED':''}${u.email?' · '+esc(u.email):''}</span></button>`).join(''):'<div class="adm-fr" style="color:var(--muted)">Nobody found</div>';
+    box.classList.remove('hidden'); document.getElementById('admShade').classList.remove('hidden');
+  },250);
+}
+document.addEventListener('keydown',e=>{
+  const pg=document.getElementById('page-admin'); if(!pg||pg.classList.contains('hidden')) return;
+  if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test((document.activeElement||{}).tagName||'')){ e.preventDefault(); const i=document.getElementById('admGlobal'); if(i) i.focus(); }
+  if(e.key==='Escape'){ admToggleMenu(false); admFindClose(); }
+});
+setInterval(()=>{ const pg=document.getElementById('page-admin'); if(!pg||pg.classList.contains('hidden')||document.hidden||!isStaff()) return; refreshAdmCounts(true); if(adminTab==='overview'&&!document.querySelector('#page-admin input:focus')) admLoad(); },60000);
+function admCsv(name,header,rows){
+  const q=v=>{ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const blob=new Blob([[header].concat(rows).map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
 
 /* --- manual 18+ checks --- */
 async function admAge(){
@@ -4096,10 +4177,33 @@ async function admRefRemove(id){
   const {error}=await admCall('admin_remove_from_referrals',{p_creator:id,p_reason:why.trim()}); if(!error){ toast('Removed'); admLoad(); }
 }
 /* --- users --- */
+const admU={q:'',filter:'all',sort:'newest',page:0,per:25};
+const ADM_FILTERS=[['all','Everyone'],['creators','Creators'],['followers','Followers'],['staff','Staff'],['unverified','Not 18+ checked'],['flagged','Open reports'],['banned','Banned'],['new7','Joined this week']];
 function admUsers(){
-  admBody().innerHTML=`<div class="admin-pad"><div class="field"><input id="admQ" placeholder="Search username…" value="${esc(adminUserQ)}" onkeydown="if(event.key==='Enter')admSearch()"></div>
-    <button class="primary" style="margin-top:0" onclick="admSearch()">Search</button></div><div id="admHelp" class="admin-pad" style="padding-top:0"></div><div id="admRes" class="admin-pad" style="padding-top:12px"></div>`;
-  admSearch(); admEmailHelp();
+  const adm=isAdmin();
+  admBody().innerHTML=`<div class="admin-pad"><div class="field" style="margin-bottom:10px"><input id="admQ" placeholder="${adm?'Search username, name, email or ID…':'Search username or name…'}" value="${esc(admU.q)}" onkeydown="if(event.key==='Enter'){admU.q=this.value.trim();admU.page=0;admSearch()}"></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px"><select class="adm-sel" onchange="admU.filter=this.value;admU.page=0;admSearch()">${ADM_FILTERS.map(([k,l])=>`<option value="${k}" ${admU.filter===k?'selected':''}>${l}</option>`).join('')}</select>
+      <select class="adm-sel" onchange="admU.sort=this.value;admU.page=0;admSearch()">${[['newest','Newest first'],['oldest','Oldest first'],['followers','Most followers']].concat(adm?[['earnings','Highest earnings'],['wallet','Highest wallet']]:[]).map(([k,l])=>`<option value="${k}" ${admU.sort===k?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div id="admCount" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div></div>
+    <div id="admHelp" class="admin-pad" style="padding-top:0"></div><div id="admRes" class="admin-pad" style="padding-top:0"></div>`;
+  admSearch(); if(adm) admEmailHelp();
+}
+async function admSearch(){
+  const q=document.getElementById('admQ'); if(q) admU.q=q.value.trim(); adminUserQ=admU.q;
+  const {data,error}=await admCall('admin_find_users',{p_q:admU.q,p_filter:admU.filter,p_sort:admU.sort,p_limit:admU.per,p_offset:admU.page*admU.per}); if(error) return;
+  const rows=data.rows||[], total=data.total||0, from=total?admU.page*admU.per+1:0, to=admU.page*admU.per+rows.length, adm=isAdmin();
+  const cnt=document.getElementById('admCount'); if(cnt) cnt.innerHTML=`${total.toLocaleString()} ${total===1?'person':'people'}${total?` · showing ${from} to ${to}`:''}${adm&&total?` · <a style="color:var(--accent-2);cursor:pointer" onclick="admExportUsers()">Export CSV</a>`:''}`;
+  const el=document.getElementById('admRes'); if(!el) return;
+  el.innerHTML=(rows.length?`<div class="list-card" style="margin:0">${rows.map(u=>`<div class="row" onclick="admOpenUser('${u.id}')">
+    <div style="flex:1;min-width:0"><b>@${esc(u.username)}</b>${u.display_name&&u.display_name!==u.username?` <span style="font-size:12px;color:var(--muted)">${esc(u.display_name)}</span>`:''}<br><span style="font-size:11.5px;color:var(--muted)">${esc(u.account_type)}${u.staff_role?' · '+esc(u.staff_role):''}${u.age_verified?' · 18+ ✓':' · not 18+ checked'}${u.is_verified?' · badge':''}${u.is_banned?' · <b style="color:var(--live)">BANNED</b>':''} · ${fmtN(u.followers||0)} followers · joined ${new Date(u.created_at).toLocaleDateString('en-GB')}${u.email?'<br>'+esc(u.email):''}${u.wallet_cents!=null?'<br>wallet '+admMoney(u.wallet_cents)+' · earned '+admMoney(u.earnings_cents):''}</span></div><span class="sub">›</span></div>`).join('')}</div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="abtn" ${admU.page?'':'disabled'} onclick="admU.page--;admSearch()">← Previous</button><button class="abtn" ${to<total?'':'disabled'} onclick="admU.page++;admSearch()">Next →</button></div>`:admEmpty('Nobody matches that.'));
+}
+async function admExportUsers(){
+  toast('Preparing the export…'); const all=[]; 
+  for(let off=0;off<5000;off+=100){ const {data,error}=await admCall('admin_find_users',{p_q:admU.q,p_filter:admU.filter,p_sort:admU.sort,p_limit:100,p_offset:off}); if(error) return; all.push(...data.rows); if(data.rows.length<100) break; }
+  admCsv('overvibez-people.csv',['Username','Name','Email','Type','Staff role','18+ checked','Badge','Banned','Followers','Joined','Wallet GBP','Earned GBP'],
+    all.map(u=>[u.username,u.display_name,u.email,u.account_type,u.staff_role,u.age_verified?'yes':'no',u.is_verified?'yes':'no',u.is_banned?'yes':'no',u.followers,u.created_at,u.wallet_cents!=null?(u.wallet_cents/100).toFixed(2):'',u.earnings_cents!=null?(u.earnings_cents/100).toFixed(2):'']));
+  toast('Exported '+all.length+' people');
 }
 async function admEmailHelp(){
   const {data,error}=await admCall('admin_email_help_list'); const el=document.getElementById('admHelp'); if(error||!el) return;
@@ -4110,18 +4214,13 @@ async function admConfirmEmail(id,fromList){
   const {error}=await admCall('admin_confirm_email',{p_user:id}); if(error) return;
   toast('Email confirmed. They can log in now'); if(fromList) admEmailHelp(); else admOpenUser(id);
 }
-async function admSearch(){
-  adminUserQ=document.getElementById('admQ').value.trim();
-  const {data,error}=await admCall('admin_search_users',{p_q:adminUserQ}); if(error) return;
-  document.getElementById('admRes').innerHTML=data.length?`<div class="list-card" style="margin:0">${data.map(u=>`<div class="row" onclick="admOpenUser('${u.id}')">
-    <div style="flex:1;min-width:0"><b>@${esc(u.username)}</b><br><span style="font-size:11.5px;color:var(--muted)">${esc(u.account_type)}${u.staff_role?' · '+esc(u.staff_role):''}${u.age_verified?' · 18+ ✓':' · unverified'}${u.is_verified?' · badge':''}${u.is_banned?' · BANNED':''}${u.wallet_cents!=null?' · wallet '+admMoney(u.wallet_cents)+' · earned '+admMoney(u.earnings_cents):''}</span></div></div>`).join('')}</div>`:admEmpty('No users found.');
-}
 async function admOpenUser(id){
-  adminTab='users'; if(document.getElementById('page-admin').classList.contains('hidden')) go('admin');
-  admLoading();
+  const listY=window.scrollY, wasHidden=document.getElementById('page-admin').classList.contains('hidden');
+  adminTab='users'; try{ sessionStorage.setItem('ov_admtab','users'); }catch(e){} if(wasHidden) go('admin'); paintAdmBar();
+  admLoading(); admLoadedTab=null; window.scrollTo(0,0);
   const {data:d,error}=await admCall('admin_user_detail',{p_user:id}); if(error) return admLoad();
   const adm=isAdmin();
-  admBody().innerHTML=`<div class="admin-pad"><button class="back-btn" onclick="admLoad()" style="padding:0 0 10px">← Results</button>
+  admBody().innerHTML=`<div class="admin-pad"><button class="back-btn" onclick="admRestoreY=${wasHidden?0:listY};admLoad()" style="padding:0 0 10px">← Results</button>
    <div class="chart-card"><h4 style="font-size:17px">@${esc(d.username)} ${d.is_verified?'<span class="verified">✔</span>':''}</h4>
      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${esc(d.account_type)}${d.staff_role?' · '+esc(d.staff_role):''} · joined ${new Date(d.created_at).toLocaleDateString()} · ${d.age_verified?'18+ verified':'NOT age verified'}</div>
      ${d.is_banned?`<div style="background:rgba(255,71,87,.15);border:1px solid var(--live);border-radius:10px;padding:10px;font-size:13px;margin-bottom:8px"><b>Banned</b> ${d.banned_at?new Date(d.banned_at).toLocaleDateString():''}<br>${esc(d.ban_reason||'')}</div>`:''}
@@ -4398,11 +4497,21 @@ async function admRedraw(id){
   const why=prompt('Redraw the winner? Say why (e.g. "no reply in 14 days"):',''); if(!why) return;
   const {error}=await admCall('admin_redraw_raffle',{p_raffle:id,p_reason:why}); if(!error){ toast('New winner drawn and notified'); admLoad(); }
 }
+let admAuditQ='', admAuditRows=[];
 async function admAudit(){
-  const {data,error}=await admCall('admin_list_actions',{p_limit:100}); if(error) return;
-  admBody().innerHTML=`<div class="admin-pad">${data.length?`<div class="list-card" style="margin:0">${data.map(a=>`<div class="row" style="cursor:default"><div style="flex:1;font-size:13px;word-break:break-word"><b>${esc(a.action)}</b> · @${esc(a.admin||'system')}${a.target?' → @'+esc(a.target):''}<br>
-     <span style="font-size:11.5px;color:var(--muted)">${new Date(a.created_at).toLocaleString()}${a.details?' · '+esc(JSON.stringify(a.details)).slice(0,180):''}</span></div></div>`).join('')}</div>`:admEmpty('No staff actions yet.')}</div>`;
+  const {data,error}=await admCall('admin_list_actions',{p_limit:200}); if(error) return; admAuditRows=data||[];
+  admBody().innerHTML=`<div class="admin-pad"><div class="field" style="margin-bottom:8px"><input id="admAuditQ" placeholder="Filter by action, staff member, person or words…" value="${esc(admAuditQ)}" oninput="admAuditQ=this.value;admAuditPaint()"></div>
+    <div id="admAuditCount" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div><div id="admAuditList"></div></div>`;
+  admAuditPaint();
 }
+function admAuditFiltered(){ const q=admAuditQ.trim().toLowerCase(); return !q?admAuditRows:admAuditRows.filter(a=>(a.action+' '+(a.admin||'')+' '+(a.target||'')+' '+JSON.stringify(a.details||{})).toLowerCase().includes(q)); }
+function admAuditPaint(){
+  const rows=admAuditFiltered(), c=document.getElementById('admAuditCount'), l=document.getElementById('admAuditList'); if(!l) return;
+  if(c) c.innerHTML=`${rows.length} of ${admAuditRows.length} recent actions${rows.length?` · <a style="color:var(--accent-2);cursor:pointer" onclick="admExportAudit()">Export CSV</a>`:''}`;
+  l.innerHTML=rows.length?`<div class="list-card" style="margin:0">${rows.map(a=>`<div class="row" style="cursor:default"><div style="flex:1;font-size:13px;word-break:break-word"><b>${esc(a.action)}</b> · @${esc(a.admin||'system')}${a.target?' → @'+esc(a.target):''}<br>
+     <span style="font-size:11.5px;color:var(--muted)">${new Date(a.created_at).toLocaleString()}${a.details?' · '+esc(JSON.stringify(a.details)).slice(0,180):''}</span></div></div>`).join('')}</div>`:admEmpty('Nothing matches.');
+}
+function admExportAudit(){ admCsv('overvibez-audit-log.csv',['When','Action','Staff','Person','Details'],admAuditFiltered().map(a=>[a.created_at,a.action,a.admin||'system',a.target||'',a.details?JSON.stringify(a.details):''])); }
 
 /* ═══════════ UTIL ═══════════ */
 function openModal(id){document.getElementById(id).classList.add('open')}
