@@ -3432,7 +3432,7 @@ function setLiveEntry(t){ liveEntry=t;
   document.getElementById('livePriceField').classList.toggle('hidden',t==='free'); }
 function openCreate(){ setCreateMode('post'); document.getElementById('cmLive').classList.toggle('hidden',!features.live); openModal('createModal'); }
 
-let liveOwners=new Set(), liveAttach=null, liveGoldT=null;
+let liveOwners=new Set(), liveOwnerAnn=new Set(), liveAttach=null, liveGoldT=null;    // liveOwners = announced AND still in the room
 let liveRoom=null, liveState=null, liveTimer=null, liveBeat=null, livePollT=null, liveChannel=null, liveSeen=new Set();
 async function loadLive(){
   const since=new Date(Date.now()-90e3).toISOString();
@@ -3500,7 +3500,7 @@ async function connectLive(streamId,role,meta){
   const {Room,RoomEvent,Track}=window.LivekitClient;
   const room=new Room({adaptiveStream:true,dynacast:true});
   liveRoom=room; liveState={id:streamId,role,start:Date.now(),title:meta.title,price:meta.price,creator:meta.creator,peak:0,ending:false,owner:t.role==='owner',onCam:false,announced:false};
-  liveOwners=new Set();
+  liveOwners=new Set(); liveOwnerAnn=new Set();
   const wrap=document.getElementById('liveVideoWrap'); wrap.innerHTML=''; wrap.classList.remove('split');
   const attach=(tr,pid)=>{ if(tr.kind==='video'){ const el=tr.attach(); el.setAttribute('playsinline','');
       const tile=document.createElement('div'); tile.className='lv-tile'; tile.dataset.pid=pid||''; tile.appendChild(el);
@@ -3511,6 +3511,9 @@ async function connectLive(streamId,role,meta){
   room.on(RoomEvent.TrackUnsubscribed,tr=>{ tr.detach().forEach(el=>{ const tl=el.closest&&el.closest('.lv-tile'); (tl||el).remove(); }); liveRelayout(); });
   const count=()=>{ if(!liveState) return; const n=room.remoteParticipants.size; liveState.peak=Math.max(liveState.peak,n); document.getElementById('lvViewers').textContent=n; };
   room.on(RoomEvent.ParticipantConnected,count); room.on(RoomEvent.ParticipantDisconnected,count);
+  // an owner who drops out without pressing Leave (app closed, signal lost) stops counting as here; they count again if they reconnect
+  room.on(RoomEvent.ParticipantDisconnected,p=>{ if(liveOwners.delete(p.identity)){ paintOwnerPill(); liveRelayout(); } });
+  room.on(RoomEvent.ParticipantConnected,p=>{ if(liveOwnerAnn.has(p.identity)){ liveOwners.add(p.identity); paintOwnerPill(); liveRelayout(); } });
   room.on(RoomEvent.Disconnected,()=>{ if(liveState&&!liveState.ending) liveEnded('You were disconnected from the stream.'); });
   // UI
   document.getElementById('lvTitle').textContent=meta.title;
@@ -3558,7 +3561,8 @@ async function liveChatStart(streamId){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'live_vibes',filter:'stream_id=eq.'+streamId},async p=>{
     await ensureUsers([p.new.sender_id]); vibeArrived(p.new); })
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'live_events',filter:'stream_id=eq.'+streamId},p=>liveEventArrived(p.new)).subscribe();
-  sb.rpc('live_owner_present',{p_stream:streamId}).then(({data})=>{ if(!liveState||liveState.id!==streamId) return; (data||[]).forEach(o=>liveOwners.add(o.actor)); paintOwnerPill(); liveRelayout(); },()=>{});
+  sb.rpc('live_owner_present',{p_stream:streamId}).then(({data})=>{ if(!liveState||liveState.id!==streamId) return; const here=new Set(liveRoom?[store.session].concat([...liveRoom.remoteParticipants.values()].map(x=>x.identity)):[]);
+    (data||[]).forEach(o=>{ liveOwnerAnn.add(o.actor); if(here.has(o.actor)) liveOwners.add(o.actor); }); paintOwnerPill(); liveRelayout(); },()=>{});
 }
 async function liveSend(){
   const inp=document.getElementById('lvInput'), body=inp.value.trim(); if(!body||!liveState) return;
@@ -3645,11 +3649,11 @@ function liveEventArrived(ev){
   if(!liveState||liveSeen.has('e'+ev.id)) return; liveSeen.add('e'+ev.id);
   const mineCreator=liveState.role==='broadcaster', cu=user(liveState.creator)||{username:'the creator'};
   if(ev.kind==='owner_joined'){
-    liveOwners.add(ev.actor_id); paintOwnerPill(); liveRelayout();
+    liveOwnerAnn.add(ev.actor_id); liveOwners.add(ev.actor_id); paintOwnerPill(); liveRelayout();
     liveBanner('👑',mineCreator?'<b>OverVibez Owner</b> joined your live!':ev.cohost?'<b>OverVibez Owner</b> is on camera with @'+esc(cu.username)+'!':'<b>OverVibez Owner</b> joined the live',true);
     liveSystemLine(ev.cohost?'👑 OverVibez Owner is on camera':'👑 OverVibez Owner joined',true);
   } else if(ev.kind==='owner_left'){
-    liveOwners.delete(ev.actor_id); paintOwnerPill(); liveRelayout(); liveSystemLine('OverVibez Owner left');
+    liveOwnerAnn.delete(ev.actor_id); liveOwners.delete(ev.actor_id); paintOwnerPill(); liveRelayout(); liveSystemLine('OverVibez Owner left');
   } else if(ev.kind==='bonus'){ liveCelebrate(ev.cents,cu.username); }
 }
 function liveCelebrate(cents,name){
@@ -3671,7 +3675,7 @@ async function liveToggleCam(){
   const lp=liveRoom.localParticipant, {Track}=window.LivekitClient, btn=document.getElementById('lvCamBtn');
   if(!liveState.onCam){
     try{ await lp.setCameraEnabled(true); await lp.setMicrophoneEnabled(true); }catch(e){ return toast('Could not start your camera. Check the camera and microphone are allowed'); }
-    liveState.onCam=true; btn.textContent='⏹'; btn.title='Stop your video'; liveOwners.add(store.session);
+    liveState.onCam=true; btn.textContent='⏹'; btn.title='Stop your video'; liveOwners.add(store.session); liveOwnerAnn.add(store.session);
     const cam=lp.getTrackPublication(Track.Source.Camera);
     if(cam&&cam.track&&liveAttach&&!document.querySelector('#liveVideoWrap .lv-tile[data-pid="'+store.session+'"]')) liveAttach(cam.track,store.session);
     liveRelayout();
@@ -3708,7 +3712,7 @@ function liveCleanup(){
   if(liveRoom){ try{ liveRoom.disconnect(); }catch(e){} liveRoom=null; }
   document.getElementById('liveVideoWrap').innerHTML='';
   document.getElementById('liveOverlay').classList.remove('open');
-  clearTimeout(liveGoldT); liveOwners=new Set(); liveAttach=null;
+  clearTimeout(liveGoldT); liveOwners=new Set(); liveOwnerAnn=new Set(); liveAttach=null;
   const wr=document.getElementById('liveVideoWrap'); if(wr) wr.classList.remove('split');
   liveState=null;
 }
