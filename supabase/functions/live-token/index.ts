@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
   const token = await mintLiveKitToken({
     apiKey, apiSecret, identity: u.user.id, room: access.room,
-    role: access.role === 'broadcaster' ? 'broadcaster' : 'viewer',
+    role: access.role === 'broadcaster' ? 'broadcaster' : access.role === 'owner' ? 'owner' : 'viewer',
     ttlSeconds: access.role === 'broadcaster' ? 6 * 3600 : 2 * 3600,
   });
   return json({ token, url, role: access.role, room: access.room, title: access.title });

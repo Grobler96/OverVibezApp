@@ -9,13 +9,13 @@ const b64url = (data) => {
 };
 
 /**
- * @param {{apiKey:string, apiSecret:string, identity:string, room:string, role:'broadcaster'|'viewer', ttlSeconds?:number, now?:number}} o
- * Broadcasters may publish camera + microphone only. Viewers may only subscribe — they cannot publish tracks or data.
+ * @param {{apiKey:string, apiSecret:string, identity:string, room:string, role:'broadcaster'|'owner'|'viewer', ttlSeconds?:number, now?:number}} o
+ * Broadcasters and owners (admins dropping into a live) may publish camera + microphone only. Viewers may only subscribe — they cannot publish tracks or data.
  */
 export async function mintLiveKitToken(o) {
   const now = o.now ?? Math.floor(Date.now() / 1000);
   const ttl = o.ttlSeconds ?? 2 * 60 * 60;
-  const broadcaster = o.role === 'broadcaster';
+  const broadcaster = o.role === 'broadcaster' || o.role === 'owner';
   const video = { room: o.room, roomJoin: true, canSubscribe: true, canPublish: broadcaster, canPublishData: false };
   if (broadcaster) video.canPublishSources = ['camera', 'microphone'];
   const payload = { iss: o.apiKey, sub: o.identity, nbf: now, exp: now + ttl, video };
