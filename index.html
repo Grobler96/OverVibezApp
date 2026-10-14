@@ -1293,7 +1293,7 @@ function paintDownloads(){
   const box=document.getElementById('dlBox'); if(!box) return; const d=dlSet.data;
   if(!d){ box.innerHTML=''; return; }
   box.innerHTML=`<div class="chart-card"><h4>⬇️ Saving your photos and videos</h4>
-    <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:0 0 10px">Nobody can save your posts unless you allow it. Every saved copy has the person's username printed across it, so a leaked copy can be traced. Pay-per-view posts always need your yes, one by one.</p>
+    <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin:0 0 10px">Nobody can save your posts unless you allow it. Every saved copy has your username printed across it, so people know whose it is. Normal viewing in the app is never watermarked. Pay-per-view posts always need your yes, one by one.</p>
     <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer"><input type="checkbox" ${d.followers_can_download?'checked':''} onchange="setDownloads(this.checked)" style="width:18px;height:18px"> Let my followers save my free and subscriber posts</label>
     ${dlSet.reqs.length?`<div style="margin-top:12px;font-size:13px;font-weight:700">Waiting for your answer</div>`+dlSet.reqs.map(r=>`<div style="padding:8px 0;border-top:1px solid var(--line);font-size:13px"><b>@${esc(r.username)}</b> wants to save a ${r.media_type==='video'?'video':'photo'}${r.caption?': “'+esc(r.caption)+'”':''}
       <div style="margin-top:6px;display:flex;gap:8px"><button class="abtn ok" onclick="decideDl('${r.id}',true)">Allow</button><button class="abtn danger" onclick="decideDl('${r.id}',false)">Say no</button></div></div>`).join(''):''}</div>`;
@@ -1329,12 +1329,12 @@ async function downloadPost(id){
   if(st==='declined') return toast('@'+c.username+' did not allow saving this one');
   if(st==='no') return toast('You cannot save this');
   if(st==='none'){
-    if(!confirm('Saving is off for this post. Ask @'+c.username+' for permission?\n\nIf they say yes, you get a copy with your username printed across it.')) return;
+    if(!confirm('Saving is off for this post. Ask @'+c.username+' for permission?\n\nIf they say yes, you get a copy with their name printed across it.')) return;
     const {data,error:e2}=await sb.rpc('request_download',{p_post:id}); if(e2) return toast(friendly(e2.message));
     return toast(data==='pending'?'Asked ✅ We will tell you their answer':'Done');
   }
   const {data:ok,error:e3}=await sb.rpc('log_download',{p_post:id}); if(e3||!ok) return toast('You cannot save this right now');
-  const label='@'+me().username+' · overvibez.com';
+  const label='@'+c.username+' · overvibez.com';
   try{
     if(p.mediaKind==='video') await saveWatermarkedVideo(p.mediaUrl,label,'overvibez-'+c.username);
     else await saveWatermarkedImage(p.mediaUrl,label,'overvibez-'+c.username);
@@ -2238,7 +2238,6 @@ function postCard(p){
         ?`<video class="scene-media" src="${esc(p.mediaUrl)}" controls playsinline preload="metadata" controlsList="nodownload noremoteplayback" disablePictureInPicture oncontextmenu="return false"></video>`
         :`<img class="scene-media" src="${esc(p.mediaUrl)}" alt="" draggable="false" oncontextmenu="return false">`)
         :`<div class="scene ${c.av}">${p.scene}</div>`}
-      ${p.mediaUrl&&open&&!mine?`<div class="wm" style="${wmStyle(u.username)}"></div>`:''}
       ${open?'':`<div class="lockglass"><div class="lock-ic">🔒</div>
         ${p.subsOnly
           ?`<button class="unlock-btn" onclick="subscribe('${p.by}')">💜 Subscribers only · ${$$(c.subPrice)}/month</button><span class="lock-note">Subscribe to see this and every subscriber post</span>`
